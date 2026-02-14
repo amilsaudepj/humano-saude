@@ -40,8 +40,8 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="py-24 bg-black overflow-hidden">
-      <div className="max-w-6xl mx-auto px-6">
+    <section className="py-16 sm:py-24 bg-black overflow-hidden">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         
         {/* Título */}
         <div className="text-center mb-20">
@@ -111,7 +111,7 @@ export default function HowItWorks() {
         </div>
 
         {/* CTA Final Premium com MagneticButton */}
-        <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-16 rounded-[2.5rem] border-2 border-[#bf953f] shadow-[0_0_60px_rgba(191,149,63,0.3)] overflow-hidden">
+        <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 sm:p-12 lg:p-16 rounded-2xl sm:rounded-[2.5rem] border-2 border-[#bf953f] shadow-[0_0_60px_rgba(191,149,63,0.3)] overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="absolute inset-0" style={{
@@ -145,7 +145,7 @@ export default function HowItWorks() {
               <MagneticButton strength={0.4} range={120}>
                 <a
                   href="#calculadora"
-                  className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-[#bf953f] via-[#ffd700] to-[#aa771c] text-white px-14 py-6 rounded-full text-base uppercase tracking-widest font-black shadow-2xl hover:shadow-[0_20px_60px_rgba(255,215,0,0.4)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 overflow-hidden"
+                  className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-[#bf953f] via-[#ffd700] to-[#aa771c] text-white px-6 sm:px-10 lg:px-14 py-5 sm:py-6 rounded-full text-sm sm:text-base uppercase tracking-widest font-black shadow-2xl hover:shadow-[0_20px_60px_rgba(255,215,0,0.4)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   <span className="relative">🎯 Calcular Economia</span>
@@ -160,7 +160,7 @@ export default function HowItWorks() {
                   href="https://wa.me/5521988179407?text=Olá! Quero economizar no meu plano de saúde"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-3 bg-white/10 backdrop-blur-xl text-white border-2 border-white/20 px-14 py-6 rounded-full text-base uppercase tracking-widest font-black hover:bg-white/20 hover:border-[#ffd700]/50 transition-all duration-300 hover:-translate-y-1"
+                  className="group inline-flex items-center gap-3 bg-white/10 backdrop-blur-xl text-white border-2 border-white/20 px-6 sm:px-10 lg:px-14 py-5 sm:py-6 rounded-full text-sm sm:text-base uppercase tracking-widest font-black hover:bg-white/20 hover:border-[#ffd700]/50 transition-all duration-300 hover:-translate-y-1"
                 >
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.52.909 3.033 1.389 4.625 1.39 5.313 0 9.636-4.322 9.638-9.634.001-2.574-1.001-4.995-2.823-6.818-1.821-1.822-4.241-2.826-6.816-2.827-5.313 0-9.636 4.323-9.638 9.636-.001 1.761.474 3.483 1.378 5.008l-.995 3.633 3.731-.978zm10.748-6.377c-.283-.141-1.669-.824-1.928-.918-.258-.094-.446-.141-.634.141-.188.281-.727.918-.891 1.104-.164.187-.328.21-.611.069-.283-.141-1.194-.441-2.274-1.405-.841-.75-1.408-1.676-1.573-1.958-.164-.282-.018-.434.123-.574.127-.127.283-.329.424-.494.141-.164.188-.282.283-.47.094-.188.047-.353-.023-.494-.071-.141-.634-1.529-.868-2.094-.229-.553-.46-.478-.634-.487-.164-.007-.353-.008-.542-.008s-.494.07-.753.353c-.259.282-.988.965-.988 2.353s1.012 2.729 1.153 2.917c.141.188 1.992 3.041 4.825 4.264.674.291 1.2.464 1.61.594.677.215 1.293.185 1.781.112.544-.081 1.669-.682 1.904-1.341.235-.659.235-1.223.164-1.341-.07-.117-.258-.188-.541-.329z"/>

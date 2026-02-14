@@ -29,8 +29,8 @@ export default function Triade() {
   }, []);
 
   return (
-    <section id="metodo" className="py-32 bg-black text-white text-center border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-6 text-center">
+    <section id="metodo" className="py-20 sm:py-32 bg-black text-white text-center border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
         <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase italic tracking-widest font-cinzel leading-[1.1]">
           A tríade Humana
         </h2>

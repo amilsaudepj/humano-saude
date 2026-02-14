@@ -295,10 +295,10 @@ export default function SejaCorretorPage() {
               priority
             />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/dashboard/corretor/cadastro"
-              className="px-5 py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-base tracking-wider hover:bg-[#F6E05E] transition-all"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-sm sm:text-base tracking-wider hover:bg-[#F6E05E] transition-all"
             >
               Quero ser corretor
             </Link>
@@ -769,13 +769,13 @@ export default function SejaCorretorPage() {
               ].map((s, i) => (
                 <motion.div key={s.stage} variants={fadeUp} custom={i + 1} className="relative">
                   <div
-                    className={`bg-gradient-to-r ${s.color} border border-white/5 rounded-xl p-4 transition-all`}
-                    style={{ width: `${Math.max(s.pct, 30)}%`, marginLeft: 'auto', marginRight: 'auto' }}
+                    className={`bg-gradient-to-r ${s.color} border border-white/5 rounded-xl p-3 sm:p-4 transition-all`}
+                    style={{ width: `${Math.max(s.pct, 50)}%`, marginLeft: 'auto', marginRight: 'auto' }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-white">{s.stage}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-black text-white">{s.count}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-white truncate">{s.stage}</span>
+                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <span className="text-base sm:text-lg font-black text-white">{s.count}</span>
                         <span className="text-[10px] text-white/50">{s.pct}%</span>
                       </div>
                     </div>
@@ -916,7 +916,7 @@ export default function SejaCorretorPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/dashboard/corretor/cadastro"
-                className="group flex items-center gap-2 px-10 py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#aa771c] text-black font-black text-base tracking-widest hover:shadow-[0_0_60px_rgba(212,175,55,0.4)] transition-all"
+                className="group flex items-center gap-2 px-8 sm:px-10 py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#aa771c] text-black font-black text-sm sm:text-base tracking-widest hover:shadow-[0_0_60px_rgba(212,175,55,0.4)] transition-all"
               >
                 Quero fazer parte
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -925,7 +925,7 @@ export default function SejaCorretorPage() {
                 href="https://wa.me/5521988179407?text=Ola! Tenho interesse em ser corretor Humano Saude."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-8 py-4 rounded-2xl border border-[#D4AF37]/30 text-[#D4AF37] text-base font-bold hover:bg-[#D4AF37]/5 transition-all"
+                className="flex items-center gap-2 px-6 sm:px-8 py-4 rounded-2xl border border-[#D4AF37]/30 text-[#D4AF37] text-sm sm:text-base font-bold hover:bg-[#D4AF37]/5 transition-all"
               >
                 <Phone className="h-4 w-4" />
                 Falar com comercial

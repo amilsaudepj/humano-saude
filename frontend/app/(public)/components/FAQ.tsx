@@ -39,8 +39,8 @@ export default function FAQ() {
   ];
 
   return (
-    <section id="duvidas" className="py-32 bg-white">
-      <div className="max-w-4xl mx-auto px-6">
+    <section id="duvidas" className="py-20 sm:py-32 bg-white">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-20">
           <div className="inline-block px-6 py-2 rounded-full border border-gray-300 text-xs tracking-widest text-gray-600 font-bold mb-6 uppercase">
             Dúvidas Frequentes

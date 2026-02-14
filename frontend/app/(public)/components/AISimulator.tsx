@@ -27,8 +27,8 @@ export default function AISimulator() {
   }, []);
 
   return (
-    <section id="ia" className="py-24 bg-black text-white">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="ia" className="py-16 sm:py-24 bg-black text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid lg:grid-cols-5 gap-16 items-center mb-24">
           
           {/* Texto */}

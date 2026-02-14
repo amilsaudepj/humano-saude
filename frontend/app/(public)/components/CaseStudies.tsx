@@ -26,8 +26,8 @@ export default function CaseStudies() {
   ];
 
   return (
-    <section id="pratica" className="py-32 bg-white text-slate-900 border-t border-gray-50 text-center">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="pratica" className="py-20 sm:py-32 bg-white text-slate-900 border-t border-gray-50 text-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tighter italic font-cinzel leading-[1.1]">
           Análise <span className="bg-gradient-to-r from-[#bf953f] to-[#aa771c] bg-clip-text text-transparent">Na Prática</span>
         </h2>
@@ -39,7 +39,7 @@ export default function CaseStudies() {
           {cases.map((item, i) => (
             <div
               key={i}
-              className="bg-gradient-to-br from-white to-gray-50 p-12 rounded-[3.5rem] border border-gray-200 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2"
+              className="bg-gradient-to-br from-white to-gray-50 p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[3.5rem] border border-gray-200 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2"
             >
               <p className="text-xs font-bold text-gray-400 uppercase tracking-[3px] mb-8 italic">
                 {item.tipo}

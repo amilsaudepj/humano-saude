@@ -197,8 +197,8 @@ export default function CalculatorWizard() {
   };
 
   return (
-    <section id="calculadora" className="py-20 bg-gray-50">
-      <div className="max-w-4xl mx-auto px-6">
+    <section id="calculadora" className="py-12 sm:py-16 lg:py-20 bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         
         {/* Título da Seção */}
         <div className="text-center mb-12">
@@ -211,12 +211,12 @@ export default function CalculatorWizard() {
         </div>
         
         {/* Progress Bar */}
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <div className="flex justify-between mb-4">
             {[1, 2, 3, 4, 5].map((step) => (
               <div
                 key={step}
-                className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
+                className={`flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 rounded-full font-bold text-sm sm:text-lg ${
                   state.step >= step
                     ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-white'
                     : 'bg-gray-200 text-gray-400'
@@ -236,8 +236,8 @@ export default function CalculatorWizard() {
 
         {/* STEP 1: Tipo de Contratação */}
         {state.step === 1 && (
-          <div className="bg-white p-10 rounded-3xl shadow-xl">
-            <h2 className="text-3xl font-bold mb-8 text-center font-cinzel leading-[1.1]">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center font-cinzel leading-[1.1]">
               Qual tipo de contratação?
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
@@ -274,8 +274,8 @@ export default function CalculatorWizard() {
 
         {/* STEP 2: Acomodação + Beneficiários */}
         {state.step === 2 && (
-          <div className="bg-white p-10 rounded-3xl shadow-xl">
-            <h2 className="text-3xl font-bold mb-8 text-center font-cinzel leading-[1.1]">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center font-cinzel leading-[1.1]">
               Acomodação e Beneficiários
             </h2>
 
@@ -288,7 +288,7 @@ export default function CalculatorWizard() {
                   value={state.cnpj}
                   onChange={(e) => setState(prev => ({ ...prev, cnpj: e.target.value }))}
                   placeholder="00.000.000/0001-00"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#bf953f] focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#bf953f] focus:border-transparent"
                 />
               </div>
             )}
@@ -329,7 +329,7 @@ export default function CalculatorWizard() {
                     <select
                       value={beneficiario.idade}
                       onChange={(e) => atualizarIdadeBeneficiario(beneficiario.id, e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#bf953f]"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#bf953f]"
                     >
                       <option value="">Selecione a idade</option>
                       {faixasEtarias.map(faixa => (
@@ -375,8 +375,8 @@ export default function CalculatorWizard() {
 
         {/* STEP 3: Localização */}
         {state.step === 3 && (
-          <div className="bg-white p-10 rounded-3xl shadow-xl">
-            <h2 className="text-3xl font-bold mb-8 text-center font-cinzel">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center font-cinzel">
               Onde você mora?
             </h2>
             <div className="mb-8">
@@ -384,7 +384,7 @@ export default function CalculatorWizard() {
               <select
                 value={state.bairro}
                 onChange={(e) => setState(prev => ({ ...prev, bairro: e.target.value }))}
-                className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#bf953f] text-lg"
+                className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#bf953f] text-base"
               >
                 <option value="">Selecione seu bairro</option>
                 {bairrosRJ.map(bairro => (
@@ -416,8 +416,8 @@ export default function CalculatorWizard() {
 
         {/* STEP 4: Dados de Contato */}
         {state.step === 4 && (
-          <div className="bg-white p-10 rounded-3xl shadow-xl">
-            <h2 className="text-3xl font-bold mb-8 text-center font-cinzel">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center font-cinzel">
               Para onde enviamos a cotação?
             </h2>
             <div className="space-y-6 mb-8">
@@ -428,7 +428,7 @@ export default function CalculatorWizard() {
                   value={state.nome}
                   onChange={(e) => { setState(prev => ({ ...prev, nome: e.target.value })); setContactErrors(prev => ({ ...prev, nome: '' })); }}
                   placeholder="Digite seu nome"
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#bf953f] ${contactErrors.nome ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#bf953f] ${contactErrors.nome ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 {contactErrors.nome && <p className="text-red-500 text-xs mt-1">{contactErrors.nome}</p>}
               </div>
@@ -440,7 +440,7 @@ export default function CalculatorWizard() {
                   value={state.email}
                   onChange={(e) => { setState(prev => ({ ...prev, email: e.target.value })); setContactErrors(prev => ({ ...prev, email: '' })); }}
                   placeholder="seu@email.com"
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#bf953f] ${contactErrors.email ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#bf953f] ${contactErrors.email ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 {contactErrors.email && <p className="text-red-500 text-xs mt-1">{contactErrors.email}</p>}
               </div>
@@ -452,7 +452,7 @@ export default function CalculatorWizard() {
                   value={state.telefone}
                   onChange={(e) => { setState(prev => ({ ...prev, telefone: e.target.value })); setContactErrors(prev => ({ ...prev, telefone: '' })); }}
                   placeholder="(21) 99999-9999"
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#bf953f] ${contactErrors.telefone ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#bf953f] ${contactErrors.telefone ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 {contactErrors.telefone && <p className="text-red-500 text-xs mt-1">{contactErrors.telefone}</p>}
               </div>
@@ -479,8 +479,8 @@ export default function CalculatorWizard() {
         {/* STEP 5: Resultados */}
         {state.step === 5 && (
           <div className="space-y-6">
-            <div className="bg-white p-10 rounded-3xl shadow-xl text-center">
-              <h2 className="text-3xl font-bold mb-4 font-cinzel">
+            <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl text-center">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4 font-cinzel">
                 🎉 Encontramos {state.resultados.length} Planos!
               </h2>
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
@@ -538,10 +538,10 @@ export default function CalculatorWizard() {
               </div>
             ))}
 
-            <div className="bg-white p-10 rounded-3xl shadow-xl text-center">
+            <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl text-center">
               <button
                 onClick={finalizarCotacao}
-                className="px-8 py-4 bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-white rounded-xl font-bold hover:shadow-lg"
+                className="px-6 sm:px-8 py-4 bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-white rounded-xl font-bold hover:shadow-lg text-sm sm:text-base"
               >
                 ✉️ Receber Cotação Completa por E-mail
               </button>

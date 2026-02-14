@@ -104,7 +104,7 @@ export default function Hero() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-[#ffd700]/3 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-8 xl:gap-10 2xl:gap-12 items-start relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-8 xl:gap-10 2xl:gap-12 items-start relative z-10">
         
         {/* ✅ Coluna Esquerda: Conteúdo com animação de entrada */}
         <div className="text-left max-w-[620px] animate-[slideInLeft_0.8s_ease-out]">
@@ -198,7 +198,7 @@ export default function Hero() {
                 value={formData.nome}
                 onChange={handleChange}
                 placeholder="Seu nome ou Empresa"
-                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-sm lg:text-base bg-white focus:outline-none transition-colors ${
+                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-base lg:text-base bg-white focus:outline-none transition-colors ${
                   errors.nome ? 'border-red-500 focus:border-red-600' : 'border-gray-200 focus:border-[#bf953f]'
                 }`}
                 required
@@ -224,7 +224,7 @@ export default function Hero() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Seu melhor e-mail"
-                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-sm lg:text-base bg-white focus:outline-none transition-colors ${
+                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-base lg:text-base bg-white focus:outline-none transition-colors ${
                   errors.email ? 'border-red-500 focus:border-red-600' : 'border-gray-200 focus:border-[#bf953f]'
                 }`}
                 required
@@ -250,7 +250,7 @@ export default function Hero() {
                 value={formData.telefone}
                 onChange={handleChange}
                 placeholder="Ex: (21) 98888-7777"
-                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-sm lg:text-base bg-white focus:outline-none transition-colors ${
+                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-base lg:text-base bg-white focus:outline-none transition-colors ${
                   errors.telefone ? 'border-red-500 focus:border-red-600' : 'border-gray-200 focus:border-[#bf953f]'
                 }`}
                 maxLength={15}
@@ -275,7 +275,7 @@ export default function Hero() {
                 name="perfil"
                 value={formData.perfil}
                 onChange={handleChange}
-                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-sm lg:text-base bg-white focus:outline-none transition-colors ${
+                className={`w-full p-3 lg:p-4 rounded-xl border-2 text-base lg:text-base bg-white focus:outline-none transition-colors ${
                   errors.perfil ? 'border-red-500 focus:border-red-600' : 'border-gray-200 focus:border-[#bf953f]'
                 }`}
                 required

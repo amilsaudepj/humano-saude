@@ -38,8 +38,8 @@ export default function Header() {
   return (
     <>
       {/* ✅ Banner Dourado Fixo */}
-      <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-[#bf953f] via-[#aa771c] to-[#bf953f] border-b border-white/10 overflow-hidden">
-        <div className="animate-marquee whitespace-nowrap py-2.5">
+      <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-[#bf953f] via-[#aa771c] to-[#bf953f] border-b border-white/10 overflow-clip">
+        <div className="animate-marquee whitespace-nowrap py-2.5 w-max">
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
             ✦ HUMANO SAÚDE: ANALISAR, ASSESSORAR E ACOMPANHAR
           </span>
@@ -110,10 +110,10 @@ export default function Header() {
             {/* Hamburger Mobile */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden text-white p-2"
+              className="lg:hidden text-white p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Abrir menu"
             >
-              <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
               </svg>
             </button>

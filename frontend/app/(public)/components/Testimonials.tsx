@@ -28,8 +28,8 @@ export default function Testimonials() {
   ];
 
   return (
-    <section id="depoimentos" className="py-32 bg-gray-100">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="depoimentos" className="py-20 sm:py-32 bg-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-20">
           <div className="inline-block px-6 py-2 rounded-full border border-gray-300 text-xs tracking-widest text-gray-600 font-bold mb-6 uppercase">
             Relatos Reais

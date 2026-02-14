@@ -716,7 +716,7 @@ export default function CadastroCorretorPage() {
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
                       placeholder={tipoPessoa === 'pf' ? 'Seu nome completo' : 'Nome do responsável legal'}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                     />
                   </div>
                 </div>
@@ -731,7 +731,7 @@ export default function CadastroCorretorPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seunome@email.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                     />
                   </div>
                 </div>
@@ -747,7 +747,7 @@ export default function CadastroCorretorPage() {
                         value={telefone}
                         onChange={(e) => setTelefone(formatPhone(e.target.value))}
                         placeholder="(21) 99999-9999"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                       />
                     </div>
                   </div>
@@ -763,7 +763,7 @@ export default function CadastroCorretorPage() {
                         onChange={(e) => handleDocChange(e.target.value)}
                         placeholder={tipoPessoa === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'}
                         className={cn(
-                          'w-full bg-white/5 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none transition-colors border',
+                          'w-full bg-white/5 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none transition-colors border',
                           docError
                             ? 'border-red-500/40 focus:border-red-500/60'
                             : 'border-white/10 focus:border-[#D4AF37]/40',
@@ -802,7 +802,7 @@ export default function CadastroCorretorPage() {
                           value={razaoSocial}
                           onChange={(e) => setRazaoSocial(e.target.value)}
                           placeholder="Razão social da empresa"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                         />
                       </div>
                     </div>
@@ -815,7 +815,7 @@ export default function CadastroCorretorPage() {
                           value={nomeFantasia}
                           onChange={(e) => setNomeFantasia(e.target.value)}
                           placeholder="Nome fantasia"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                         />
                       </div>
                     </div>
@@ -848,7 +848,7 @@ export default function CadastroCorretorPage() {
                         value={registroSusep}
                         onChange={(e) => setRegistroSusep(e.target.value)}
                         placeholder="Opcional"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                       />
                     </div>
                   </div>
@@ -863,7 +863,7 @@ export default function CadastroCorretorPage() {
                         value={experienciaAnos}
                         onChange={(e) => setExperienciaAnos(e.target.value)}
                         placeholder="0"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                       />
                     </div>
                   </div>
@@ -1049,7 +1049,7 @@ export default function CadastroCorretorPage() {
                     onChange={(e) => setMensagem(e.target.value)}
                     placeholder="Conte mais sobre sua experiência, expectativas ou dúvidas..."
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors resize-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 sm:py-3.5 md:py-4 text-base md:text-lg text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors resize-none"
                   />
                 </div>
 

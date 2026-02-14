@@ -41,7 +41,7 @@ export default function ObrigadoPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black flex items-center justify-center px-4 sm:px-6">
       <div className="max-w-2xl w-full text-center">
         {/* Success Icon */}
         <div className="mb-8 flex justify-center">
@@ -66,17 +66,17 @@ export default function ObrigadoPage() {
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl md:text-6xl font-black text-white mb-6 font-cinzel">
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-6 font-cinzel">
           Solicitação Recebida!
         </h1>
 
         {/* Subtitle */}
-        <p className="text-xl md:text-2xl text-gray-400 mb-4 font-light">
+        <p className="text-lg sm:text-xl md:text-2xl text-gray-400 mb-4 font-light">
           Sua cotação personalizada está sendo processada
         </p>
 
         {/* Main Message */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 mb-8">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-5 sm:p-8 mb-8">
           <div className="flex items-start gap-4 mb-6">
             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#bf953f] to-[#aa771c] flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">

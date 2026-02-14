@@ -172,6 +172,30 @@
     position: relative;
     overflow-x: hidden;
   }
+
+  /* Previne double-tap zoom em elementos interativos */
+  a, button, [role="button"], input, select, textarea, summary {
+    touch-action: manipulation;
+  }
+
+  /* Garante scroll suave ao focar inputs com header fixo */
+  *:target {
+    scroll-margin-top: 120px;
+  }
+
+  input, select, textarea {
+    scroll-margin-top: 120px;
+    scroll-margin-bottom: 80px;
+  }
+
+  /* ═══ iOS Safari zoom prevention ═══
+     iOS Safari auto-zooms when focusing inputs with font-size < 16px.
+     Force 16px on mobile, restore smaller sizes on md+ breakpoints. */
+  @media screen and (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
   
   /* Black Piano com Mesh Gradient de Seda Dourada */
   body::before {

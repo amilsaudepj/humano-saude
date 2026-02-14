@@ -87,7 +87,7 @@ export default function CorretorLoginPage() {
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 backdrop-blur-xl">
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">E-mail Corporativo</label>
+              <label className="text-xs sm:text-sm text-white/50 mb-1.5 block">E-mail Corporativo</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <input
@@ -95,14 +95,14 @@ export default function CorretorLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seunome@humanosaude.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-base text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                   autoComplete="email"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Senha</label>
+              <label className="text-xs sm:text-sm text-white/50 mb-1.5 block">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <input
@@ -110,13 +110,13 @@ export default function CorretorLoginPage() {
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-base text-white placeholder:text-white/25 outline-none focus:border-[#D4AF37]/40 transition-colors"
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/30 hover:text-white/60 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -157,7 +157,7 @@ export default function CorretorLoginPage() {
           <div className="mt-4 text-center">
             <a
               href="#"
-              className="text-xs text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors"
+              className="text-xs sm:text-sm text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors py-2 inline-block"
             >
               Esqueceu a senha?
             </a>

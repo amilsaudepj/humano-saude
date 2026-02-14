@@ -42,8 +42,8 @@ export default function WhatsAppFloat() {
     >
       {/* Message Bubble */}
       <div className="absolute bottom-20 right-0 mb-2 animate-bounce">
-        <div className="bg-white px-6 py-3 rounded-2xl shadow-2xl border border-gray-200 whitespace-nowrap">
-          <p className="text-sm font-bold text-gray-900">
+        <div className="bg-white px-4 sm:px-6 py-3 rounded-2xl shadow-2xl border border-gray-200 max-w-[calc(100vw-6rem)]">
+          <p className="text-sm font-bold text-gray-900 truncate">
             {messages[messageIndex]}
           </p>
         </div>
