@@ -15,7 +15,7 @@ import {
   Search, Globe, Briefcase, CalendarClock, UserCheck, Signal,
   Gift, Download, ChevronDown, ChevronUp, CircleCheck, CircleX,
   Play, Pause, RotateCcw, Tag, Layers, Inbox, Workflow,
-  MapPin, Hash, Megaphone as MegaphoneIcon,
+  MapPin, Hash, Loader2, Megaphone as MegaphoneIcon,
 } from 'lucide-react';
 
 // Official WhatsApp SVG icon
@@ -26,6 +26,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 import { toast } from 'sonner';
 import { useCorretorId } from '../../../hooks/useCorretorToken';
+import ClientScannerQuickPanel from '@/app/components/ClientScannerQuickPanel';
 import type {
   CrmCardFullDetail, CrmInteracaoTipo, KanbanColumnSlug, CrmInteracao,
   CrmTask, CrmTaskStatus, CrmTaskPriority,
@@ -40,15 +41,23 @@ import {
 // CONSTANTS
 // ========================================
 
+const CRM_THEME = {
+  gold: '#D4AF37',
+  blue: '#3B82F6',
+  green: '#10B981',
+  red: '#EF4444',
+  gray: '#6B7280',
+} as const;
+
 const STAGE_CONFIG: Record<KanbanColumnSlug, {
   label: string; color: string; bg: string; step: number;
 }> = {
-  novo_lead:         { label: 'Novo Lead',         color: '#3B82F6', bg: 'rgba(59,130,246,0.12)',  step: 1 },
-  qualificado:       { label: 'Qualificado',       color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)', step: 2 },
-  proposta_enviada:  { label: 'Proposta Enviada',   color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', step: 3 },
-  documentacao:      { label: 'Documentação',       color: '#06B6D4', bg: 'rgba(6,182,212,0.12)',  step: 4 },
-  fechado:           { label: 'Fechado',            color: '#10B981', bg: 'rgba(16,185,129,0.12)', step: 5 },
-  perdido:           { label: 'Perdido',            color: '#EF4444', bg: 'rgba(239,68,68,0.12)',  step: 6 },
+  novo_lead:         { label: 'Novo Lead',         color: CRM_THEME.blue,  bg: 'rgba(59,130,246,0.12)',  step: 1 },
+  qualificado:       { label: 'Qualificado',       color: CRM_THEME.gold,  bg: 'rgba(212,175,55,0.12)',  step: 2 },
+  proposta_enviada:  { label: 'Proposta Enviada',  color: CRM_THEME.gold,  bg: 'rgba(212,175,55,0.12)',  step: 3 },
+  documentacao:      { label: 'Documentação',      color: CRM_THEME.gold,  bg: 'rgba(212,175,55,0.12)',  step: 4 },
+  fechado:           { label: 'Fechado',           color: CRM_THEME.green, bg: 'rgba(16,185,129,0.12)', step: 5 },
+  perdido:           { label: 'Perdido',           color: CRM_THEME.red,   bg: 'rgba(239,68,68,0.12)',  step: 6 },
 };
 
 const STAGE_ORDER: KanbanColumnSlug[] = [
@@ -70,30 +79,41 @@ const StageIcon = ({ slug, className, style }: { slug: KanbanColumnSlug; classNa
 
 type InteracaoConf = { label: string; Icon: typeof Activity; color: string };
 const INTERACAO_CFG: Record<string, InteracaoConf> = {
-  nota:              { label: 'Nota',             Icon: PenLine,       color: '#6B7280' },
-  ligacao:           { label: 'Ligação',          Icon: Phone,         color: '#3B82F6' },
-  whatsapp:          { label: 'WhatsApp',         Icon: MessageCircle, color: '#25D366' },
-  email:             { label: 'Email',            Icon: Mail,          color: '#F59E0B' },
-  reuniao:           { label: 'Reunião',          Icon: HandshakeIcon, color: '#8B5CF6' },
-  proposta_enviada:  { label: 'Proposta',         Icon: Send,          color: '#D4AF37' },
-  proposta_aceita:   { label: 'Aceita',           Icon: CircleCheck,   color: '#10B981' },
-  proposta_recusada: { label: 'Recusada',         Icon: CircleX,       color: '#EF4444' },
-  documento_recebido:{ label: 'Doc. Recebido',    Icon: Download,      color: '#06B6D4' },
-  status_change:     { label: 'Status',           Icon: Workflow,      color: '#8B5CF6' },
-  nota_voz:          { label: 'Áudio',            Icon: Mic,           color: '#EC4899' },
-  sistema:           { label: 'Sistema',          Icon: Gauge,         color: '#6B7280' },
-  tarefa:            { label: 'Tarefa',           Icon: ListChecks,    color: '#F97316' },
-  follow_up:         { label: 'Follow-up',        Icon: BellRing,      color: '#D4AF37' },
-  documento_enviado: { label: 'Doc. Enviado',     Icon: Upload,        color: '#14B8A6' },
-  visita:            { label: 'Visita',           Icon: Globe,         color: '#7C3AED' },
+  nota:              { label: 'Nota',             Icon: PenLine,       color: CRM_THEME.gray },
+  ligacao:           { label: 'Ligação',          Icon: Phone,         color: CRM_THEME.blue },
+  whatsapp:          { label: 'WhatsApp',         Icon: MessageCircle, color: CRM_THEME.green },
+  email:             { label: 'Email',            Icon: Mail,          color: CRM_THEME.blue },
+  reuniao:           { label: 'Reunião',          Icon: HandshakeIcon, color: CRM_THEME.gold },
+  proposta_enviada:  { label: 'Proposta',         Icon: Send,          color: CRM_THEME.gold },
+  proposta_aceita:   { label: 'Aceita',           Icon: CircleCheck,   color: CRM_THEME.green },
+  proposta_recusada: { label: 'Recusada',         Icon: CircleX,       color: CRM_THEME.red },
+  documento_recebido:{ label: 'Doc. Recebido',    Icon: Download,      color: CRM_THEME.green },
+  status_change:     { label: 'Status',           Icon: Workflow,      color: CRM_THEME.blue },
+  nota_voz:          { label: 'Áudio',            Icon: Mic,           color: CRM_THEME.gray },
+  sistema:           { label: 'Sistema',          Icon: Gauge,         color: CRM_THEME.gray },
+  tarefa:            { label: 'Tarefa',           Icon: ListChecks,    color: CRM_THEME.gold },
+  follow_up:         { label: 'Follow-up',        Icon: BellRing,      color: CRM_THEME.gold },
+  documento_enviado: { label: 'Doc. Enviado',     Icon: Upload,        color: CRM_THEME.gold },
+  visita:            { label: 'Visita',           Icon: Globe,         color: CRM_THEME.blue },
 };
 
 const PRIORITY_CFG: Record<string, { label: string; color: string; dot: string }> = {
   baixa:   { label: 'Baixa',   color: 'text-emerald-400', dot: 'bg-emerald-400' },
-  media:   { label: 'Média',   color: 'text-amber-400',   dot: 'bg-amber-400'   },
-  alta:    { label: 'Alta',    color: 'text-orange-400',  dot: 'bg-orange-400'  },
+  media:   { label: 'Média',   color: 'text-[#D4AF37]',   dot: 'bg-[#D4AF37]'   },
+  alta:    { label: 'Alta',    color: 'text-[#D4AF37]',   dot: 'bg-[#D4AF37]'   },
   urgente: { label: 'Urgente', color: 'text-red-400',     dot: 'bg-red-400'     },
 };
+
+type PlaybookAction =
+  | 'whatsapp'
+  | 'call'
+  | 'urgent'
+  | 'proposta'
+  | 'case'
+  | 'follow_up'
+  | 'reuniao'
+  | 'docs'
+  | 'schedule';
 
 // ========================================
 // CONFETTI
@@ -105,7 +125,7 @@ function ConfettiExplosion() {
     x: Math.random() * 100 - 50,
     y: -(Math.random() * 300 + 200),
     rotate: Math.random() * 720,
-    color: ['#D4AF37', '#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6'][i % 6],
+    color: [CRM_THEME.gold, CRM_THEME.green, CRM_THEME.blue, '#F6E05E'][i % 4],
     delay: Math.random() * 0.3,
     size: Math.random() * 8 + 4,
   })), []);
@@ -555,19 +575,19 @@ function CommentsPanel({ comments: serverComments, cardId, corretorId, onRefresh
 // ========================================
 
 const ORIGEM_OPTIONS = [
-  { value: 'corretor_crm',  label: 'CRM Manual',     icon: User,          color: '#F59E0B' },
-  { value: 'indicacao',     label: 'Indicação',      icon: Gift,          color: '#D4AF37' },
-  { value: 'whatsapp',      label: 'WhatsApp',       icon: MessageCircle, color: '#25D366' },
-  { value: 'meta_ads',      label: 'Meta Ads',       icon: MegaphoneIcon, color: '#3B82F6' },
-  { value: 'facebook',      label: 'Facebook',       icon: Globe,         color: '#1877F2' },
-  { value: 'instagram',     label: 'Instagram',      icon: Globe,         color: '#E4405F' },
-  { value: 'google_ads',    label: 'Google Ads',     icon: Search,        color: '#34A853' },
-  { value: 'landing_page',  label: 'Landing Page',   icon: Globe,         color: '#06B6D4' },
-  { value: 'scanner_pdf',   label: 'Scanner PDF',    icon: FileText,      color: '#8B5CF6' },
-  { value: 'site',          label: 'Website',        icon: Globe,         color: '#3B82F6' },
-  { value: 'telefone',      label: 'Telefone',       icon: Phone,         color: '#6366F1' },
-  { value: 'manual',        label: 'Manual',         icon: PenLine,       color: '#6B7280' },
-  { value: 'outro',         label: 'Outro',          icon: Globe,         color: '#6B7280' },
+  { value: 'corretor_crm',  label: 'CRM Manual',     icon: User,          color: CRM_THEME.gold },
+  { value: 'indicacao',     label: 'Indicação',      icon: Gift,          color: CRM_THEME.gold },
+  { value: 'whatsapp',      label: 'WhatsApp',       icon: MessageCircle, color: CRM_THEME.green },
+  { value: 'meta_ads',      label: 'Meta Ads',       icon: MegaphoneIcon, color: CRM_THEME.blue },
+  { value: 'facebook',      label: 'Facebook',       icon: Globe,         color: CRM_THEME.blue },
+  { value: 'instagram',     label: 'Instagram',      icon: Globe,         color: CRM_THEME.blue },
+  { value: 'google_ads',    label: 'Google Ads',     icon: Search,        color: CRM_THEME.blue },
+  { value: 'landing_page',  label: 'Landing Page',   icon: Globe,         color: CRM_THEME.blue },
+  { value: 'scanner_pdf',   label: 'Scanner PDF',    icon: FileText,      color: CRM_THEME.gold },
+  { value: 'site',          label: 'Website',        icon: Globe,         color: CRM_THEME.blue },
+  { value: 'telefone',      label: 'Telefone',       icon: Phone,         color: CRM_THEME.blue },
+  { value: 'manual',        label: 'Manual',         icon: PenLine,       color: CRM_THEME.gray },
+  { value: 'outro',         label: 'Outro',          icon: Globe,         color: CRM_THEME.gray },
 ] as const;
 
 function OrigemCard({ detail, cardId, corretorId, onRefresh }: {
@@ -579,7 +599,7 @@ function OrigemCard({ detail, cardId, corretorId, onRefresh }: {
   const origemRaw = detail.lead?.origem ?? (detail.metadata as Record<string, unknown>)?.origem as string ?? null;
   const origemOpt = ORIGEM_OPTIONS.find(o => o.value === origemRaw);
   const OrigemIcon = origemOpt?.icon ?? Globe;
-  const origemColor = origemOpt?.color ?? '#6B7280';
+  const origemColor = origemOpt?.color ?? CRM_THEME.gray;
   const origemLabel = origemOpt?.label ?? origemRaw ?? 'Não definida';
 
   const meta = (detail.metadata as Record<string, unknown>) ?? {};
@@ -720,37 +740,45 @@ function OrigemCard({ detail, cardId, corretorId, onRefresh }: {
 // AI COPILOT SIDEBAR
 // ========================================
 
-function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
+function AICopilot({
+  detail,
+  onPlaybookAction,
+  playbookBusyAction,
+}: {
+  detail: CrmCardFullDetail;
+  onPlaybookAction: (action: PlaybookAction, title: string) => Promise<void> | void;
+  playbookBusyAction: PlaybookAction | null;
+}) {
   const slug = detail.coluna_slug;
   const hrs = detail.hours_since_update;
   const score = detail.score;
 
   // Playbook suggestions based on stage
   const playbook = useMemo(() => {
-    const plays: Array<{ icon: typeof Lightbulb; title: string; desc: string; action: string; color: string }> = [];
+    const plays: Array<{ icon: typeof Lightbulb; title: string; desc: string; action: PlaybookAction; color: string }> = [];
 
     if (slug === 'novo_lead') {
       plays.push(
-        { icon: MessageCircle, title: 'Primeiro contato via WhatsApp', desc: 'Envie mensagem de apresentação personalizada', action: 'whatsapp', color: '#25D366' },
-        { icon: Phone, title: 'Ligação de qualificação', desc: 'Descubra necessidades e orçamento do lead', action: 'call', color: '#3B82F6' },
+        { icon: MessageCircle, title: 'Primeiro contato via WhatsApp', desc: 'Envie mensagem de apresentação personalizada', action: 'whatsapp', color: CRM_THEME.green },
+        { icon: Phone, title: 'Ligação de qualificação', desc: 'Descubra necessidades e orçamento do lead', action: 'call', color: CRM_THEME.blue },
       );
       if (hrs > 4) plays.push(
-        { icon: AlertCircle, title: '⚡ Lead esfriando!', desc: 'Sem contato há +4h. Leads novos perdem 80% do interesse após 5 min.', action: 'urgent', color: '#EF4444' },
+        { icon: AlertCircle, title: '⚡ Lead esfriando!', desc: 'Sem contato há +4h. Leads novos perdem 80% do interesse após 5 min.', action: 'urgent', color: CRM_THEME.red },
       );
     } else if (slug === 'qualificado') {
       plays.push(
-        { icon: Send, title: 'Enviar proposta comercial', desc: 'Lead qualificado — próximo passo é apresentar valores', action: 'proposta', color: '#D4AF37' },
-        { icon: FileText, title: 'Enviar caso de sucesso', desc: 'Aumente confiança com case relevante do segmento', action: 'case', color: '#8B5CF6' },
+        { icon: Send, title: 'Enviar proposta comercial', desc: 'Lead qualificado — próximo passo é apresentar valores', action: 'proposta', color: CRM_THEME.gold },
+        { icon: FileText, title: 'Enviar caso de sucesso', desc: 'Aumente confiança com case relevante do segmento', action: 'case', color: CRM_THEME.gold },
       );
     } else if (slug === 'proposta_enviada') {
       plays.push(
-        { icon: BellRing, title: 'Follow-up estratégico', desc: hrs > 24 ? 'Sem resposta há +24h — envie follow-up' : 'Aguarde 24h antes do follow-up', action: 'follow_up', color: '#D4AF37' },
-        { icon: HandshakeIcon, title: 'Agendar reunião de fechamento', desc: 'Tire dúvidas e negocie condições', action: 'reuniao', color: '#8B5CF6' },
+        { icon: BellRing, title: 'Follow-up estratégico', desc: hrs > 24 ? 'Sem resposta há +24h — envie follow-up' : 'Aguarde 24h antes do follow-up', action: 'follow_up', color: CRM_THEME.gold },
+        { icon: HandshakeIcon, title: 'Agendar reunião de fechamento', desc: 'Tire dúvidas e negocie condições', action: 'reuniao', color: CRM_THEME.gold },
       );
     } else if (slug === 'documentacao') {
       plays.push(
-        { icon: FileText, title: 'Solicitar documentos pendentes', desc: 'Envie checklist de documentos necessários', action: 'docs', color: '#06B6D4' },
-        { icon: CalendarClock, title: 'Agendar acompanhamento', desc: 'Defina prazo para recebimento dos documentos', action: 'schedule', color: '#F59E0B' },
+        { icon: FileText, title: 'Solicitar documentos pendentes', desc: 'Envie checklist de documentos necessários', action: 'docs', color: CRM_THEME.gold },
+        { icon: CalendarClock, title: 'Agendar acompanhamento', desc: 'Defina prazo para recebimento dos documentos', action: 'schedule', color: CRM_THEME.gold },
       );
     }
 
@@ -768,9 +796,9 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
     const total = interacoes.length || 1;
 
     const ratio = (positives - negatives) / total;
-    if (ratio > 0.2) return { label: 'Positivo', color: '#10B981', icon: TrendingUp, desc: 'Lead demonstrando interesse ativo' };
-    if (ratio < -0.1) return { label: 'Risco', color: '#EF4444', icon: AlertCircle, desc: 'Sinais de desinteresse detectados' };
-    return { label: 'Neutro', color: '#F59E0B', icon: Signal, desc: 'Precisa de mais engajamento' };
+    if (ratio > 0.2) return { label: 'Positivo', color: CRM_THEME.green, icon: TrendingUp, desc: 'Lead demonstrando interesse ativo' };
+    if (ratio < -0.1) return { label: 'Risco', color: CRM_THEME.red, icon: AlertCircle, desc: 'Sinais de desinteresse detectados' };
+    return { label: 'Neutro', color: CRM_THEME.gold, icon: Signal, desc: 'Precisa de mais engajamento' };
   }, [detail.interacoes]);
 
   // Win probability
@@ -789,10 +817,10 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
   return (
     <div className="space-y-4">
       {/* AI Copilot Header */}
-      <div className="bg-gradient-to-r from-[#D4AF37]/10 to-purple-500/10 border border-[#D4AF37]/25 rounded-2xl p-4 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#D4AF37]/12 to-[#D4AF37]/4 border border-[#D4AF37]/25 rounded-2xl p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 to-transparent" />
         <div className="relative flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37]/30 to-purple-500/20 flex items-center justify-center ring-2 ring-[#D4AF37]/20">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37]/30 to-white/10 flex items-center justify-center ring-2 ring-[#D4AF37]/20">
             <Brain className="w-5 h-5 text-[#D4AF37]" />
           </div>
           <div>
@@ -816,7 +844,7 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
           <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
             <circle cx="50" cy="50" r="42" fill="none"
-              stroke={winProb >= 60 ? '#10B981' : winProb >= 30 ? '#F59E0B' : '#EF4444'}
+              stroke={winProb >= 60 ? CRM_THEME.green : winProb >= 30 ? CRM_THEME.gold : CRM_THEME.red}
               strokeWidth="6" strokeDasharray={`${winProb * 2.64} 264`} strokeLinecap="round" />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -852,7 +880,13 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
         </h3>
         <div className="space-y-3">
           {playbook.map((play, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.06] transition-colors cursor-pointer">
+            <button
+              key={i}
+              type="button"
+              onClick={() => onPlaybookAction(play.action, play.title)}
+              disabled={playbookBusyAction === play.action}
+              className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.06] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: `${play.color}15` }}>
                 <play.icon className="w-4 h-4" style={{ color: play.color }} />
@@ -861,8 +895,12 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
                 <p className="text-xs font-semibold text-white/80">{play.title}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">{play.desc}</p>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-0.5" />
-            </div>
+              {playbookBusyAction === play.action ? (
+                <Loader2 className="w-3.5 h-3.5 text-white/40 flex-shrink-0 mt-0.5 animate-spin" />
+              ) : (
+                <ArrowUpRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-0.5" />
+              )}
+            </button>
           ))}
         </div>
       </div>
@@ -875,10 +913,10 @@ function AICopilot({ detail }: { detail: CrmCardFullDetail }) {
         </h3>
         <div className="space-y-2">
           {[
-            { day: 'Dia 1', channel: 'WhatsApp', text: 'Apresentação', icon: MessageCircle, color: '#25D366' },
-            { day: 'Dia 3', channel: 'Email', text: 'Envio de proposta', icon: Mail, color: '#F59E0B' },
-            { day: 'Dia 5', channel: 'Ligação', text: 'Follow-up', icon: Phone, color: '#3B82F6' },
-            { day: 'Dia 8', channel: 'WhatsApp', text: 'Checagem final', icon: MessageCircle, color: '#25D366' },
+            { day: 'Dia 1', channel: 'WhatsApp', text: 'Apresentação', icon: MessageCircle, color: CRM_THEME.green },
+            { day: 'Dia 3', channel: 'Email', text: 'Envio de proposta', icon: Mail, color: CRM_THEME.gold },
+            { day: 'Dia 5', channel: 'Ligação', text: 'Follow-up', icon: Phone, color: CRM_THEME.blue },
+            { day: 'Dia 8', channel: 'WhatsApp', text: 'Checagem final', icon: MessageCircle, color: CRM_THEME.gold },
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className="w-12 text-[10px] text-white/30 text-right">{step.day}</div>
@@ -924,6 +962,7 @@ export default function LeadDetailPage() {
   const [celebrationData, setCelebrationData] = useState<{ vendasMes: number; valorMes: number; valorVenda: number } | null>(null);
   const [markingSale, setMarkingSale] = useState(false);
   const [slaTime, setSlaTime] = useState('');
+  const [playbookBusyAction, setPlaybookBusyAction] = useState<PlaybookAction | null>(null);
 
   // ── Fetch ──
   const fetchDetail = useCallback(async () => {
@@ -1001,17 +1040,211 @@ export default function LeadDetailPage() {
     toast.success('WhatsApp aberto'); fetchDetail();
   };
 
+  const registerPlaybookInteraction = useCallback(async (
+    tipo: CrmInteracaoTipo,
+    titulo: string,
+    descricao: string,
+    metadata: Record<string, unknown>,
+  ) => {
+    if (!detail || !corretorId) return;
+    await addCardInteracao({
+      card_id: cardId,
+      corretor_id: corretorId,
+      lead_id: detail.lead_id,
+      tipo,
+      titulo,
+      descricao,
+      anexo_url: null,
+      anexo_tipo: null,
+      status_anterior: null,
+      status_novo: null,
+      metadata,
+    });
+  }, [cardId, corretorId, detail]);
+
+  const handlePlaybookAction = useCallback(async (action: PlaybookAction, title: string) => {
+    if (!detail || !corretorId) {
+      toast.error('Sessão de corretor não encontrada.');
+      return;
+    }
+
+    const phone = detail.lead?.whatsapp?.replace(/\D/g, '') ?? '';
+    const email = detail.lead?.email ?? '';
+    const leadFirstName = detail.lead?.nome?.trim().split(/\s+/)[0] ?? 'cliente';
+
+    const runWhatsAppAction = async (
+      message: string,
+      interactionType: CrmInteracaoTipo = 'whatsapp',
+      interactionTitle = title,
+    ) => {
+      if (!phone) {
+        try {
+          await navigator.clipboard.writeText(message);
+        } catch {
+          // Em ambientes sem permissão de clipboard, ao menos registramos a ação.
+        }
+        await registerPlaybookInteraction(
+          interactionType,
+          `${interactionTitle} (copiado)`,
+          message,
+          { source: 'ai_playbook', action, fallback: 'clipboard' },
+        );
+        toast.info('Lead sem WhatsApp. Mensagem copiada para área de transferência.');
+        return;
+      }
+
+      await trackWhatsAppAction(cardId, corretorId, message);
+      if (interactionType !== 'whatsapp') {
+        await registerPlaybookInteraction(
+          interactionType,
+          interactionTitle,
+          message,
+          { source: 'ai_playbook', action },
+        );
+      }
+
+      window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank');
+      toast.success('Ação do playbook executada no WhatsApp.');
+    };
+
+    const runEmailAction = async (subject: string, body: string) => {
+      if (!email) return false;
+      const trackRes = await trackEmailAction(cardId, corretorId, email, subject, body);
+      if (!trackRes.success) {
+        toast.error(trackRes.error ?? 'Erro ao rastrear email');
+        return false;
+      }
+      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+      toast.success('Email preparado para envio.');
+      return true;
+    };
+
+    const runCallAction = async () => {
+      if (!phone) {
+        toast.error('Lead sem telefone para ligação.');
+        return;
+      }
+      await registerPlaybookInteraction(
+        'ligacao',
+        title,
+        'Ligação iniciada via playbook de vendas',
+        { source: 'ai_playbook', action },
+      );
+      window.open(`tel:+55${phone}`, '_self');
+      toast.success('Abrindo discador.');
+    };
+
+    try {
+      setPlaybookBusyAction(action);
+
+      if (action === 'whatsapp') {
+        await runWhatsAppAction(
+          `Olá, ${leadFirstName}! Aqui é da Humano Saúde. Posso te enviar uma análise rápida para reduzir seu custo com plano de saúde?`,
+        );
+        return;
+      }
+
+      if (action === 'call') {
+        await runCallAction();
+        return;
+      }
+
+      if (action === 'urgent') {
+        await runWhatsAppAction(
+          `Oi, ${leadFirstName}! Vi seu interesse e já separei opções com potencial de economia. Me confirma se posso te enviar agora?`,
+          'follow_up',
+          title,
+        );
+        return;
+      }
+
+      if (action === 'proposta') {
+        const proposalSubject = `Proposta Humano Saúde para ${detail.lead?.nome ?? 'sua empresa'}`;
+        const proposalBody = `Olá, ${leadFirstName}!\n\nConforme alinhamos, segue a proposta com opções de plano e estimativa de economia.\n\nSe preferir, posso explicar os detalhes agora por WhatsApp.\n\nAtenciosamente,\nTime Humano Saúde`;
+        const emailSent = await runEmailAction(proposalSubject, proposalBody);
+        if (!emailSent) {
+          await runWhatsAppAction(
+            `Olá, ${leadFirstName}! Preparei sua proposta e posso te enviar agora pelo WhatsApp com todos os detalhes. Posso seguir?`,
+            'proposta_enviada',
+            title,
+          );
+        } else {
+          await registerPlaybookInteraction(
+            'proposta_enviada',
+            title,
+            'Proposta iniciada por email via playbook',
+            { source: 'ai_playbook', action, channel: 'email' },
+          );
+        }
+        return;
+      }
+
+      if (action === 'case') {
+        await runWhatsAppAction(
+          `Tenho um caso real de empresa com perfil parecido com o seu que reduziu custo sem perder cobertura. Quer que eu te envie o resumo agora?`,
+        );
+        return;
+      }
+
+      if (action === 'follow_up') {
+        await runWhatsAppAction(
+          `Olá, ${leadFirstName}! Passando para confirmar se conseguiu analisar a proposta. Posso te ajudar a validar os próximos passos?`,
+          'follow_up',
+          title,
+        );
+        return;
+      }
+
+      if (action === 'reuniao') {
+        await runWhatsAppAction(
+          `Podemos agendar uma conversa rápida para fechar sua proposta? Tenho horários hoje e amanhã.`,
+          'reuniao',
+          title,
+        );
+        return;
+      }
+
+      if (action === 'docs') {
+        await runWhatsAppAction(
+          `Para avançarmos, preciso dos documentos pendentes: contrato social/cartão CNPJ e IDs dos sócios/beneficiários. Posso te mandar o checklist completo?`,
+          'documento_enviado',
+          title,
+        );
+        return;
+      }
+
+      if (action === 'schedule') {
+        await registerPlaybookInteraction(
+          'tarefa',
+          title,
+          'Acompanhamento de documentação agendado via playbook',
+          { source: 'ai_playbook', action, due_hint: '24h' },
+        );
+        await runWhatsAppAction(
+          `Perfeito, ${leadFirstName}. Vou acompanhar sua documentação e te retorno em até 24h para concluirmos o envio da proposta.`,
+          'follow_up',
+          title,
+        );
+      }
+    } catch {
+      toast.error('Não foi possível executar esta ação do playbook.');
+    } finally {
+      setPlaybookBusyAction(null);
+      fetchDetail();
+    }
+  }, [cardId, corretorId, detail, fetchDetail, registerPlaybookInteraction]);
+
   // ── Computed ──
   const leadTemp = useMemo(() => {
-    if (!detail) return { label: '—', color: '#6B7280', icon: Signal };
+    if (!detail) return { label: '—', color: CRM_THEME.gray, icon: Signal };
     const s = detail.score ?? 0;
     const h = detail.hours_since_update;
-    if (detail.coluna_slug === 'fechado') return { label: 'Convertido', color: '#10B981', icon: Crown };
-    if (detail.coluna_slug === 'perdido') return { label: 'Perdido', color: '#EF4444', icon: CircleX };
-    if (s >= 80 || detail.is_hot) return { label: 'Quente', color: '#EF4444', icon: Flame };
-    if (s >= 50 && h < 48) return { label: 'Morno', color: '#F59E0B', icon: ThermometerSun };
-    if (s >= 30) return { label: 'Frio', color: '#3B82F6', icon: Signal };
-    return { label: 'Gelado', color: '#6B7280', icon: Signal };
+    if (detail.coluna_slug === 'fechado') return { label: 'Convertido', color: CRM_THEME.green, icon: Crown };
+    if (detail.coluna_slug === 'perdido') return { label: 'Perdido', color: CRM_THEME.red, icon: CircleX };
+    if (s >= 80 || detail.is_hot) return { label: 'Quente', color: CRM_THEME.red, icon: Flame };
+    if (s >= 50 && h < 48) return { label: 'Morno', color: CRM_THEME.gold, icon: ThermometerSun };
+    if (s >= 30) return { label: 'Frio', color: CRM_THEME.blue, icon: Signal };
+    return { label: 'Gelado', color: CRM_THEME.gray, icon: Signal };
   }, [detail]);
 
   const stageProgress = useMemo(() => {
@@ -1119,7 +1352,7 @@ export default function LeadDetailPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {detail.lead?.whatsapp && (
               <button onClick={handleWhatsApp}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/20 rounded-xl text-[#25D366] text-sm font-medium transition-all hover:shadow-lg hover:shadow-[#25D366]/10">
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/20 rounded-xl text-[#10B981] text-sm font-medium transition-all hover:shadow-lg hover:shadow-[#10B981]/10">
                 <WhatsAppIcon className="w-4 h-4" /> WhatsApp
               </button>
             )}
@@ -1204,12 +1437,12 @@ export default function LeadDetailPage() {
                 <User className="w-4 h-4 text-[#D4AF37]" /> Informações
               </h3>
               {[
-                { val: detail.lead?.nome, label: 'Nome', icon: User, color: '#D4AF37' },
-                { val: detail.lead?.whatsapp, label: 'WhatsApp', icon: Phone, color: '#25D366' },
-                { val: detail.lead?.email, label: 'Email', icon: Mail, color: '#F59E0B' },
-                { val: detail.lead?.operadora_atual, label: 'Operadora', icon: Building2, color: '#8B5CF6' },
-                { val: detail.lead?.valor_atual ? `R$ ${Number(detail.lead.valor_atual).toLocaleString('pt-BR')}` : null, label: 'Valor Atual', icon: DollarSign, color: '#10B981' },
-                { val: detail.lead?.tipo_contratacao, label: 'Tipo Contratação', icon: Briefcase, color: '#06B6D4' },
+                { val: detail.lead?.nome, label: 'Nome', icon: User, color: CRM_THEME.gold },
+                { val: detail.lead?.whatsapp, label: 'WhatsApp', icon: Phone, color: CRM_THEME.green },
+                { val: detail.lead?.email, label: 'Email', icon: Mail, color: CRM_THEME.blue },
+                { val: detail.lead?.operadora_atual, label: 'Operadora', icon: Building2, color: CRM_THEME.gold },
+                { val: detail.lead?.valor_atual ? `R$ ${Number(detail.lead.valor_atual).toLocaleString('pt-BR')}` : null, label: 'Valor Atual', icon: DollarSign, color: CRM_THEME.green },
+                { val: detail.lead?.tipo_contratacao, label: 'Tipo Contratação', icon: Briefcase, color: CRM_THEME.blue },
               ].filter(r => r.val).map((row, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${row.color}15` }}>
@@ -1228,13 +1461,13 @@ export default function LeadDetailPage() {
 
             {/* SLA */}
             <div className={`bg-white/[0.02] border rounded-2xl p-5 ${
-              detail.hours_since_update > 48 ? 'border-red-500/30' : detail.hours_since_update > 24 ? 'border-amber-500/30' : 'border-white/[0.06]'
+              detail.hours_since_update > 48 ? 'border-red-500/30' : detail.hours_since_update > 24 ? 'border-[#D4AF37]/30' : 'border-white/[0.06]'
             }`}>
               <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2 mb-2">
                 <Timer className="w-4 h-4 text-[#D4AF37]" /> SLA
               </h3>
               <p className={`text-3xl font-bold tracking-tight ${
-                detail.hours_since_update > 48 ? 'text-red-400' : detail.hours_since_update > 24 ? 'text-amber-400' : 'text-emerald-400'
+                detail.hours_since_update > 48 ? 'text-red-400' : detail.hours_since_update > 24 ? 'text-[#D4AF37]' : 'text-emerald-400'
               }`}>{slaTime}</p>
               <p className="text-[10px] text-white/30 mt-1">
                 {detail.hours_since_update > 48 ? 'Urgente — lead esfriando!' :
@@ -1378,6 +1611,20 @@ export default function LeadDetailPage() {
 
           {/* ── RIGHT: AI Copilot + Stage ── */}
           <div className="lg:col-span-3 space-y-4">
+            {/* Scanner Inteligente no painel do cliente */}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-[#D4AF37]" /> Scanner Inteligente
+              </h3>
+              <ClientScannerQuickPanel
+                context="corretor"
+                corretorId={corretorId}
+                leadId={detail.lead_id || null}
+                leadName={detail.lead?.nome || detail.titulo}
+                compact
+              />
+            </div>
+
             {/* Current Stage */}
             <div className="rounded-2xl p-5 border" style={{ backgroundColor: stageConf.bg, borderColor: `${stageConf.color}25` }}>
               <div className="flex items-center gap-3 mb-3">
@@ -1403,7 +1650,11 @@ export default function LeadDetailPage() {
             </div>
 
             {/* AI Copilot */}
-            <AICopilot detail={detail} />
+            <AICopilot
+              detail={detail}
+              onPlaybookAction={handlePlaybookAction}
+              playbookBusyAction={playbookBusyAction}
+            />
 
             {/* Quick Stats */}
             <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5">

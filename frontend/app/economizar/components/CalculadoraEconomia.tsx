@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Shield,
   Sparkles,
+  Bot,
   Camera,
   AlertCircle,
   Building2,
@@ -35,6 +36,7 @@ import {
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import styles from './CalculadoraEconomia.module.css';
 import {
   salvarLeadIndicacao,
   marcarClicouContato,
@@ -952,16 +954,16 @@ export default function CalculadoraEconomia({
   // =============================================
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className={cn('min-h-screen bg-white text-slate-900', styles.lightTheme)}>
       {/* Header — logo + WhatsApp CTA */}
-      <header className="border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+      <header className={cn('border-b backdrop-blur-xl', styles.darkHeader)}>
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Image
             src="/images/logos/LOGO 1 SEM FUNDO.png"
             alt="Humano Saúde"
             width={160}
             height={48}
-            className="brightness-110"
+            className="brightness-100"
             priority
           />
           <a
@@ -987,13 +989,18 @@ export default function CalculadoraEconomia({
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-10"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-medium mb-4">
+          <div
+            className={cn(
+              'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-4',
+              styles.heroAutoTag,
+            )}
+          >
             <Sparkles className="h-3.5 w-3.5" />
             Análise automática em segundos
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-3">
             Descubra quanto você pode{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#F6E05E]">
+            <span className={styles.heroHighlight}>
               economizar
             </span>
           </h1>
@@ -1033,7 +1040,7 @@ export default function CalculadoraEconomia({
                   animate={{ x: [0, 6, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#D4AF37]/60" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#9b7316]/70" />
                 </motion.div>
               </div>
 
@@ -1041,28 +1048,28 @@ export default function CalculadoraEconomia({
               <motion.div
                 animate={{ rotateY: [0, -6, 0, 6, 0], scale: [1, 1.03, 1] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-[#D4AF37]/15 to-[#D4AF37]/5 border border-[#D4AF37]/25 shadow-xl shadow-[#D4AF37]/10 flex flex-col items-center justify-center gap-2 overflow-hidden"
+                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-[#9b7316]/15 to-[#9b7316]/5 border border-[#9b7316]/30 shadow-xl shadow-[#9b7316]/10 flex flex-col items-center justify-center gap-2 overflow-hidden"
                 style={{ transformStyle: 'preserve-3d' }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-[#D4AF37]/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#9b7316]/12 to-transparent" />
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
                   className="relative z-10"
                 >
-                  <Sparkles className="h-8 w-8 sm:h-9 sm:w-9 text-[#D4AF37]" />
+                  <Bot className="h-8 w-8 sm:h-9 sm:w-9 text-[#8a650c]" />
                 </motion.div>
-                <span className="text-[9px] sm:text-[10px] text-[#D4AF37] font-bold relative z-10">Analisando</span>
+                <span className="text-[9px] sm:text-[10px] text-[#8a650c] font-bold relative z-10">Analisando</span>
                 {/* Partículas */}
                 <motion.div
                   animate={{ opacity: [0.2, 0.6, 0.2], y: [-2, 2, -2] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full bg-[#D4AF37]/40"
+                  className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full bg-[#8a650c]/45"
                 />
                 <motion.div
                   animate={{ opacity: [0.3, 0.7, 0.3], y: [2, -2, 2] }}
                   transition={{ duration: 2.5, repeat: Infinity }}
-                  className="absolute bottom-8 left-3 h-1 w-1 rounded-full bg-[#D4AF37]/30"
+                  className="absolute bottom-8 left-3 h-1 w-1 rounded-full bg-[#8a650c]/35"
                 />
               </motion.div>
 
@@ -1072,7 +1079,7 @@ export default function CalculadoraEconomia({
                   animate={{ x: [0, 6, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                 >
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#D4AF37]/60" />
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#9b7316]/70" />
                 </motion.div>
               </div>
 
@@ -1080,23 +1087,23 @@ export default function CalculadoraEconomia({
               <motion.div
                 animate={{ rotateY: [0, 6, 0, -6, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 shadow-xl shadow-green-500/5 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
+                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-[#1d7f4a]/12 to-[#1d7f4a]/6 border border-[#1d7f4a]/30 shadow-xl shadow-[#1d7f4a]/10 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
                 style={{ transformStyle: 'preserve-3d' }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent" />
-                <TrendingDown className="h-7 w-7 sm:h-8 sm:w-8 text-green-400 relative z-10" />
-                <span className="text-[9px] sm:text-[10px] text-green-400 font-bold relative z-10">Economia</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1d7f4a]/12 to-transparent" />
+                <TrendingDown className="h-7 w-7 sm:h-8 sm:w-8 text-[#17663b] relative z-10" />
+                <span className="text-[9px] sm:text-[10px] text-[#17663b] font-bold relative z-10">Economia</span>
                 <motion.div
                   animate={{ scale: [0.95, 1.05, 0.95] }}
                   transition={{ duration: 2, repeat: Infinity }}
                   className="relative z-10"
                 >
-                  <span className="text-xs sm:text-sm font-black text-green-400">-35%</span>
+                  <span className="text-xs sm:text-sm font-black text-[#17663b]">-35%</span>
                 </motion.div>
                 {/* Mini cards de proposta */}
                 <div className="absolute bottom-2 left-2 right-2 space-y-0.5">
-                  <div className="h-[3px] bg-green-400/20 rounded-full" />
-                  <div className="h-[3px] bg-green-400/15 rounded-full w-4/5" />
+                  <div className="h-[3px] bg-[#17663b]/25 rounded-full" />
+                  <div className="h-[3px] bg-[#17663b]/18 rounded-full w-4/5" />
                 </div>
               </motion.div>
             </motion.div>
@@ -1330,10 +1337,10 @@ export default function CalculadoraEconomia({
                   </div>
 
                   {/* ─── Aviso de Segurança (abaixo do upload) ─── */}
-                  <div className="mt-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-green-500/5 border border-green-500/10">
-                    <Lock className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
+                  <div className="mt-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-[#1d7f4a]/14 border border-[#1d7f4a]/24">
+                    <Lock className="h-4 w-4 text-[#17663b] shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/40 leading-relaxed">
-                      <span className="text-green-400 font-semibold">Ambiente Seguro:</span>{' '}
+                      <span className="text-[#17663b] font-semibold">Ambiente Seguro:</span>{' '}
                       Seus documentos são processados de forma privada e criptografada.
                       Utilizamos tecnologia de ponta para garantir que apenas nossa equipe
                       técnica tenha acesso aos seus dados para fins de análise de plano de saúde.
@@ -1362,32 +1369,6 @@ export default function CalculadoraEconomia({
                 Prefiro digitar manualmente
               </button>
 
-              {/* Dados da empresa — minimalista */}
-              <div className="mt-6 pt-5 border-t border-white/[0.04] space-y-3">
-                {/* Ícones de segurança */}
-                <div className="flex items-center justify-center gap-4 flex-wrap">
-                  <span className="flex items-center gap-1.5 text-[11px] text-white/25">
-                    <Lock className="h-3 w-3 text-green-500/50" />
-                    Site seguro
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] text-white/25">
-                    <Shield className="h-3 w-3 text-blue-400/50" />
-                    LGPD
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] text-white/25">
-                    <Eye className="h-3 w-3 text-[#D4AF37]/40" />
-                    Dados protegidos
-                  </span>
-                </div>
-                <div className="text-center space-y-0.5">
-                  <p className="text-[10px] text-white/15 leading-relaxed">
-                    HDM Consultoria Imobiliária e Seguros LTDA — ME · CNPJ 50.216.907/0001-60
-                  </p>
-                  <p className="text-[10px] text-white/12">
-                    SUSEP nº 251174847
-                  </p>
-                </div>
-              </div>
             </motion.div>
           )}
 
@@ -2234,7 +2215,7 @@ export default function CalculadoraEconomia({
           className="mt-20 mb-12"
         >
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-medium mb-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#9b7316]/18 border border-[#9b7316]/35 text-[#8a650c] text-xs font-medium mb-3">
               <Heart className="h-3.5 w-3.5" />
               Depoimentos reais
             </div>
@@ -2322,7 +2303,7 @@ export default function CalculadoraEconomia({
       </main>
 
       {/* ─── FOOTER PROFISSIONAL ─── */}
-      <footer className="border-t border-white/[0.06] bg-white/[0.02]">
+      <footer className={cn('border-t', styles.darkFooter)}>
         <div className="max-w-5xl mx-auto px-4 py-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             {/* Coluna 1 — Logo & Sobre */}
@@ -2420,10 +2401,7 @@ export default function CalculadoraEconomia({
                   © {new Date().getFullYear()} Humano Saúde — Todos os direitos reservados.
                 </p>
                 <p className="text-[10px] text-white/15 mt-0.5">
-                  Valores estimados, sujeitos à análise. Registro SUSEP consultável em{' '}
-                  <a href="https://www.susep.gov.br" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/30 transition-colors">
-                    susep.gov.br
-                  </a>
+                  Valores estimados, sujeitos à análise. Registro SUSEP consultável no site oficial da SUSEP.
                 </p>
               </div>
               <div className="flex items-center gap-4 text-[11px] text-white/20">

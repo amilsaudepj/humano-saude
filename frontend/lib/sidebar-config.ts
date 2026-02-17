@@ -52,6 +52,9 @@ import {
   Briefcase,
   Building2,
   Columns3,
+  GraduationCap,
+  BookOpen,
+  Compass,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -115,7 +118,6 @@ export const sidebarItems: SidebarItem[] = [
     icon: TrendingUp,
     children: [
       { id: 'analytics-ga4', label: 'Google Analytics', icon: TrendingUp, href: `${P}/analytics`, badge: { text: 'GA4', variant: 'danger' } },
-      { id: 'analytics-dashboard-vendas', label: 'Dashboard Vendas', icon: DollarSign, href: `${P}/dashboard-vendas`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'analytics-metricas', label: 'Métricas & KPIs', icon: LineChart, href: `${P}/metricas`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'analytics-performance', label: 'Performance', icon: Award, href: `${P}/performance` },
       { id: 'analytics-relatorios', label: 'Relatórios', icon: BarChart3, href: `${P}/relatorios` },
@@ -263,6 +265,7 @@ export const sidebarItems: SidebarItem[] = [
     icon: UsersRound,
     children: [
       { id: 'gestao-clientes', label: 'Clientes', icon: Users, href: `${P}/clientes` },
+      { id: 'gestao-clientes-portal', label: 'Clientes Portal', icon: UsersRound, href: `${P}/clientes-portal`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'gestao-documentos', label: 'Documentos', icon: FileArchive, href: `${P}/documentos` },
       { id: 'gestao-tarefas', label: 'Tarefas', icon: CheckSquare, href: `${P}/tarefas`, badge: { text: '5', variant: 'warning' } },
     ],
@@ -290,6 +293,20 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'com-chat', label: 'Chat Equipe', icon: MessageSquare, href: `${P}/chat`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'com-email', label: 'E-mail', icon: Mail, href: `${P}/email` },
       { id: 'com-notificacoes', label: 'Notificações', icon: Bell, href: `${P}/notificacoes`, badge: { text: '3', variant: 'danger' } },
+    ],
+  },
+
+  // ── TREINAMENTO ──
+  {
+    id: 'treinamento',
+    label: 'Treinamento',
+    icon: GraduationCap,
+    color: 'blue',
+    children: [
+      { id: 'training-hub', label: 'Central de Treinamento', icon: GraduationCap, href: `${P}/treinamento`, badge: { text: 'NOVO', variant: 'gold' } },
+      { id: 'training-tour', label: 'Tour da Plataforma', icon: Compass, href: `${P}/treinamento/tour` },
+      { id: 'training-product', label: 'Treinamento de Produto', icon: BookOpen, href: `${P}/treinamento/produto` },
+      { id: 'training-market', label: 'Mercado de Seguros', icon: Briefcase, href: `${P}/treinamento/mercado-seguros` },
     ],
   },
 

@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { CrmDealEnriched, CrmActivityEnriched, CrmActivityType } from '@/lib/types/crm';
 import type { CrmActivityInsert } from '@/lib/types/crm';
+import ClientScannerQuickPanel from '@/app/components/ClientScannerQuickPanel';
 
 // ========================================
 // ACTIVITY TYPE CONFIG
@@ -232,6 +233,16 @@ export default function DealDrawer({
                 )}
               </div>
             )}
+
+            <div className="px-6 py-3 border-b border-white/5">
+              <ClientScannerQuickPanel
+                context="admin"
+                corretorId={deal.owner_corretor_id || null}
+                leadId={deal.lead_id || null}
+                leadName={deal.contact?.nome || deal.titulo}
+                compact
+              />
+            </div>
 
             {/* Activity Timeline */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 sidebar-scroll">

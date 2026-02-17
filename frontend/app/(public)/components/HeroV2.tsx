@@ -154,7 +154,10 @@ export default function HeroV2() {
         }, 1200);
       } else {
         const data = await response.json().catch(() => ({}));
-        alert('Erro ao enviar: ' + (data.error || 'Tente novamente.'));
+        const details = typeof data?.details === 'string' && data.details.trim().length > 0
+          ? ` (${data.details})`
+          : '';
+        alert(`Erro ao enviar: ${(data.error || 'Tente novamente.')}${details}`);
       }
     } catch (error) {
       console.error('[LP V2] Submit error:', error);

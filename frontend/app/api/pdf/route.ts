@@ -32,8 +32,18 @@ type ExtractedDocument = {
   nome_completo?: string | null;
   cpf?: string | null;
   rg?: string | null;
+  ifp?: string | null;
+  documento_identificacao_tipo?: 'rg' | 'cnh' | 'ifp' | 'outro' | null;
+  data_expedicao?: string | null;
+  orgao_expedidor?: string | null;
+  numero_habilitacao?: string | null;
   cnpj?: string | null;
   razao_social?: string | null;
+  inscricao_estadual?: string | null;
+  data_abertura?: string | null;
+  status_cnpj?: string | null;
+  data_inicio_atividade?: string | null;
+  nome_fantasia?: string | null;
   estado_civil?: string | null;
   email?: string | null;
   telefone?: string | null;
@@ -302,6 +312,14 @@ function parseOptionalString(value: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function parseOptionalStringByKeys(raw: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const parsed = parseOptionalString(raw[key]);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
 function sanitizeDigits(value: string | null): string | null {
   if (!value) return null;
   const digits = value.replace(/\D/g, '');
@@ -330,6 +348,20 @@ function normalizeCivilStatus(value: string | null): string | null {
   return null;
 }
 
+function normalizeIdentityDocumentType(value: string | null): 'rg' | 'cnh' | 'ifp' | 'outro' | null {
+  if (!value) return null;
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (normalized.includes('cnh') || normalized.includes('habilit')) return 'cnh';
+  if (normalized.includes('ifp')) return 'ifp';
+  if (normalized.includes('rg') || normalized.includes('identidade')) return 'rg';
+  if (normalized.length > 0) return 'outro';
+  return null;
+}
+
 function normalizePhone(value: string | null): string | null {
   const digits = sanitizeDigits(value);
   if (!digits) return null;
@@ -353,8 +385,18 @@ function sanitizeExtraction(
     nome_completo: null,
     cpf: null,
     rg: null,
+    ifp: null,
+    documento_identificacao_tipo: null,
+    data_expedicao: null,
+    orgao_expedidor: null,
+    numero_habilitacao: null,
     cnpj: null,
     razao_social: null,
+    inscricao_estadual: null,
+    data_abertura: null,
+    status_cnpj: null,
+    data_inicio_atividade: null,
+    nome_fantasia: null,
     estado_civil: null,
     email: null,
     telefone: null,
@@ -400,9 +442,23 @@ function sanitizeExtraction(
 
   result.nome_completo = parseOptionalString(raw.nome_completo);
   result.cpf = normalizeDocumentNumber(parseOptionalString(raw.cpf), 11);
-  result.rg = sanitizeDigits(parseOptionalString(raw.rg));
+  result.rg = sanitizeDigits(
+    parseOptionalStringByKeys(raw, ['rg', 'registro_geral', 'numero_rg', 'numero_registro_geral']),
+  );
+  result.ifp = parseOptionalString(raw.ifp);
+  result.documento_identificacao_tipo = normalizeIdentityDocumentType(
+    parseOptionalString(raw.documento_identificacao_tipo),
+  );
+  result.data_expedicao = parseOptionalString(raw.data_expedicao);
+  result.orgao_expedidor = parseOptionalString(raw.orgao_expedidor);
+  result.numero_habilitacao = sanitizeDigits(parseOptionalString(raw.numero_habilitacao));
   result.cnpj = normalizeDocumentNumber(parseOptionalString(raw.cnpj), 14);
   result.razao_social = parseOptionalString(raw.razao_social);
+  result.inscricao_estadual = parseOptionalString(raw.inscricao_estadual);
+  result.data_abertura = parseOptionalString(raw.data_abertura);
+  result.status_cnpj = parseOptionalString(raw.status_cnpj);
+  result.data_inicio_atividade = parseOptionalString(raw.data_inicio_atividade);
+  result.nome_fantasia = parseOptionalString(raw.nome_fantasia);
   result.estado_civil = normalizeCivilStatus(parseOptionalString(raw.estado_civil));
   result.email = parseOptionalString(raw.email)?.toLowerCase() || null;
   result.telefone = normalizePhone(parseOptionalString(raw.telefone));
@@ -430,14 +486,35 @@ function sanitizeExtraction(
     result.confianca = raw.confianca.trim();
   }
 
+  if (!result.documento_identificacao_tipo) {
+    if (result.numero_habilitacao) {
+      result.documento_identificacao_tipo = 'cnh';
+    } else if (result.ifp) {
+      result.documento_identificacao_tipo = 'ifp';
+    } else if (result.rg) {
+      result.documento_identificacao_tipo = 'rg';
+    }
+  }
+
   return {
     ...result,
     ...defaults,
     nome_completo: defaults?.nome_completo ?? result.nome_completo,
     cpf: defaults?.cpf ?? result.cpf,
     rg: defaults?.rg ?? result.rg,
+    ifp: defaults?.ifp ?? result.ifp,
+    documento_identificacao_tipo:
+      defaults?.documento_identificacao_tipo ?? result.documento_identificacao_tipo,
+    data_expedicao: defaults?.data_expedicao ?? result.data_expedicao,
+    orgao_expedidor: defaults?.orgao_expedidor ?? result.orgao_expedidor,
+    numero_habilitacao: defaults?.numero_habilitacao ?? result.numero_habilitacao,
     cnpj: defaults?.cnpj ?? result.cnpj,
     razao_social: defaults?.razao_social ?? result.razao_social,
+    inscricao_estadual: defaults?.inscricao_estadual ?? result.inscricao_estadual,
+    data_abertura: defaults?.data_abertura ?? result.data_abertura,
+    status_cnpj: defaults?.status_cnpj ?? result.status_cnpj,
+    data_inicio_atividade: defaults?.data_inicio_atividade ?? result.data_inicio_atividade,
+    nome_fantasia: defaults?.nome_fantasia ?? result.nome_fantasia,
     estado_civil: defaults?.estado_civil ?? result.estado_civil,
     email: defaults?.email ?? result.email,
     telefone: defaults?.telefone ?? result.telefone,
@@ -456,8 +533,18 @@ function buildFallbackExtraction(fileName: string, reason: string): ExtractedDoc
     nome_completo: null,
     cpf: null,
     rg: null,
+    ifp: null,
+    documento_identificacao_tipo: null,
+    data_expedicao: null,
+    orgao_expedidor: null,
+    numero_habilitacao: null,
     cnpj: null,
     razao_social: null,
+    inscricao_estadual: null,
+    data_abertura: null,
+    status_cnpj: null,
+    data_inicio_atividade: null,
+    nome_fantasia: null,
     estado_civil: null,
     email: null,
     telefone: null,
@@ -486,8 +573,18 @@ Campos do JSON:
   "nome_completo": "nome principal encontrado no documento",
   "cpf": "somente números",
   "rg": "somente números quando possível",
+  "ifp": "registro/identificação IFP quando aplicável",
+  "documento_identificacao_tipo": "rg|cnh|ifp|outro|null",
+  "data_expedicao": "DD/MM/AAAA quando houver",
+  "orgao_expedidor": "órgão emissor quando houver (ex.: SSP-RJ, DETRAN)",
+  "numero_habilitacao": "somente números quando for CNH",
   "cnpj": "somente números",
   "razao_social": "razão social da empresa",
+  "inscricao_estadual": "inscrição estadual da empresa quando houver",
+  "data_abertura": "DD/MM/AAAA quando houver",
+  "status_cnpj": "status cadastral da empresa quando houver",
+  "data_inicio_atividade": "DD/MM/AAAA quando houver",
+  "nome_fantasia": "nome fantasia quando houver",
   "estado_civil": "solteiro|casado|uniao_estavel|divorciado|viuvo|null",
   "email": "email detectado",
   "telefone": "somente números, DDD incluso",
@@ -502,8 +599,9 @@ Campos do JSON:
 Regras:
 - Se não encontrar um campo, retorne null (ou array vazio para listas).
 - CPF deve ter 11 dígitos e CNPJ 14 dígitos quando encontrados.
-- Em contrato social, priorize sócios, razão social, CNPJ e contatos.
-- Em identidade/CPF, priorize nome_completo, cpf, rg, data_nascimento e estado_civil.
+- Em contrato social, priorize sócios, razão social, CNPJ, contatos e data de abertura.
+- Em cartão CNPJ, priorize status cadastral, data de início de atividade e nome fantasia.
+- Em identidade/CPF, priorize nome_completo, cpf, rg, data_nascimento, data_expedicao, orgao_expedidor e identificação do tipo de documento (RG/CNH/IFP).
 - Em comprovante de residência, priorize endereco.
 - Em certidões, priorize estado_civil, nome_completo e data_nascimento.
 - Em carteirinha/carta de permanência, priorize operadora, tipo_plano, valor_atual e nomes de beneficiários.
@@ -528,9 +626,9 @@ Contexto do upload:
 - beneficiario_tipo: ${beneficiaryRole}
 
 Validação de consistência:
-- Se o tipo_documento for "cartao_cnpj", priorize CNPJ e razão social.
+- Se o tipo_documento for "cartao_cnpj", priorize CNPJ, razão social, status cadastral, data de início de atividade e nome fantasia.
 - Se for "contrato_social", detecte quantidade de sócios e seus nomes.
-- Se for "identidade_cpf" ou "identidade_cpf_socios", extraia nome, CPF, RG e data de nascimento.
+- Se for "identidade_cpf" ou "identidade_cpf_socios", extraia nome, CPF, RG/IFP/CNH, tipo do documento, data de nascimento, data de expedição e órgão expedidor.
 - Se for "comprovante_residencia", extraia endereço completo e possível titular.
 - Se for "certidao_casamento" ou "declaracao_uniao_estavel", identifique estado civil.
 - Se for "certidao_nascimento", priorize nome e data de nascimento.
@@ -643,8 +741,18 @@ async function extractImageWithOpenAI(
     '- nome_completo: string ou null',
     '- cpf: string só com números ou null',
     '- rg: string só com números ou null',
+    '- ifp: string ou null',
+    '- documento_identificacao_tipo: rg|cnh|ifp|outro|null',
+    '- data_expedicao: DD/MM/AAAA ou null',
+    '- orgao_expedidor: string ou null',
+    '- numero_habilitacao: string só com números ou null',
     '- cnpj: string só com números ou null',
     '- razao_social: string ou null',
+    '- inscricao_estadual: string ou null',
+    '- data_abertura: DD/MM/AAAA ou null',
+    '- status_cnpj: string ou null',
+    '- data_inicio_atividade: DD/MM/AAAA ou null',
+    '- nome_fantasia: string ou null',
     '- estado_civil: solteiro|casado|uniao_estavel|divorciado|viuvo|null',
     '- email: string ou null',
     '- telefone: string só com números ou null',
@@ -705,8 +813,18 @@ Campos esperados:
 - nome_completo (string ou null)
 - cpf (string numérica ou null)
 - rg (string numérica ou null)
+- ifp (string ou null)
+- documento_identificacao_tipo (rg|cnh|ifp|outro|null)
+- data_expedicao (DD/MM/AAAA ou null)
+- orgao_expedidor (string ou null)
+- numero_habilitacao (string numérica ou null)
 - cnpj (string numérica ou null)
 - razao_social (string ou null)
+- inscricao_estadual (string ou null)
+- data_abertura (DD/MM/AAAA ou null)
+- status_cnpj (string ou null)
+- data_inicio_atividade (DD/MM/AAAA ou null)
+- nome_fantasia (string ou null)
 - estado_civil (solteiro|casado|uniao_estavel|divorciado|viuvo|null)
 - email (string ou null)
 - telefone (string numérica ou null)

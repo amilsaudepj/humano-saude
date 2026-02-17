@@ -18,6 +18,7 @@ import ActivityTimeline from '@/components/crm/ActivityTimeline';
 import QuickActions from '@/components/crm/QuickActions';
 import ChangelogView from '@/components/crm/ChangelogView';
 import CommentsSection from '@/components/crm/CommentsSection';
+import ClientScannerQuickPanel from '@/app/components/ClientScannerQuickPanel';
 import type { CrmDealPriority, CrmActivityInsert } from '@/lib/types/crm';
 import { getCorretoresList } from '@/app/actions/crm';
 
@@ -483,6 +484,19 @@ export default function DealDetailPage() {
 
         {/* RIGHT: Attachments + Related Deals + Quotes */}
         <div className="lg:col-span-3 space-y-4">
+          {/* Scanner Inteligente do cliente */}
+          <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-3">
+            <Section title="Scanner Inteligente" icon={Sparkles}>
+              <ClientScannerQuickPanel
+                context="admin"
+                corretorId={deal.owner_corretor_id || null}
+                leadId={deal.lead_id || null}
+                leadName={deal.contact?.nome || deal.titulo}
+                compact
+              />
+            </Section>
+          </div>
+
           {/* Attachments */}
           <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-3">
             <Section title="Anexos" icon={Paperclip}>

@@ -127,6 +127,22 @@ Analise o documento abaixo e extraia as seguintes informações:
 - **valor_atual**: valor atual do plano (número decimal, sem símbolo de moeda)
 - **tipo_plano**: tipo de plano se mencionado (ADESAO, PME, EMPRESARIAL ou null)
 - **nome_beneficiarios**: lista com nomes dos beneficiários se disponíveis
+- **nome_completo**: nome completo principal no documento
+- **cpf**: CPF detectado (somente números quando possível)
+- **rg**: RG detectado quando disponível
+- **ifp**: número IFP quando o documento for IFP
+- **documento_identificacao_tipo**: tipo do documento identificado (rg, cnh, ifp, outro ou null)
+- **data_nascimento**: data de nascimento quando houver
+- **data_expedicao**: data de expedição quando houver
+- **orgao_expedidor**: órgão emissor quando houver (ex.: SSP-RJ, DETRAN)
+- **numero_habilitacao**: número da habilitação quando for CNH
+- **cnpj**: CNPJ da empresa (somente números quando possível)
+- **razao_social**: razão social da empresa quando disponível
+- **inscricao_estadual**: inscrição estadual da empresa quando disponível
+- **data_abertura**: data de abertura da empresa quando disponível
+- **status_cnpj**: status cadastral da empresa quando disponível
+- **data_inicio_atividade**: data de início de atividade quando disponível
+- **nome_fantasia**: nome fantasia quando disponível
 - **socios_detectados**: lista com nomes dos sócios quando o documento for societário (contrato social/alteração contratual)
 - **total_socios**: número de sócios identificados quando possível
 - **observacoes**: qualquer informação relevante adicional
@@ -191,6 +207,14 @@ JSON:
                 "Analise esta imagem de um documento de plano de saúde e extraia um JSON com os campos: "
                 "idades (lista de inteiros), operadora (string em maiúsculas), valor_atual (float), "
                 "tipo_plano (ADESAO, PME, EMPRESARIAL ou null), nome_beneficiarios (lista de strings), "
+                "nome_completo (string ou null), cpf (string numérica ou null), rg (string ou null), "
+                "ifp (string ou null), documento_identificacao_tipo (rg|cnh|ifp|outro|null), "
+                "data_nascimento (DD/MM/AAAA ou null), data_expedicao (DD/MM/AAAA ou null), "
+                "orgao_expedidor (string ou null), numero_habilitacao (string numérica ou null), "
+                "cnpj (string numérica ou null), razao_social (string ou null), "
+                "inscricao_estadual (string ou null), data_abertura (DD/MM/AAAA ou null), "
+                "status_cnpj (string ou null), data_inicio_atividade (DD/MM/AAAA ou null), "
+                "nome_fantasia (string ou null), "
                 "socios_detectados (lista de strings), total_socios (inteiro ou null), "
                 "observacoes (string ou null). "
                 "Se não encontrar um campo, retorne null ou lista vazia. "
@@ -245,6 +269,22 @@ JSON:
             "valor_atual": None,
             "tipo_plano": None,
             "nome_beneficiarios": [],
+            "nome_completo": None,
+            "cpf": None,
+            "rg": None,
+            "ifp": None,
+            "documento_identificacao_tipo": None,
+            "data_nascimento": None,
+            "data_expedicao": None,
+            "orgao_expedidor": None,
+            "numero_habilitacao": None,
+            "cnpj": None,
+            "razao_social": None,
+            "inscricao_estadual": None,
+            "data_abertura": None,
+            "status_cnpj": None,
+            "data_inicio_atividade": None,
+            "nome_fantasia": None,
             "socios_detectados": [],
             "total_socios": None,
             "observacoes": None,
@@ -276,6 +316,72 @@ JSON:
             resultado["nome_beneficiarios"] = [
                 str(nome).strip() for nome in dados["nome_beneficiarios"] if nome
             ]
+
+        if "nome_completo" in dados and dados["nome_completo"]:
+            resultado["nome_completo"] = str(dados["nome_completo"]).strip() or None
+
+        if "cpf" in dados and dados["cpf"]:
+            resultado["cpf"] = ''.join(ch for ch in str(dados["cpf"]) if ch.isdigit())[:11] or None
+
+        rg_raw = (
+            dados.get("rg")
+            or dados.get("registro_geral")
+            or dados.get("numero_rg")
+            or dados.get("numero_registro_geral")
+        )
+        if rg_raw:
+            resultado["rg"] = ''.join(ch for ch in str(rg_raw) if ch.isdigit()) or None
+
+        if "ifp" in dados and dados["ifp"]:
+            resultado["ifp"] = str(dados["ifp"]).strip() or None
+
+        if "documento_identificacao_tipo" in dados and dados["documento_identificacao_tipo"]:
+            tipo_doc = str(dados["documento_identificacao_tipo"]).strip().lower()
+            if tipo_doc in ["rg", "cnh", "ifp", "outro"]:
+                resultado["documento_identificacao_tipo"] = tipo_doc
+
+        if "data_nascimento" in dados and dados["data_nascimento"]:
+            resultado["data_nascimento"] = str(dados["data_nascimento"]).strip() or None
+
+        if "data_expedicao" in dados and dados["data_expedicao"]:
+            resultado["data_expedicao"] = str(dados["data_expedicao"]).strip() or None
+
+        if "orgao_expedidor" in dados and dados["orgao_expedidor"]:
+            resultado["orgao_expedidor"] = str(dados["orgao_expedidor"]).strip() or None
+
+        if "numero_habilitacao" in dados and dados["numero_habilitacao"]:
+            resultado["numero_habilitacao"] = ''.join(
+                ch for ch in str(dados["numero_habilitacao"]) if ch.isdigit()
+            ) or None
+
+        if "cnpj" in dados and dados["cnpj"]:
+            resultado["cnpj"] = ''.join(ch for ch in str(dados["cnpj"]) if ch.isdigit())[:14] or None
+
+        if "razao_social" in dados and dados["razao_social"]:
+            resultado["razao_social"] = str(dados["razao_social"]).strip() or None
+
+        if "inscricao_estadual" in dados and dados["inscricao_estadual"]:
+            resultado["inscricao_estadual"] = str(dados["inscricao_estadual"]).strip() or None
+
+        if "data_abertura" in dados and dados["data_abertura"]:
+            resultado["data_abertura"] = str(dados["data_abertura"]).strip() or None
+
+        if "status_cnpj" in dados and dados["status_cnpj"]:
+            resultado["status_cnpj"] = str(dados["status_cnpj"]).strip() or None
+
+        if "data_inicio_atividade" in dados and dados["data_inicio_atividade"]:
+            resultado["data_inicio_atividade"] = str(dados["data_inicio_atividade"]).strip() or None
+
+        if "nome_fantasia" in dados and dados["nome_fantasia"]:
+            resultado["nome_fantasia"] = str(dados["nome_fantasia"]).strip() or None
+
+        if not resultado["documento_identificacao_tipo"]:
+            if resultado["numero_habilitacao"]:
+                resultado["documento_identificacao_tipo"] = "cnh"
+            elif resultado["ifp"]:
+                resultado["documento_identificacao_tipo"] = "ifp"
+            elif resultado["rg"]:
+                resultado["documento_identificacao_tipo"] = "rg"
 
         if "socios_detectados" in dados and isinstance(dados["socios_detectados"], list):
             resultado["socios_detectados"] = [

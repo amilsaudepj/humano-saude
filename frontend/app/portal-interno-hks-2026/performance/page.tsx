@@ -2,26 +2,48 @@
 
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, Target, Award, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { getClienteStats } from '@/app/actions/clientes';
-import { getCotacaoStats } from '@/app/actions/cotacoes';
-import { getPropostaStats } from '@/app/actions/propostas';
+import type { BigNumbersMetrics, FunnelData } from '@/lib/types/analytics';
+
+interface ConsolidatedMetrics {
+  totalLeads: number;
+  roas: number;
+  ctr: number;
+  cpc: number;
+  cpa: number;
+  cpl: number;
+  conversionRate: number;
+}
 
 export default function PerformancePage() {
-  const [clienteStats, setClienteStats] = useState<any>(null);
-  const [cotacaoStats, setCotacaoStats] = useState<any>(null);
-  const [propostaStats, setPropostaStats] = useState<any>(null);
+  const [dashboardMetrics, setDashboardMetrics] = useState<BigNumbersMetrics | null>(null);
+  const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [consolidated, setConsolidated] = useState<ConsolidatedMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [c, cot, p] = await Promise.all([
-        getClienteStats(),
-        getCotacaoStats(),
-        getPropostaStats(),
+      const [dashRes, consolidatedRes] = await Promise.all([
+        fetch('/api/admin/dashboard?days=30').then(r => r.json()).catch(() => null),
+        fetch('/api/consolidated/metrics?period=last_30d').then(r => r.json()).catch(() => null),
       ]);
-      if (c.success) setClienteStats(c.data);
-      if (cot.success) setCotacaoStats(cot.data);
-      if (p.success) setPropostaStats(p.data);
+
+      if (dashRes?.success) {
+        setDashboardMetrics(dashRes?.data?.metrics || null);
+        setFunnel(dashRes?.data?.funnel || dashRes?.data?.funnelData || null);
+      }
+
+      if (consolidatedRes?.success) {
+        setConsolidated({
+          totalLeads: Number(consolidatedRes?.metrics?.totalLeads || 0),
+          roas: Number(consolidatedRes?.metrics?.roas || 0),
+          ctr: Number(consolidatedRes?.metrics?.ctr || 0),
+          cpc: Number(consolidatedRes?.metrics?.cpc || 0),
+          cpa: Number(consolidatedRes?.metrics?.cpa || 0),
+          cpl: Number(consolidatedRes?.metrics?.cpl || 0),
+          conversionRate: Number(consolidatedRes?.metrics?.conversionRate || 0),
+        });
+      }
+
       setLoading(false);
     }
     load();
@@ -29,42 +51,42 @@ export default function PerformancePage() {
 
   const cards = [
     {
-      title: 'Total Leads',
-      value: clienteStats?.total_leads || 0,
-      sub: `${clienteStats?.novos_hoje || 0} hoje`,
+      title: 'Faturamento',
+      value: `R$ ${(dashboardMetrics?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      sub: 'Últimos 30 dias',
       icon: Users,
       color: 'text-blue-400',
     },
     {
-      title: 'Cotações Geradas',
-      value: cotacaoStats?.total || 0,
-      sub: `${cotacaoStats?.aceitas || 0} aceitas`,
+      title: 'Vendas Confirmadas',
+      value: dashboardMetrics?.sales || 0,
+      sub: `${dashboardMetrics?.paid_sales || 0} pagas`,
       icon: Target,
       color: 'text-purple-400',
     },
     {
-      title: 'Propostas Ativas',
-      value: propostaStats?.ativas || 0,
-      sub: `${propostaStats?.pendentes || 0} pendentes`,
+      title: 'Leads Capturados',
+      value: consolidated?.totalLeads || 0,
+      sub: 'Meta + Google',
       icon: Award,
       color: 'text-green-400',
     },
     {
       title: 'Taxa de Conversão',
-      value: `${cotacaoStats?.taxa_conversao || 0}%`,
-      sub: 'Cotações → Propostas',
+      value: `${dashboardMetrics?.conversion_rate || 0}%`,
+      sub: 'Visitantes → Vendas',
       icon: TrendingUp,
       color: 'text-[#D4AF37]',
     },
   ];
 
   const kpis = [
-    { label: 'Leads Novos (Mês)', value: clienteStats?.novos_mes || 0, trend: 'up' },
-    { label: 'Leads Convertidos (Mês)', value: clienteStats?.convertidos_mes || 0, trend: 'up' },
-    { label: 'Leads Perdidos (Mês)', value: clienteStats?.perdidos_mes || 0, trend: 'down' },
-    { label: 'Ticket Médio', value: cotacaoStats?.ticket_medio ? `R$ ${cotacaoStats.ticket_medio.toLocaleString('pt-BR')}` : '—', trend: 'up' },
-    { label: 'Economia Média', value: cotacaoStats?.economia_media ? `R$ ${cotacaoStats.economia_media.toLocaleString('pt-BR')}` : '—', trend: 'up' },
-    { label: 'Receita Recorrente', value: propostaStats?.receita_recorrente ? `R$ ${propostaStats.receita_recorrente.toLocaleString('pt-BR')}` : '—', trend: 'up' },
+    { label: 'ROAS', value: `${(consolidated?.roas || 0).toFixed(2)}x`, trend: (consolidated?.roas || 0) >= 1 ? 'up' : 'down' },
+    { label: 'CTR', value: `${(consolidated?.ctr || 0).toFixed(2)}%`, trend: (consolidated?.ctr || 0) >= 1 ? 'up' : 'down' },
+    { label: 'CPC', value: `R$ ${(consolidated?.cpc || 0).toFixed(2)}`, trend: (consolidated?.cpc || 0) <= 2 ? 'up' : 'down' },
+    { label: 'CPA', value: `R$ ${(consolidated?.cpa || 0).toFixed(2)}`, trend: (consolidated?.cpa || 0) <= 80 ? 'up' : 'down' },
+    { label: 'CPL', value: `R$ ${(consolidated?.cpl || 0).toFixed(2)}`, trend: (consolidated?.cpl || 0) <= 50 ? 'up' : 'down' },
+    { label: 'Conv. Marketing', value: `${(consolidated?.conversionRate || 0).toFixed(2)}%`, trend: (consolidated?.conversionRate || 0) >= 1 ? 'up' : 'down' },
   ];
 
   return (
@@ -117,17 +139,15 @@ export default function PerformancePage() {
 
           {/* Pipeline Summary */}
           <div className="rounded-lg border border-white/10 bg-[#0a0a0a] p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Resumo do Pipeline</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Resumo do Funil</h2>
             <div className="space-y-3">
               {[
-                { label: 'Novos', count: clienteStats?.por_status?.novo || 0, color: 'bg-blue-500' },
-                { label: 'Contatados', count: clienteStats?.por_status?.contatado || 0, color: 'bg-cyan-500' },
-                { label: 'Negociando', count: clienteStats?.por_status?.negociando || 0, color: 'bg-yellow-500' },
-                { label: 'Cotação Enviada', count: clienteStats?.por_status?.cotacao_enviada || 0, color: 'bg-orange-500' },
-                { label: 'Convertidos', count: clienteStats?.por_status?.convertido || 0, color: 'bg-green-500' },
-                { label: 'Perdidos', count: clienteStats?.por_status?.perdido || 0, color: 'bg-red-500' },
+                { label: 'Visitantes', count: funnel?.visitors || 0, color: 'bg-blue-500' },
+                { label: 'Interessados', count: funnel?.interested || 0, color: 'bg-cyan-500' },
+                { label: 'Checkout', count: funnel?.checkoutStarted || 0, color: 'bg-yellow-500' },
+                { label: 'Vendas', count: funnel?.purchased || 0, color: 'bg-green-500' },
               ].map((item) => {
-                const total = clienteStats?.total_leads || 1;
+                const total = funnel?.visitors || 1;
                 const pct = ((item.count / total) * 100).toFixed(1);
                 return (
                   <div key={item.label} className="flex items-center gap-3">

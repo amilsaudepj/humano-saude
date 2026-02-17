@@ -655,3 +655,76 @@ export async function enviarEmailNovoLead(dados: {
     return { success: false, error: 'Erro ao enviar email de novo lead' };
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// 15. ACESSO PORTAL CLIENTE (Calculadora /economizar)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAcessoPortalCliente(dados: {
+  nome: string;
+  email: string;
+  senhaTemporaria: string;
+  portalLink: string;
+  resumo?: {
+    operadoraAtual?: string | null;
+    valorAtual?: number | null;
+    qtdVidas?: number | null;
+  };
+}) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const valorAtual =
+      typeof dados.resumo?.valorAtual === 'number'
+        ? dados.resumo.valorAtual.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })
+        : '—';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; background: #f6f8fb; padding: 24px;">
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+          <div style="padding: 20px 24px; background: #111827; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 20px;">Portal do Cliente Humano Saúde</h1>
+            <p style="margin: 8px 0 0; color: #d1d5db; font-size: 14px;">
+              Seu acesso foi criado com sucesso.
+            </p>
+          </div>
+          <div style="padding: 24px;">
+            <p style="margin-top: 0; color: #111827;">Olá, <strong>${dados.nome}</strong>.</p>
+            <p style="color: #374151; line-height: 1.5;">
+              Seu cadastro foi recebido e você já pode acessar o portal para acompanhar as opções de plano e o resumo dos seus dados.
+            </p>
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin: 18px 0;">
+              <p style="margin: 0 0 6px; color: #111827;"><strong>Login:</strong> ${dados.email}</p>
+              <p style="margin: 0; color: #111827;"><strong>Senha temporária:</strong> ${dados.senhaTemporaria}</p>
+            </div>
+            <p style="margin: 0 0 10px; color: #111827;"><strong>Resumo inicial:</strong></p>
+            <ul style="margin: 0 0 18px; padding-left: 18px; color: #374151;">
+              <li>Operadora atual: ${dados.resumo?.operadoraAtual || '—'}</li>
+              <li>Valor atual: ${valorAtual}</li>
+              <li>Quantidade de vidas: ${dados.resumo?.qtdVidas || '—'}</li>
+            </ul>
+            <a href="${dados.portalLink}"
+               style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 700;">
+              Acessar portal do cliente
+            </a>
+            <p style="margin: 18px 0 0; color: #6b7280; font-size: 13px;">
+              Nossa equipe comercial entrará em contato para validar os dados e seguir com sua proposta.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return sendViaResend({
+      to: dados.email,
+      subject: 'Seu acesso ao portal de propostas — Humano Saúde',
+      html,
+    });
+  } catch (err) {
+    log.error('enviarEmailAcessoPortalCliente', err);
+    return { success: false, error: 'Erro ao enviar acesso do portal cliente' };
+  }
+}

@@ -134,6 +134,14 @@ export default function AnalyticsPage() {
         fetch(`/api/analytics/outbound${qs}`).then(r => r.json()).catch(() => null),
       ]);
 
+      const responses = [kR, tR, sR, pR, coR, ciR, dR, bR, aR, oR].filter(Boolean);
+      const ga4ConfigResponse = responses.find((r: any) => r?.errorCode === 'GA4_NOT_CONFIGURED');
+      const ga4NotConfigured = responses.some((r: any) =>
+        r?.errorCode === 'GA4_NOT_CONFIGURED' ||
+        typeof r?.error === 'string' && r.error.toLowerCase().includes('ga4 não configurado')
+      );
+      const hasApiError = responses.some((r: any) => r?.success === false);
+
       setData({
         kpis: kR?.success ? kR.data : null,
         traffic: tR?.success ? tR.data : [],
@@ -146,7 +154,18 @@ export default function AnalyticsPage() {
         ageGroups: aR?.success ? aR.data : [],
         outbound: oR?.success ? oR.data : null,
       });
-      setError(null);
+      if (ga4NotConfigured) {
+        const missing = Array.isArray(ga4ConfigResponse?.details?.missing)
+          ? ga4ConfigResponse.details.missing.join(' ')
+          : '';
+        setError(
+          `GA4 não configurado no servidor.${missing ? ` ${missing}` : ' Configure Property ID numérico + credenciais da Service Account Google.'}`
+        );
+      } else if (hasApiError) {
+        setError('Erro ao carregar dados do GA4. Verifique as credenciais.');
+      } else {
+        setError(null);
+      }
     } catch (e) {
       setError('Erro ao carregar dados do GA4. Verifique as credenciais.');
     } finally {

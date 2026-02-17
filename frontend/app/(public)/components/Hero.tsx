@@ -85,7 +85,10 @@ export default function Hero() {
         // Redirecionar para página de sucesso
         window.location.href = '/obrigado';
       } else {
-        alert('Erro ao enviar: ' + data.error);
+        const details = typeof data?.details === 'string' && data.details.trim().length > 0
+          ? ` (${data.details})`
+          : '';
+        alert(`Erro ao enviar: ${data.error || 'Tente novamente.'}${details}`);
       }
     } catch (error) {
       console.error('Erro:', error);

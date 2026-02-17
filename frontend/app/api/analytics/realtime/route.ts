@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
-    if (!isGA4Available()) {
+    if (!(await isGA4Available())) {
       return NextResponse.json({ success: true, data: { activeUsers: 0, pages: [] } });
     }
 

@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
           "img-src 'self' data: https: blob: *.heapanalytics.com",
           "font-src 'self' data: fonts.gstatic.com",
           "connect-src 'self' *.supabase.co *.google-analytics.com *.facebook.com *.facebook.net vitals.vercel-insights.com *.hotjar.com *.hotjar.io wss://*.hotjar.com wss://*.hotjar.io *.contentsquare.net *.contentsquare.com *.heapanalytics.com app.contentsquare.com tcvsapi.contentsquare.com cserror.com",
-          "frame-src 'self' *.google.com *.facebook.com",
+          "frame-src 'self' blob: data: *.google.com *.facebook.com",
           "media-src 'self' blob:",
           "object-src 'none'",
           "base-uri 'self'",

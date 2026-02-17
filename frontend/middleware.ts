@@ -57,6 +57,27 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
+  // PROTEÇÃO: Portal do cliente
+  // ============================================
+  if (pathname.startsWith('/portal-cliente') && pathname !== '/portal-cliente/login') {
+    const token = request.cookies.get('cliente_token')?.value ||
+                  request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      const loginUrl = new URL('/portal-cliente/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const result = await resolveToken(token);
+    if (!result.valid || result.role !== 'cliente') {
+      const loginUrl = new URL('/portal-cliente/login', request.url);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.set('cliente_token', '', { maxAge: 0, path: '/' });
+      return response;
+    }
+  }
+
+  // ============================================
   // PROTEÇÃO: Webhooks (validação básica — tokens verificados dentro das routes)
   // ============================================
   if (pathname.startsWith('/api/webhooks/')) {
@@ -67,9 +88,33 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
+  // PROTEÇÃO: API do Cliente (portal-cliente)
+  // ============================================
+  if (pathname.startsWith('/api/cliente')) {
+    const token = request.cookies.get('cliente_token')?.value ||
+                  request.cookies.get('admin_token')?.value ||
+                  request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Não autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const result = await resolveToken(token);
+    if (!result.valid || (result.role !== 'cliente' && result.role !== 'admin')) {
+      return NextResponse.json(
+        { error: 'Token inválido ou sem permissão' },
+        { status: 401 }
+      );
+    }
+  }
+
+  // ============================================
   // PROTEÇÃO: API routes internas (exceto leads, calculadora, auth, e corretor APIs)
   // ============================================
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente')) {
     const token = request.cookies.get('admin_token')?.value ||
                   request.headers.get('authorization')?.replace('Bearer ', '');
 
@@ -157,6 +202,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/portal-interno-hks-2026/:path*',
+    '/portal-cliente/:path*',
     '/dashboard/:path*',
     '/admin/:path*',
     '/api/:path*',

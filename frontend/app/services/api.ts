@@ -36,8 +36,18 @@ export interface DocumentoExtraido {
   nome_completo?: string | null;
   cpf?: string | null;
   rg?: string | null;
+  ifp?: string | null;
+  documento_identificacao_tipo?: string | null;
+  data_expedicao?: string | null;
+  orgao_expedidor?: string | null;
+  numero_habilitacao?: string | null;
   cnpj?: string | null;
   razao_social?: string | null;
+  inscricao_estadual?: string | null;
+  data_abertura?: string | null;
+  status_cnpj?: string | null;
+  data_inicio_atividade?: string | null;
+  nome_fantasia?: string | null;
   estado_civil?: string | null;
   email?: string | null;
   telefone?: string | null;

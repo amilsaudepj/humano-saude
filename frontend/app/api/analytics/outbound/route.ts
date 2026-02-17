@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isGA4Available()) {
+    if (!(await isGA4Available())) {
       return NextResponse.json({
         success: true,
         data: { clicks: [], summary: { whatsapp: 0, appstore: 0, playstore: 0, external: 0, total: 0 } },

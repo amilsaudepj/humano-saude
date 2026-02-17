@@ -1,0 +1,100 @@
+.lightTheme {
+  color: #0f172a;
+}
+
+.darkHeader,
+.darkFooter {
+  background-color: #000000 !important;
+  border-color: #262626 !important;
+}
+
+.darkHeader :global([class*='text-white/']),
+.darkFooter :global([class*='text-white/']) {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.darkHeader :global(.text-white),
+.darkFooter :global(.text-white) {
+  color: #ffffff !important;
+}
+
+.darkHeader :global([class*='border-white']),
+.darkFooter :global([class*='border-white']) {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.darkHeader :global([class*='bg-white/']),
+.darkFooter :global([class*='bg-white/']) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.heroAutoTag {
+  color: #9b7316 !important;
+  border: 1px solid #c8a35c !important;
+  background: #f6f1e4 !important;
+}
+
+.heroHighlight {
+  color: #a27610 !important;
+}
+
+/* Converte superfícies escuras para tons claros */
+.lightTheme :global([class*='bg-black']) {
+  background-color: #f8fafc !important;
+}
+
+.lightTheme :global([class*='bg-[#0a0a0a]']),
+.lightTheme :global([class*='bg-[#050505]']) {
+  background-color: #ffffff !important;
+}
+
+.lightTheme :global([class*='bg-white/']) {
+  background-color: rgba(248, 250, 252, 0.92) !important;
+}
+
+.lightTheme :global([class*='border-white']) {
+  border-color: rgba(148, 163, 184, 0.4) !important;
+}
+
+/* Texto claro/sem contraste no fundo branco */
+.lightTheme :global([class*='text-white/']) {
+  color: #64748b !important;
+}
+
+.lightTheme :global(.text-white) {
+  color: #0f172a !important;
+}
+
+/* Sombras muito escuras ficam mais suaves no tema claro */
+.lightTheme :global([class*='shadow-black']) {
+  --tw-shadow-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* CTAs de WhatsApp e botões verdes mantêm texto branco */
+.lightTheme :global([class*='bg-[#128C7E]']),
+.lightTheme :global([class*='bg-[#075E54]']),
+.lightTheme :global([class*='bg-[#25D366]']) {
+  color: #ffffff !important;
+}
+
+/* Override final do footer preto: garante legibilidade */
+.lightTheme .darkFooter {
+  color: #ffffff !important;
+}
+
+.lightTheme .darkFooter :global([class*='text-white/']),
+.lightTheme .darkFooter :global(.text-white),
+.lightTheme .darkFooter :global(p),
+.lightTheme .darkFooter :global(span),
+.lightTheme .darkFooter :global(h4),
+.lightTheme .darkFooter :global(a) {
+  color: #ffffff !important;
+}
+
+.lightTheme .darkFooter :global([class*='bg-white/']) {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.lightTheme .darkFooter :global([class*='border-white']) {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}

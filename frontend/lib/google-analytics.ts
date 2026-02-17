@@ -6,6 +6,7 @@
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { logger } from '@/lib/logger';
+import { createServiceClient } from '@/lib/supabase';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GA4Row = any;
@@ -14,26 +15,57 @@ type GA4Row = any;
 // CONFIGURAÇÃO & AUTENTICAÇÃO
 // =====================================================
 
-const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID;
+const GA4_CACHE_TTL_MS = 60 * 1000;
+let cachedGA4PropertyId: string | null | undefined;
+let cachedGA4PropertyAt = 0;
+let cachedGA4MeasurementHint: string | null | undefined;
+let cachedGA4MeasurementAt = 0;
+
+function parseCredentialJson(raw: string, source: string): { client_email?: string; private_key?: string } | null {
+  const value = raw.trim();
+  if (!value) return null;
+
+  const parseObject = (content: string) => {
+    const parsed = JSON.parse(content);
+    if (parsed.private_key?.includes('\\n')) {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+    }
+    if (!parsed.client_email || !parsed.private_key) return null;
+    return parsed as { client_email?: string; private_key?: string };
+  };
+
+  try {
+    return parseObject(value);
+  } catch {
+    try {
+      // Alguns ambientes salvam JSON em base64.
+      const decoded = Buffer.from(value, 'base64').toString('utf8');
+      return parseObject(decoded);
+    } catch {
+      logger.error(`❌ Erro ao parsear ${source}`);
+      return null;
+    }
+  }
+}
 
 function getCredentials(): { client_email?: string; private_key?: string } | null {
   // Método 1: JSON completo (recomendado para Vercel)
-  const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim();
-  if (rawJson) {
-    try {
-      const creds = JSON.parse(rawJson);
-      if (creds.private_key?.includes('\\n')) {
-        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
-      }
-      return creds;
-    } catch {
-      logger.error('❌ Erro ao parsear GOOGLE_APPLICATION_CREDENTIALS_JSON');
-    }
+  const jsonCandidates = [
+    { key: 'GOOGLE_APPLICATION_CREDENTIALS_JSON', value: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON },
+    { key: 'GOOGLE_SERVICE_ACCOUNT_JSON', value: process.env.GOOGLE_SERVICE_ACCOUNT_JSON },
+    { key: 'GOOGLE_CREDENTIALS_JSON', value: process.env.GOOGLE_CREDENTIALS_JSON },
+  ];
+
+  for (const candidate of jsonCandidates) {
+    if (!candidate.value) continue;
+    const creds = parseCredentialJson(candidate.value, candidate.key);
+    if (creds) return creds;
   }
 
   // Método 2: Variáveis separadas
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL?.trim() || process.env.GCP_CLIENT_EMAIL?.trim();
+  const privateKeyRaw = process.env.GOOGLE_PRIVATE_KEY ?? process.env.GCP_PRIVATE_KEY;
+  const privateKey = privateKeyRaw?.replace(/\\n/g, '\n');
   if (clientEmail && privateKey) {
     return { client_email: clientEmail, private_key: privateKey };
   }
@@ -41,27 +73,249 @@ function getCredentials(): { client_email?: string; private_key?: string } | nul
   return null;
 }
 
-function getClient(): BetaAnalyticsDataClient | null {
+function extractPropertyId(config?: Record<string, unknown> | null): string | null {
+  if (!config) return null;
+  return (
+    toPropertyId(config.ga4_property_id) ||
+    toPropertyId(config.google_analytics_property_id) ||
+    toPropertyId(config.google_analytics_id) ||
+    toPropertyId(config.ga4PropertyId) ||
+    toPropertyId(config.googleAnalyticsPropertyId) ||
+    null
+  );
+}
+
+function extractMeasurementId(config?: Record<string, unknown> | null): string | null {
+  if (!config) return null;
+  return (
+    toMeasurementId(config.ga_measurement_id) ||
+    toMeasurementId(config.ga4_measurement_id) ||
+    toMeasurementId(config.google_analytics_measurement_id) ||
+    toMeasurementId(config.google_analytics_id) ||
+    toMeasurementId(config.gaMeasurementId) ||
+    toMeasurementId(config.ga4MeasurementId) ||
+    toMeasurementId(config.googleAnalyticsMeasurementId) ||
+    null
+  );
+}
+
+function resolvePropertyIdFromEnv(): string | null {
+  const envCandidates = [
+    process.env.GA4_PROPERTY_ID,
+    process.env.GOOGLE_ANALYTICS_PROPERTY_ID,
+    process.env.GA_PROPERTY_ID,
+    process.env.NEXT_PUBLIC_GA4_PROPERTY_ID,
+    process.env.NEXT_PUBLIC_GA_PROPERTY_ID,
+  ];
+
+  for (const candidate of envCandidates) {
+    const normalized = toPropertyId(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+function resolveMeasurementIdFromEnv(): string | null {
+  const envCandidates = [
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
+    process.env.GA_MEASUREMENT_ID,
+    process.env.GA4_MEASUREMENT_ID,
+    process.env.GOOGLE_ANALYTICS_MEASUREMENT_ID,
+  ];
+
+  for (const candidate of envCandidates) {
+    const normalized = toMeasurementId(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+function toPropertyId(candidate: unknown): string | null {
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return `${Math.trunc(candidate)}`;
+  }
+  if (typeof candidate !== 'string') return null;
+  const cleaned = candidate.trim();
+  if (!cleaned) return null;
+
+  if (cleaned.startsWith('properties/')) {
+    const onlyId = cleaned.slice('properties/'.length).trim();
+    return /^\d+$/.test(onlyId) ? onlyId : null;
+  }
+
+  return /^\d+$/.test(cleaned) ? cleaned : null;
+}
+
+function toMeasurementId(candidate: unknown): string | null {
+  if (typeof candidate !== 'string') return null;
+  const cleaned = candidate.trim().toUpperCase();
+  if (!cleaned) return null;
+  return /^G-[A-Z0-9]+$/.test(cleaned) ? cleaned : null;
+}
+
+function extractPropertyIdFromRow(row: Record<string, unknown>): string | null {
+  return (
+    toPropertyId(row.ga4_property_id) ||
+    toPropertyId(row.google_analytics_property_id) ||
+    extractPropertyId((row.config as Record<string, unknown> | null | undefined) ?? null) ||
+    extractPropertyId((row.encrypted_credentials as Record<string, unknown> | null | undefined) ?? null) ||
+    null
+  );
+}
+
+function extractMeasurementFromRow(row: Record<string, unknown>): string | null {
+  return (
+    toMeasurementId(row.ga_measurement_id) ||
+    toMeasurementId(row.ga4_measurement_id) ||
+    toMeasurementId(row.google_analytics_measurement_id) ||
+    toMeasurementId(row.google_analytics_id) ||
+    extractMeasurementId((row.config as Record<string, unknown> | null | undefined) ?? null) ||
+    extractMeasurementId((row.encrypted_credentials as Record<string, unknown> | null | undefined) ?? null) ||
+    null
+  );
+}
+
+type SettingsResolution = { propertyId: string | null; measurementId: string | null };
+
+async function resolveFromIntegrationSettings(): Promise<SettingsResolution> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from('integration_settings')
+    .select('*')
+    .limit(50);
+
+  if (error || !Array.isArray(data)) {
+    return { propertyId: null, measurementId: null };
+  }
+
+  let propertyId: string | null = null;
+  let measurementId: string | null = null;
+
+  for (const rawRow of data) {
+    const row = rawRow as Record<string, unknown>;
+    if (!propertyId) propertyId = extractPropertyIdFromRow(row);
+    if (!measurementId) measurementId = extractMeasurementFromRow(row);
+    if (propertyId && measurementId) break;
+  }
+
+  return { propertyId, measurementId };
+}
+
+export type GA4AvailabilityDiagnostics = {
+  available: boolean;
+  hasPropertyId: boolean;
+  hasCredentials: boolean;
+  missing: string[];
+  propertyId?: string | null;
+  measurementIdHint?: string | null;
+};
+
+export async function getGA4AvailabilityDiagnostics(): Promise<GA4AvailabilityDiagnostics> {
+  const propertyId = await resolveGA4PropertyId();
+  const measurementHint = await resolveGA4MeasurementHint();
   const creds = getCredentials();
-  if (!creds || !GA4_PROPERTY_ID) return null;
+
+  const hasPropertyId = !!propertyId;
+  const hasCredentials = !!creds;
+  const missing: string[] = [];
+
+  if (!hasPropertyId) {
+    if (measurementHint) {
+      missing.push(
+        `Measurement ID detectado (${measurementHint}). Para a API do GA4 é obrigatório o Property ID numérico (ex.: 123456789).`
+      );
+    } else {
+      missing.push(
+        'Defina GA4_PROPERTY_ID numérico (ex.: 123456789), ou salve ga4_property_id numérico em integration_settings.'
+      );
+    }
+  }
+  if (!hasCredentials) {
+    missing.push(
+      'Defina GOOGLE_APPLICATION_CREDENTIALS_JSON ou GOOGLE_SERVICE_ACCOUNT_JSON, ou GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY.'
+    );
+  }
+
+  return {
+    available: hasPropertyId && hasCredentials,
+    hasPropertyId,
+    hasCredentials,
+    missing,
+    propertyId,
+    measurementIdHint: measurementHint,
+  };
+}
+
+export async function isGA4Available(): Promise<boolean> {
+  const diagnostics = await getGA4AvailabilityDiagnostics();
+  return diagnostics.available;
+}
+
+async function resolveGA4PropertyId(): Promise<string | null> {
+  const fromEnv = resolvePropertyIdFromEnv();
+  if (fromEnv) return fromEnv;
+
+  const now = Date.now();
+  if (cachedGA4PropertyId !== undefined && now - cachedGA4PropertyAt < GA4_CACHE_TTL_MS) {
+    return cachedGA4PropertyId;
+  }
+
+  let resolved: string | null = null;
+  try {
+    const settings = await resolveFromIntegrationSettings();
+    resolved = settings.propertyId;
+  } catch (error) {
+    logger.warn('⚠️ Falha ao resolver GA4_PROPERTY_ID via integration_settings', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  cachedGA4PropertyId = resolved;
+  cachedGA4PropertyAt = now;
+  return resolved;
+}
+
+async function resolveGA4MeasurementHint(): Promise<string | null> {
+  const fromEnv = resolveMeasurementIdFromEnv();
+  if (fromEnv) return fromEnv;
+
+  const now = Date.now();
+  if (cachedGA4MeasurementHint !== undefined && now - cachedGA4MeasurementAt < GA4_CACHE_TTL_MS) {
+    return cachedGA4MeasurementHint;
+  }
+
+  let resolved: string | null = null;
+  try {
+    const settings = await resolveFromIntegrationSettings();
+    resolved = settings.measurementId;
+  } catch (error) {
+    logger.warn('⚠️ Falha ao resolver Measurement ID via integration_settings', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  cachedGA4MeasurementHint = resolved;
+  cachedGA4MeasurementAt = now;
+  return resolved;
+}
+
+async function getClientAndProperty(): Promise<{ client: BetaAnalyticsDataClient; property: string } | null> {
+  const creds = getCredentials();
+  const propertyId = await resolveGA4PropertyId();
+  if (!creds || !propertyId) return null;
 
   try {
-    return new BetaAnalyticsDataClient({
+    const client = new BetaAnalyticsDataClient({
       credentials: creds,
       projectId: process.env.GOOGLE_PROJECT_ID,
     });
+    return { client, property: `properties/${propertyId}` };
   } catch (error) {
     logger.error('❌ Erro ao criar GA4 client:', error);
     return null;
   }
-}
-
-function getProperty(): string {
-  return `properties/${GA4_PROPERTY_ID}`;
-}
-
-export function isGA4Available(): boolean {
-  return !!GA4_PROPERTY_ID && getCredentials() !== null;
 }
 
 // =====================================================
@@ -97,13 +351,14 @@ const SOURCE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#
 // =====================================================
 
 export async function getKPIs(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return null;
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return null;
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     metrics: [
       { name: 'activeUsers' },
@@ -127,13 +382,14 @@ export async function getKPIs(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getTrafficData(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'date' }],
     metrics: [
@@ -155,13 +411,14 @@ export async function getTrafficData(start?: string | null, end?: string | null)
 // =====================================================
 
 export async function getTrafficSources(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'sessionDefaultChannelGroup' }],
     metrics: [{ name: 'activeUsers' }],
@@ -181,13 +438,14 @@ export async function getTrafficSources(start?: string | null, end?: string | nu
 // =====================================================
 
 export async function getTopPages(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'pageTitle' }],
     metrics: [{ name: 'screenPageViews' }],
@@ -206,13 +464,14 @@ export async function getTopPages(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getTopCountries(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'country' }],
     metrics: [{ name: 'activeUsers' }],
@@ -233,13 +492,14 @@ export async function getTopCountries(start?: string | null, end?: string | null
 // =====================================================
 
 export async function getTopCities(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'city' }],
     metrics: [{ name: 'activeUsers' }],
@@ -261,13 +521,14 @@ export async function getTopCities(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getDevices(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'deviceCategory' }],
     metrics: [{ name: 'activeUsers' }],
@@ -285,13 +546,14 @@ export async function getDevices(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getBrowsers(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'browser' }],
     metrics: [{ name: 'activeUsers' }],
@@ -310,13 +572,14 @@ export async function getBrowsers(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getAgeGroups(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return [];
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return [];
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null);
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'userAgeBracket' }],
     metrics: [{ name: 'activeUsers' }],
@@ -336,11 +599,12 @@ export async function getAgeGroups(start?: string | null, end?: string | null) {
 // =====================================================
 
 export async function getRealtimeData() {
-  const client = getClient();
-  if (!client) return null;
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return null;
+  const { client, property } = ga4;
 
   const [response] = await client.runRealtimeReport({
-    property: getProperty(),
+    property,
     dimensions: [{ name: 'unifiedScreenName' }],
     metrics: [{ name: 'activeUsers' }],
     limit: 10,
@@ -366,23 +630,24 @@ export async function getRealtimeData() {
 // =====================================================
 
 export async function getRealtimeDetailed() {
-  const client = getClient();
-  if (!client) return null;
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return null;
+  const { client, property } = ga4;
 
   const [citiesRes, devicesRes, countriesRes] = await Promise.all([
     client.runRealtimeReport({
-      property: getProperty(),
+      property,
       dimensions: [{ name: 'city' }],
       metrics: [{ name: 'activeUsers' }],
       limit: 10,
     }),
     client.runRealtimeReport({
-      property: getProperty(),
+      property,
       dimensions: [{ name: 'deviceCategory' }],
       metrics: [{ name: 'activeUsers' }],
     }),
     client.runRealtimeReport({
-      property: getProperty(),
+      property,
       dimensions: [{ name: 'country' }],
       metrics: [{ name: 'activeUsers' }],
       limit: 5,
@@ -417,13 +682,14 @@ export async function getRealtimeDetailed() {
 // =====================================================
 
 export async function getOutboundClicks(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return null;
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return null;
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null, '30daysAgo');
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'linkUrl' }],
     metrics: [{ name: 'eventCount' }],
@@ -471,13 +737,14 @@ export async function getOutboundClicks(start?: string | null, end?: string | nu
 // =====================================================
 
 export async function getVideoEvents(start?: string | null, end?: string | null) {
-  const client = getClient();
-  if (!client) return null;
+  const ga4 = await getClientAndProperty();
+  if (!ga4) return null;
+  const { client, property } = ga4;
 
   const dateRanges = buildDateRanges(start ?? null, end ?? null, '30daysAgo');
 
   const [response] = await client.runReport({
-    property: getProperty(),
+    property,
     dateRanges,
     dimensions: [{ name: 'eventName' }],
     metrics: [{ name: 'eventCount' }],

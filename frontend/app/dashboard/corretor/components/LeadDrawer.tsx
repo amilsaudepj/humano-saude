@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { CrmCardEnriched, CrmInteracaoTipo } from '@/lib/types/corretor';
 import { useCardInteracoes } from '../hooks/useKanban';
+import ClientScannerQuickPanel from '@/app/components/ClientScannerQuickPanel';
 
 // ========================================
 // INTERAÇÃO ICONS
@@ -210,6 +211,17 @@ export default function LeadDrawer({
                 </div>
               </div>
             )}
+
+            {/* Scanner Inteligente dentro do painel do cliente */}
+            <div className="px-6 py-3 border-b border-white/5">
+              <ClientScannerQuickPanel
+                context="corretor"
+                corretorId={corretorId}
+                leadId={card.lead_id || null}
+                leadName={card.lead?.nome || card.titulo}
+                compact
+              />
+            </div>
 
             {/* Add Interaction */}
             <div className="px-6 py-3 border-b border-white/5">

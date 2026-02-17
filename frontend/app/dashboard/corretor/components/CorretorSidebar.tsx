@@ -32,11 +32,17 @@ import {
   Link2,
   Building2,
   Briefcase,
+  GraduationCap,
+  BookOpen,
+  Compass,
 } from 'lucide-react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+
+const SIDEBAR_COLLAPSED_WIDTH = 72;
+const SIDEBAR_EXPANDED_WIDTH = 332;
 
 // ============================================
 // TIPOS
@@ -126,6 +132,18 @@ const menuItems: SidebarItem[] = [
       { id: 'mat-iaclone', label: 'IA Clone', icon: Wand2, href: `${B}/materiais/ia-clone`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'mat-galeria', label: 'Galeria Salvas', icon: Image, href: `${B}/materiais/galeria` },
       { id: 'mat-upload', label: 'Meus Uploads', icon: Upload, href: `${B}/materiais/uploads` },
+    ],
+  },
+  {
+    id: 'treinamento',
+    label: 'Treinamento',
+    icon: GraduationCap,
+    color: 'blue',
+    children: [
+      { id: 'training-hub', label: 'Central de Treinamento', icon: GraduationCap, href: `${B}/treinamento`, badge: { text: 'NOVO', variant: 'gold' } },
+      { id: 'training-tour', label: 'Tour da Plataforma', icon: Compass, href: `${B}/treinamento/tour` },
+      { id: 'training-product', label: 'Treinamento de Produto', icon: BookOpen, href: `${B}/treinamento/produto` },
+      { id: 'training-market', label: 'Mercado de Seguros', icon: Briefcase, href: `${B}/treinamento/mercado-seguros` },
     ],
   },
   {
@@ -299,7 +317,7 @@ export default function CorretorSidebar() {
                 <Icon className={cn('h-5 w-5 flex-shrink-0', colors.icon)} />
                 {expanded && (
                   <>
-                    <span className={cn('text-sm font-medium flex-1 truncate', colors.text)}>{item.label}</span>
+                    <span className={cn('text-sm font-medium flex-1 min-w-0 whitespace-normal leading-snug', colors.text)}>{item.label}</span>
                     {item.badge && (
                       <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold', badgeStyles[item.badge.variant])}>{item.badge.text}</span>
                     )}
@@ -324,7 +342,7 @@ export default function CorretorSidebar() {
               <Icon className={cn('h-5 w-5 flex-shrink-0', colors.icon)} />
               {expanded && (
                 <>
-                  <span className={cn('text-sm font-medium flex-1 text-left truncate', colors.text)}>{item.label}</span>
+                  <span className={cn('text-sm font-medium flex-1 min-w-0 text-left whitespace-normal leading-snug', colors.text)}>{item.label}</span>
                   {item.badge && (
                     <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold mr-1', badgeStyles[item.badge.variant])}>{item.badge.text}</span>
                   )}
@@ -367,7 +385,7 @@ export default function CorretorSidebar() {
                             childIsActive ? colors.childActive : 'text-white/60 hover:text-white/80 hover:bg-white/5',
                           )}>
                             <ChildIcon className="h-4 w-4 flex-shrink-0" />
-                            <span className="text-sm truncate">{child.label}</span>
+                            <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
                             {child.badge && (
                               <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold ml-auto', badgeStyles[child.badge.variant])}>{child.badge.text}</span>
                             )}
@@ -423,8 +441,8 @@ export default function CorretorSidebar() {
     <>
       {/* DESKTOP */}
       <motion.aside
-        initial={{ width: 72 }}
-        animate={{ width: isExpanded ? 260 : 72 }}
+        initial={{ width: SIDEBAR_COLLAPSED_WIDTH }}
+        animate={{ width: isExpanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
@@ -492,7 +510,7 @@ export default function CorretorSidebar() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-[#0B1215]/98 backdrop-blur-xl border-r border-white/10 flex flex-col z-50"
+              className="lg:hidden fixed left-0 top-0 h-screen w-80 bg-[#0B1215]/98 backdrop-blur-xl border-r border-white/10 flex flex-col z-50"
             >
               <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
                 <div className="flex items-center gap-2">

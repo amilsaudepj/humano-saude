@@ -259,8 +259,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="space-y-3">
-        <div data-tour="admin-radar" className="flex items-center justify-between gap-3">
+      <div data-tour="admin-radar" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-white">Radar Estratégico</h2>
           <span className="text-xs text-white/50">
             Decisão rápida sobre contatos e potencial de conversão
@@ -396,7 +396,7 @@ export default function DashboardPage() {
             </div>
           </GlassCard>
 
-          <GlassCard>
+          <GlassCard data-tour="admin-last-extraction">
             <div className="space-y-2 text-sm text-white/80">
               <h3 className="text-base font-semibold text-white">Última extração da IA</h3>
               <p className="text-white/60">

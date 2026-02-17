@@ -23,6 +23,9 @@ import {
 } from "@/lib/sidebar-config"
 import { useSidebarNav, useSidebarConvite } from "./hooks/useSidebar"
 
+const SIDEBAR_COLLAPSED_WIDTH = 72
+const SIDEBAR_EXPANDED_WIDTH = 332
+
 // ═══════════════════════════════════════════
 // Componente principal
 // ═══════════════════════════════════════════
@@ -72,7 +75,7 @@ export default function DockSidebar() {
                 <Icon className={cn("h-5 w-5 flex-shrink-0", colors.icon)} />
                 {expanded && (
                   <>
-                    <span className={cn("text-sm font-medium flex-1 truncate", colors.text)}>{item.label}</span>
+                    <span className={cn("text-sm font-medium flex-1 min-w-0 whitespace-normal leading-snug", colors.text)}>{item.label}</span>
                     {item.badge && (
                       <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", badgeStyles[item.badge.variant])}>{item.badge.text}</span>
                     )}
@@ -94,7 +97,7 @@ export default function DockSidebar() {
               <Icon className={cn("h-5 w-5 flex-shrink-0", colors.icon)} />
               {expanded && (
                 <>
-                  <span className={cn("text-sm font-medium flex-1 text-left truncate", colors.text)}>{item.label}</span>
+                  <span className={cn("text-sm font-medium flex-1 min-w-0 text-left whitespace-normal leading-snug", colors.text)}>{item.label}</span>
                   {item.badge && (
                     <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold mr-1", badgeStyles[item.badge.variant])}>{item.badge.text}</span>
                   )}
@@ -129,7 +132,7 @@ export default function DockSidebar() {
                             childIsActive ? colors.childActive : "text-white/60 hover:text-white/80 hover:bg-white/5"
                           )}>
                             <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childIsActive && "opacity-100")} />
-                            <span className="text-sm truncate">{child.label}</span>
+                            <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
                             {child.badge && (
                               <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold ml-auto", badgeStyles[child.badge.variant])}>{child.badge.text}</span>
                             )}
@@ -181,8 +184,8 @@ export default function DockSidebar() {
     <>
       {/* DESKTOP */}
       <motion.aside
-        initial={{ width: 72 }}
-        animate={{ width: nav.isExpanded ? 260 : 72 }}
+        initial={{ width: SIDEBAR_COLLAPSED_WIDTH }}
+        animate={{ width: nav.isExpanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         onMouseEnter={() => nav.setIsExpanded(true)}
         onMouseLeave={() => nav.setIsExpanded(false)}
@@ -226,7 +229,7 @@ export default function DockSidebar() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-[#0B1215]/98 backdrop-blur-xl border-r border-white/10 flex flex-col z-50"
+              className="lg:hidden fixed left-0 top-0 h-screen w-80 bg-[#0B1215]/98 backdrop-blur-xl border-r border-white/10 flex flex-col z-50"
             >
               <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
                 <Logo variant="2" size="sm" className="max-w-[140px] max-h-[36px]" />

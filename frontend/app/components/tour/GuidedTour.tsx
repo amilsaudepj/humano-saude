@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { HelpCircle, ChevronLeft, ChevronRight, CheckCircle2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 
 type TourRole = 'admin' | 'corretor';
@@ -19,9 +20,11 @@ type TourStep = {
 
 type GuidedTourProps = {
   role: TourRole;
+  triggerMode?: 'floating' | 'inline';
+  triggerClassName?: string;
 };
 
-const TOUR_VERSION = 'v2';
+const TOUR_VERSION = 'v3';
 
 function getStorageKeys(role: TourRole) {
   return {
@@ -40,13 +43,6 @@ function getStepsForRoute(role: TourRole, pathname: string): TourStep[] {
           description: 'Este menu centraliza os módulos para navegar rapidamente no painel.',
           selector: '[data-tour="admin-docksidebar"]',
           placement: 'right',
-        },
-        {
-          id: 'admin-overview',
-          title: 'Visão geral',
-          description: 'Aqui você acompanha os principais números e objetivos do dia.',
-          selector: '[data-tour="admin-overview"]',
-          placement: 'bottom',
         },
         {
           id: 'admin-filters',
@@ -75,6 +71,13 @@ function getStepsForRoute(role: TourRole, pathname: string): TourStep[] {
           description: 'Inicie a proposta com upload e extração inteligente dos documentos.',
           selector: '[data-tour="admin-scanner"]',
           placement: 'auto',
+        },
+        {
+          id: 'admin-last-extraction',
+          title: 'Última extração da IA',
+          description: 'Aqui você revisa o último CNPJ, razão social e demais dados extraídos pelo scanner.',
+          selector: '[data-tour="admin-last-extraction"]',
+          placement: 'left',
         },
         {
           id: 'admin-manual',
@@ -135,8 +138,13 @@ function overlapArea(
   return overlapWidth * overlapHeight;
 }
 
-export default function GuidedTour({ role }: GuidedTourProps) {
+export default function GuidedTour({
+  role,
+  triggerMode = 'floating',
+  triggerClassName,
+}: GuidedTourProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isBrowser = typeof window !== 'undefined';
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -145,6 +153,22 @@ export default function GuidedTour({ role }: GuidedTourProps) {
   const trackedElementRef = useRef<Element | null>(null);
   const steps = useMemo(() => getStepsForRoute(role, pathname), [pathname, role]);
   const currentStep = steps[stepIndex] || null;
+
+  useEffect(() => {
+    if (!isBrowser) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const forceTourParam = searchParams.get('tour');
+    const shouldForceOpen = forceTourParam === '1' || forceTourParam === 'true';
+    if (!shouldForceOpen || steps.length === 0) return;
+
+    setDontShowAgain(false);
+    setStepIndex(0);
+    setOpen(true);
+
+    searchParams.delete('tour');
+    const query = searchParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [isBrowser, pathname, router, steps.length]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -445,139 +469,145 @@ export default function GuidedTour({ role }: GuidedTourProps) {
     setOpen(true);
   };
 
+  const triggerButtonClassName =
+    triggerMode === 'inline'
+      ? `flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/90 px-3 py-2 text-xs font-semibold text-[#D4AF37] shadow-md shadow-black/40 backdrop-blur ${
+          triggerClassName || ''
+        }`
+      : `fixed bottom-5 right-5 z-[109] flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/95 px-4 py-2 text-xs font-semibold text-[#D4AF37] shadow-lg shadow-black/40 backdrop-blur ${
+          triggerClassName || ''
+        }`;
+
+  const TriggerButton = (
+    <button
+      type="button"
+      onClick={handleManualOpen}
+      className={triggerButtonClassName}
+    >
+      <HelpCircle className="h-4 w-4" />
+      <span className={triggerMode === 'inline' ? 'hidden sm:inline' : ''}>Abrir tour</span>
+    </button>
+  );
+
   if (steps.length === 0) {
-    return (
-      <button
-        type="button"
-        onClick={handleManualOpen}
-        className="fixed bottom-5 right-5 z-[72] flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/95 px-4 py-2 text-xs font-semibold text-[#D4AF37] shadow-lg shadow-black/40 backdrop-blur"
-      >
-        <HelpCircle className="h-4 w-4" />
-        Abrir tour
-      </button>
-    );
+    return TriggerButton;
   }
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={handleManualOpen}
-        className="fixed bottom-5 right-5 z-[72] flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/95 px-4 py-2 text-xs font-semibold text-[#D4AF37] shadow-lg shadow-black/40 backdrop-blur"
-      >
-        <HelpCircle className="h-4 w-4" />
-        Abrir tour
-      </button>
-
-      {open && currentStep && (
-        <>
-          {overlayPanels.map((panel, index) => (
-            <div
-              key={`tour-overlay-${index}`}
-              className="fixed z-[70] bg-black/55 backdrop-blur-[3px]"
-              style={{
-                left: panel.left,
-                top: panel.top,
-                width: panel.width,
-                height: panel.height,
-              }}
-            />
-          ))}
-
-          {targetRect && (
-            <div
-              className="pointer-events-none fixed z-[71] rounded-xl border-2 border-[#D4AF37] shadow-[0_0_0_1px_rgba(212,175,55,0.35),0_0_28px_rgba(212,175,55,0.25)]"
-              style={{
-                left: Math.max(0, targetRect.left - 6),
-                top: Math.max(0, targetRect.top - 6),
-                width: Math.max(0, targetRect.width + 12),
-                height: Math.max(0, targetRect.height + 12),
-              }}
-            />
-          )}
-
+  const overlayContent =
+    open && currentStep ? (
+      <>
+        {overlayPanels.map((panel, index) => (
           <div
-            className="fixed z-[72] w-full rounded-xl border border-white/15 bg-[#0a0a0a] p-4 text-white shadow-2xl"
+            key={`tour-overlay-${index}`}
+            className="fixed z-[110] bg-black/55 backdrop-blur-[3px]"
             style={{
-              left: tooltipStyle.left,
-              top: tooltipStyle.top,
-              maxWidth: tooltipStyle.maxWidth,
+              left: panel.left,
+              top: panel.top,
+              width: panel.width,
+              height: panel.height,
             }}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-white/45">
-                  Etapa {stepIndex + 1} de {steps.length}
-                </p>
-                <h3 className="text-sm font-semibold text-white">{currentStep.title}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleClose(false)}
-                className="rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
+          />
+        ))}
+
+        {targetRect && (
+          <div
+            className="pointer-events-none fixed z-[111] rounded-xl border-2 border-[#D4AF37] shadow-[0_0_0_1px_rgba(212,175,55,0.35),0_0_28px_rgba(212,175,55,0.25)]"
+            style={{
+              left: Math.max(0, targetRect.left - 6),
+              top: Math.max(0, targetRect.top - 6),
+              width: Math.max(0, targetRect.width + 12),
+              height: Math.max(0, targetRect.height + 12),
+            }}
+          />
+        )}
+
+        <div
+          className="fixed z-[112] w-full rounded-xl border border-white/15 bg-[#0a0a0a] p-4 text-white shadow-2xl"
+          style={{
+            left: tooltipStyle.left,
+            top: tooltipStyle.top,
+            maxWidth: tooltipStyle.maxWidth,
+          }}
+        >
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-white/45">
+                Etapa {stepIndex + 1} de {steps.length}
+              </p>
+              <h3 className="text-sm font-semibold text-white">{currentStep.title}</h3>
             </div>
+            <button
+              type="button"
+              onClick={() => handleClose(false)}
+              className="rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            <p className="mb-4 text-sm text-white/80">{currentStep.description}</p>
+          <p className="mb-4 text-sm text-white/80">{currentStep.description}</p>
 
-            <label className="mb-4 flex items-center gap-2 text-xs text-white/70">
-              <input
-                type="checkbox"
-                checked={dontShowAgain}
-                onChange={(event) => setDontShowAgain(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-white/30 bg-black/50 accent-[#D4AF37]"
-              />
-              Não exibir novamente automaticamente
-            </label>
+          <label className="mb-4 flex items-center gap-2 text-xs text-white/70">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(event) => setDontShowAgain(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-white/30 bg-black/50 accent-[#D4AF37]"
+            />
+            Não exibir novamente automaticamente
+          </label>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-white/20 bg-black/40 text-white hover:bg-black/60 hover:text-white"
+              disabled={stepIndex === 0}
+              onClick={() => setStepIndex((prev) => Math.max(prev - 1, 0))}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Voltar
+            </Button>
+
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 className="border-white/20 bg-black/40 text-white hover:bg-black/60 hover:text-white"
-                disabled={stepIndex === 0}
-                onClick={() => setStepIndex((prev) => Math.max(prev - 1, 0))}
+                onClick={() => handleClose(false)}
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Voltar
+                Pular
               </Button>
 
-              <div className="flex items-center gap-2">
+              {stepIndex < steps.length - 1 ? (
                 <Button
                   type="button"
-                  variant="outline"
-                  className="border-white/20 bg-black/40 text-white hover:bg-black/60 hover:text-white"
-                  onClick={() => handleClose(false)}
+                  className="bg-[#D4AF37] text-black hover:bg-[#E8C25B]"
+                  onClick={() => setStepIndex((prev) => Math.min(prev + 1, steps.length - 1))}
                 >
-                  Pular
+                  Próximo
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
-
-                {stepIndex < steps.length - 1 ? (
-                  <Button
-                    type="button"
-                    className="bg-[#D4AF37] text-black hover:bg-[#E8C25B]"
-                    onClick={() => setStepIndex((prev) => Math.min(prev + 1, steps.length - 1))}
-                  >
-                    Próximo
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    className="bg-[#D4AF37] text-black hover:bg-[#E8C25B]"
-                    onClick={() => handleClose(true)}
-                  >
-                    <CheckCircle2 className="mr-1 h-4 w-4" />
-                    Concluir tour
-                  </Button>
-                )}
-              </div>
+              ) : (
+                <Button
+                  type="button"
+                  className="bg-[#D4AF37] text-black hover:bg-[#E8C25B]"
+                  onClick={() => handleClose(true)}
+                >
+                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                  Concluir tour
+                </Button>
+              )}
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </>
+    ) : null;
+
+  return (
+    <>
+      {TriggerButton}
+      {isBrowser && overlayContent ? createPortal(overlayContent, window.document.body) : null}
     </>
   );
 }

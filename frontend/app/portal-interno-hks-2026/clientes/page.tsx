@@ -12,6 +12,7 @@ import {
   PageLoading,
 } from '../components';
 import type { Column } from '../components';
+import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 
 const columns: Column<any>[] = [
   {
@@ -79,6 +80,8 @@ export default function ClientesPage() {
   const [stats, setStats] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -129,6 +132,16 @@ export default function ClientesPage() {
         rowKey={(row) => row.id}
         emptyIcon={Users}
         emptyTitle="Nenhum cliente encontrado"
+        onRowClick={(cliente) => {
+          setSelectedCliente(cliente);
+          setDrawerOpen(true);
+        }}
+      />
+
+      <LeadDetailDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        lead={selectedCliente}
       />
     </div>
   );

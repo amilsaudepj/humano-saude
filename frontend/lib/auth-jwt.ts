@@ -3,8 +3,9 @@ import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 // Payload tipado para tokens da plataforma
 export interface HumanoTokenPayload extends JWTPayload {
   email: string;
-  role: 'admin' | 'corretor';
+  role: 'admin' | 'corretor' | 'cliente';
   corretor_id?: string;
+  cliente_id?: string;
 }
 
 // Secret derivada da env var — mínimo 32 chars recomendado
@@ -25,8 +26,9 @@ function getSecret(): Uint8Array {
  */
 export async function signToken(payload: {
   email: string;
-  role: 'admin' | 'corretor';
+  role: 'admin' | 'corretor' | 'cliente';
   corretor_id?: string;
+  cliente_id?: string;
 }): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
@@ -59,6 +61,7 @@ export function decodeTokenUnsafe(token: string): {
   email: string;
   role: string;
   corretor_id?: string;
+  cliente_id?: string;
   exp?: number;
 } | null {
   try {

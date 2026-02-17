@@ -11,6 +11,8 @@ import {
   fetchOperationalHealth,
   fetchSalesByDay,
   fetchFunnelData,
+  fetchGatewayStats,
+  fetchFraudAnalysis,
   getDateRangeForPeriod,
 } from '@/lib/dashboard-queries';
 
@@ -18,6 +20,15 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const { searchParams } = new URL(request.url);
+    const fraudOnly = searchParams.get('fraud') === 'true';
+
+    if (fraudOnly) {
+      const fraudItems = await fetchFraudAnalysis(supabase);
+      return NextResponse.json({
+        success: true,
+        data: { fraudItems },
+      });
+    }
 
     // Determinar período
     const days = searchParams.get('days');
@@ -44,16 +55,31 @@ export async function GET(request: NextRequest) {
     const options = { startIso, endIso };
 
     // Buscar tudo em paralelo
-    const [metrics, operationalHealth, chartData, funnelData] = await Promise.all([
+    const [metrics, operationalHealth, chartData, funnelData, gatewayStats, fraudItems] = await Promise.all([
       fetchDashboardMetrics(supabase, options),
       fetchOperationalHealth(supabase, options),
       fetchSalesByDay(supabase, startIso, endIso),
       fetchFunnelData(supabase),
+      fetchGatewayStats(supabase, options),
+      fetchFraudAnalysis(supabase),
     ]);
 
     return NextResponse.json({
       success: true,
-      data: { metrics, chartData, funnelData, operationalHealth },
+      data: {
+        metrics,
+        operationalHealth,
+        chartData,
+        funnelData,
+        gateway: gatewayStats,
+        fraud: fraudItems,
+        // aliases para compatibilidade com telas já existentes
+        health: operationalHealth,
+        salesByDay: chartData,
+        funnel: funnelData,
+        gatewayStats,
+        fraudItems,
+      },
     });
   } catch (error) {
     logger.error('Admin Dashboard Error', error);

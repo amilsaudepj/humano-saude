@@ -190,7 +190,7 @@ export default function ConfiguracoesPage() {
           {[
             { key: 'whatsapp_api_token', label: 'WhatsApp API Token', placeholder: 'Token da API do WhatsApp Business' },
             { key: 'meta_pixel_id', label: 'Meta Pixel ID', placeholder: 'ID do pixel do Facebook' },
-            { key: 'google_analytics_id', label: 'Google Analytics ID', placeholder: 'G-XXXXXXXXXX' },
+            { key: 'google_analytics_id', label: 'GA4 Property ID (numérico)', placeholder: 'Ex: 123456789' },
           ].map((field) => (
             <div key={field.key}>
               <label className="block text-sm text-gray-400 mb-1">{field.label}</label>

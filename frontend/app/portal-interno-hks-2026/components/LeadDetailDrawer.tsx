@@ -38,8 +38,10 @@ import {
   Eye,
   ZoomIn,
   ZoomOut,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ClientScannerQuickPanel from '@/app/components/ClientScannerQuickPanel';
 
 // ============================================
 // TYPES
@@ -474,6 +476,17 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
               {corretor.id && <InfoRow label="ID" value={corretor.id} />}
             </Section>
           )}
+
+          {/* ═══ SCANNER INTELIGENTE ═══ */}
+          <Section title="Scanner Inteligente" icon={Sparkles}>
+            <ClientScannerQuickPanel
+              context="admin"
+              corretorId={lead.corretor_id || corretor?.id || null}
+              leadId={lead.id || null}
+              leadName={lead.nome || null}
+              compact
+            />
+          </Section>
 
           {/* ═══ OBSERVAÇÕES ═══ */}
           {lead.observacoes && (

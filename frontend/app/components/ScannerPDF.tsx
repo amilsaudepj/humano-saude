@@ -23,11 +23,13 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   Eye,
   ExternalLink,
   Loader2,
   Mail,
+  Plus,
   Phone,
   Sparkles,
   Trash2,
@@ -40,10 +42,11 @@ import { saveScannedLead } from '@/app/actions/leads';
 import { getCorretoresList } from '@/app/actions/crm';
 
 type ProposalCategory = '' | 'adesao' | 'pessoa_fisica' | 'pessoa_juridica';
-type CompanyDataMode = '' | 'scanner' | 'manual';
+type CompanyDataMode = '' | 'scanner' | 'scanfull' | 'manual';
 type CivilStatus = 'solteiro' | 'casado' | 'uniao_estavel' | 'divorciado' | 'viuvo';
 type MarriageProofMode = 'certidao' | 'declaracao';
 type BeneficiaryRole = 'titular' | 'socio' | 'funcionario' | 'dependente';
+type IdentityDocumentType = 'rg' | 'cnh' | 'ifp' | 'outro';
 
 type CompanyDocumentType =
   | 'contrato_social'
@@ -64,7 +67,8 @@ type BeneficiaryDocumentType =
   | 'carta_permanencia'
   | 'certidao_casamento'
   | 'declaracao_uniao_estavel'
-  | 'certidao_nascimento';
+  | 'certidao_nascimento'
+  | 'selfie';
 
 type UploadTarget =
   | { scope: 'empresa'; docType: CompanyDocumentType; partnerId?: string }
@@ -100,12 +104,27 @@ interface UploadedDocument {
 interface CompanyPartnerProfile {
   id: string;
   nome: string;
+  documento_tipo?: IdentityDocumentType | null;
+  cpf?: string;
+  rg?: string;
+  ifp?: string;
+  dataNascimento?: string;
+  dataExpedicao?: string;
+  orgaoExpedidor?: string;
+  numeroHabilitacao?: string;
 }
 
 interface CompanyPartnerDocStatus {
   partner: CompanyPartnerProfile;
   done: boolean;
   filesCount: number;
+}
+
+interface ScanFullBatchResult {
+  processed: number;
+  classified: number;
+  unclassified: number;
+  distributedSummary: string[];
 }
 
 interface BeneficiaryForm {
@@ -167,6 +186,7 @@ const BENEFICIARY_DOC_LABELS: Record<BeneficiaryDocumentType, string> = {
   certidao_casamento: 'Certidão de casamento',
   declaracao_uniao_estavel: 'Declaração marital/união estável',
   certidao_nascimento: 'Certidão de nascimento',
+  selfie: 'Selfie (opcional)',
 };
 
 const ADESAO_DOC_LABELS: Record<AdesaoDocumentType, string> = {
@@ -222,6 +242,8 @@ const DARK_OUTLINE_BUTTON =
 const CHECKLIST_BADGE_DONE = 'border-green-400/35 bg-green-500/25 text-green-100';
 const CHECKLIST_BADGE_PENDING = 'border-yellow-400/35 bg-yellow-500/25 text-yellow-100';
 const CHECKLIST_BADGE_OPTIONAL = 'border-white/45 bg-white/10 text-white';
+const FIELD_ERROR_CLASS = 'border-red-500/70 bg-red-950/20 focus-visible:border-red-500 focus-visible:ring-red-500/30';
+const PANEL_ERROR_CLASS = 'border-red-500/60 bg-red-500/10';
 
 function getChecklistBadgeVariant(done: boolean, required: boolean): 'success' | 'warning' | 'outline' {
   if (done) return 'success';
@@ -294,6 +316,36 @@ function getDocumentExtension(fileName: string): string {
   return extension ? extension.toLowerCase() : '';
 }
 
+const EXTENSION_MIME_TYPE: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  txt: 'text/plain',
+  md: 'text/markdown',
+  csv: 'text/csv',
+  json: 'application/json',
+  xml: 'application/xml',
+  html: 'text/html',
+  htm: 'text/html',
+};
+
+function inferDocumentMimeType(fileName: string, providedMimeType?: string): string {
+  const normalizedProvided = (providedMimeType || '').trim().toLowerCase();
+  const isGeneric =
+    normalizedProvided.length === 0 ||
+    normalizedProvided === 'application/octet-stream' ||
+    normalizedProvided === 'binary/octet-stream';
+  if (!isGeneric) return normalizedProvided;
+
+  const byExtension = EXTENSION_MIME_TYPE[getDocumentExtension(fileName)];
+  return byExtension || 'application/octet-stream';
+}
+
 function isPreviewableDocument(document: UploadedDocument): boolean {
   const fileType = document.fileType?.toLowerCase() || '';
   if (fileType.startsWith('image/')) return true;
@@ -302,6 +354,13 @@ function isPreviewableDocument(document: UploadedDocument): boolean {
 
   const extension = getDocumentExtension(document.fileName);
   return ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff', 'txt', 'md', 'csv', 'json', 'xml', 'html', 'htm'].includes(extension);
+}
+
+function isImagePreviewDocument(document: UploadedDocument): boolean {
+  const fileType = document.fileType?.toLowerCase() || '';
+  if (fileType.startsWith('image/')) return true;
+  const extension = getDocumentExtension(document.fileName);
+  return ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff'].includes(extension);
 }
 
 function normalizePhone(value: string): string {
@@ -315,6 +374,15 @@ function formatPhoneInput(value: string): string {
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatCnpjInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
 }
 
 function normalizeEmailInput(value: string): string {
@@ -378,14 +446,312 @@ function normalizeCivilStatusFromExtraction(value?: string | null): CivilStatus 
   return null;
 }
 
+function normalizeIdentityDocTypeFromExtraction(value?: string | null): IdentityDocumentType | null {
+  if (!value) return null;
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (normalized.includes('cnh') || normalized.includes('habilit')) return 'cnh';
+  if (normalized.includes('ifp')) return 'ifp';
+  if (normalized.includes('rg') || normalized.includes('identidade')) return 'rg';
+  if (normalized.length > 0) return 'outro';
+  return null;
+}
+
+function inferIdentityDocTypeFromExtraction(extracted: PDFExtraido): IdentityDocumentType | null {
+  const explicit = normalizeIdentityDocTypeFromExtraction(extracted.documento_identificacao_tipo);
+  if (explicit) return explicit;
+  if (extracted.numero_habilitacao) return 'cnh';
+  if (extracted.ifp) return 'ifp';
+  if (extracted.rg) return 'rg';
+  return null;
+}
+
+function getIdentityDocTypeLabel(value?: IdentityDocumentType | null): string {
+  if (value === 'rg') return 'RG';
+  if (value === 'cnh') return 'CNH';
+  if (value === 'ifp') return 'IFP';
+  if (value === 'outro') return 'Outro';
+  return 'Não identificado';
+}
+
+function normalizeTextMatch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function containsAnyKeyword(value: string, keywords: string[]): boolean {
+  return keywords.some((keyword) => value.includes(keyword));
+}
+
+function isLikelySamePerson(candidateName: string, optionName: string): boolean {
+  const candidate = normalizeTextMatch(candidateName);
+  const option = normalizeTextMatch(optionName);
+  if (!candidate || !option) return false;
+  if (candidate === option) return true;
+  return candidate.includes(option) || option.includes(candidate);
+}
+
+function isPlaceholderPartnerName(value: string): boolean {
+  const normalized = normalizeTextMatch(value);
+  if (!normalized) return true;
+  return /^socio\s*\d+$/.test(normalized) || /^socia\s*\d+$/.test(normalized);
+}
+
+function scoreAddressCandidate(value: string): number {
+  const normalized = value.trim();
+  if (!normalized) return 0;
+
+  let score = 0;
+  if (/\d{5}-?\d{3}/.test(normalized)) score += 4; // CEP
+  if (/\b\d{1,5}\b/.test(normalized)) score += 2; // número
+  if (/\b(?:ac|al|ap|am|ba|ce|df|es|go|ma|mt|ms|mg|pa|pb|pr|pe|pi|rj|rn|rs|ro|rr|sc|sp|se|to)\b/i.test(normalized)) {
+    score += 2; // UF
+  }
+  if (normalized.length >= 20) score += 2;
+  if (normalized.length >= 35) score += 1;
+  return score;
+}
+
+function getBestAddressCandidate(values: Array<string | null | undefined>): string | null {
+  const candidates = values
+    .map((value) => (value || '').trim())
+    .filter((value) => value.length > 0);
+  if (candidates.length === 0) return null;
+
+  const ranked = candidates
+    .map((value) => ({ value, score: scoreAddressCandidate(value) }))
+    .sort((a, b) => b.score - a.score || b.value.length - a.value.length);
+
+  return ranked[0]?.value || null;
+}
+
 function hasUploadedDocs(value?: UploadedDocument[]): boolean {
   return Boolean(value && value.length > 0);
+}
+
+type ExtractionField = {
+  label: string;
+  value: string;
+};
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+function getExtractionFields(extracted: PDFExtraido): ExtractionField[] {
+  const fields: ExtractionField[] = [];
+  const pushField = (label: string, value?: string | null) => {
+    if (!value) return;
+    const normalized = value.trim();
+    if (!normalized) return;
+    fields.push({ label, value: normalized });
+  };
+
+  pushField('Nome completo', extracted.nome_completo || null);
+
+  if (extracted.nome_beneficiarios.length > 0) {
+    pushField('Beneficiários/Sócios', uniqueStrings(extracted.nome_beneficiarios).join(', '));
+  }
+
+  if (extracted.idades.length > 0) {
+    pushField('Idades', uniqueNumbers(extracted.idades).join(', '));
+  }
+
+  pushField('CPF', extracted.cpf ? formatCpfInput(extracted.cpf) : null);
+  pushField('RG', extracted.rg || null);
+  pushField('IFP', extracted.ifp || null);
+  const detectedIdentityType = inferIdentityDocTypeFromExtraction(extracted);
+  if (detectedIdentityType) {
+    pushField('Tipo de documento', getIdentityDocTypeLabel(detectedIdentityType));
+  }
+  pushField('Nº da habilitação', extracted.numero_habilitacao || null);
+  pushField('Data de nascimento', extracted.data_nascimento || null);
+  pushField('Data de expedição', extracted.data_expedicao || null);
+  pushField('Órgão expedidor', extracted.orgao_expedidor || null);
+
+  pushField('CNPJ', extracted.cnpj ? formatCnpjInput(extracted.cnpj) : null);
+  pushField('Razão social', extracted.razao_social || null);
+  pushField('Nome fantasia', extracted.nome_fantasia || null);
+  pushField('Inscrição estadual', extracted.inscricao_estadual || null);
+  pushField('Data de abertura', extracted.data_abertura || null);
+  pushField('Status CNPJ', extracted.status_cnpj || null);
+  pushField('Data início atividade', extracted.data_inicio_atividade || null);
+
+  pushField('Operadora', extracted.operadora || null);
+  pushField('Tipo de plano', extracted.tipo_plano || null);
+  if (typeof extracted.valor_atual === 'number') {
+    pushField('Valor atual', formatCurrency(extracted.valor_atual));
+  }
+
+  pushField('Estado civil', extracted.estado_civil || null);
+  pushField('E-mail', extracted.email || null);
+  pushField('Telefone', extracted.telefone ? formatPhoneInput(extracted.telefone) : null);
+  pushField('Endereço', extracted.endereco || null);
+
+  if (extracted.socios_detectados && extracted.socios_detectados.length > 0) {
+    pushField('Sócios detectados', uniqueStrings(extracted.socios_detectados).join(', '));
+  }
+  if (typeof extracted.total_socios === 'number' && extracted.total_socios > 0) {
+    pushField('Total de sócios', String(extracted.total_socios));
+  }
+
+  pushField('Observações', extracted.observacoes || null);
+  pushField('Confiança', extracted.confianca || null);
+
+  return fields;
+}
+
+function buildExtractionCopyText(extracted: PDFExtraido): string {
+  return getExtractionFields(extracted)
+    .map((field) => `${field.label}: ${field.value}`)
+    .join('\n');
+}
+
+function getUnifiedExtractionFromDocuments(docs: UploadedDocument[]): PDFExtraido {
+  const merged: PDFExtraido = {
+    idades: [],
+    operadora: null,
+    valor_atual: null,
+    tipo_plano: null,
+    nome_beneficiarios: [],
+    observacoes: null,
+    confianca: 'baixa',
+    texto_extraido_preview: null,
+    total_caracteres: 0,
+    socios_detectados: [],
+    total_socios: null,
+  };
+
+  const assignLatestString = (
+    key:
+      | 'operadora'
+      | 'tipo_plano'
+      | 'nome_completo'
+      | 'cpf'
+      | 'rg'
+      | 'ifp'
+      | 'documento_identificacao_tipo'
+      | 'data_expedicao'
+      | 'orgao_expedidor'
+      | 'numero_habilitacao'
+      | 'cnpj'
+      | 'razao_social'
+      | 'inscricao_estadual'
+      | 'data_abertura'
+      | 'status_cnpj'
+      | 'data_inicio_atividade'
+      | 'nome_fantasia'
+      | 'estado_civil'
+      | 'email'
+      | 'telefone'
+      | 'endereco'
+      | 'data_nascimento'
+      | 'observacoes'
+      | 'confianca',
+    value?: string | null,
+  ) => {
+    if (!value) return;
+    const normalized = value.trim();
+    if (!normalized) return;
+    (merged as PDFExtraido & Record<string, string | null>)[key] = normalized;
+  };
+
+  docs.forEach((document) => {
+    const extracted = document.extracted;
+    merged.idades = uniqueNumbers([...(merged.idades || []), ...(extracted.idades || [])]);
+    merged.nome_beneficiarios = uniqueStrings([
+      ...(merged.nome_beneficiarios || []),
+      ...(extracted.nome_beneficiarios || []),
+    ]);
+    merged.socios_detectados = uniqueStrings([
+      ...(merged.socios_detectados || []),
+      ...(extracted.socios_detectados || []),
+    ]);
+    merged.total_caracteres += extracted.total_caracteres || 0;
+
+    if (typeof extracted.valor_atual === 'number' && Number.isFinite(extracted.valor_atual)) {
+      merged.valor_atual = extracted.valor_atual;
+    }
+
+    if (typeof extracted.total_socios === 'number' && extracted.total_socios > 0) {
+      merged.total_socios = Math.max(merged.total_socios || 0, extracted.total_socios);
+    }
+
+    assignLatestString('operadora', extracted.operadora);
+    assignLatestString('tipo_plano', extracted.tipo_plano);
+    assignLatestString('nome_completo', extracted.nome_completo);
+    assignLatestString('cpf', extracted.cpf);
+    assignLatestString('rg', extracted.rg);
+    assignLatestString('ifp', extracted.ifp);
+    assignLatestString('documento_identificacao_tipo', extracted.documento_identificacao_tipo || null);
+    assignLatestString('data_expedicao', extracted.data_expedicao);
+    assignLatestString('orgao_expedidor', extracted.orgao_expedidor);
+    assignLatestString('numero_habilitacao', extracted.numero_habilitacao);
+    assignLatestString('cnpj', extracted.cnpj);
+    assignLatestString('razao_social', extracted.razao_social);
+    assignLatestString('inscricao_estadual', extracted.inscricao_estadual);
+    assignLatestString('data_abertura', extracted.data_abertura);
+    assignLatestString('status_cnpj', extracted.status_cnpj);
+    assignLatestString('data_inicio_atividade', extracted.data_inicio_atividade);
+    assignLatestString('nome_fantasia', extracted.nome_fantasia);
+    assignLatestString('estado_civil', extracted.estado_civil || null);
+    assignLatestString('email', extracted.email || null);
+    assignLatestString('telefone', extracted.telefone || null);
+    assignLatestString('endereco', extracted.endereco || null);
+    assignLatestString('data_nascimento', extracted.data_nascimento || null);
+    assignLatestString('observacoes', extracted.observacoes || null);
+    assignLatestString('confianca', extracted.confianca || null);
+  });
+
+  if (!merged.confianca) {
+    merged.confianca = 'baixa';
+  }
+
+  return merged;
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = window.document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  window.document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const copied = window.document.execCommand('copy');
+  window.document.body.removeChild(textarea);
+
+  if (!copied) {
+    throw new Error('Falha ao copiar');
+  }
 }
 
 function createCompanyPartner(index: number, name?: string): CompanyPartnerProfile {
   return {
     id: `company-partner-${Date.now()}-${index}-${Math.random().toString(16).slice(2, 8)}`,
     nome: name?.trim() || `Sócio ${index + 1}`,
+    documento_tipo: null,
+    cpf: '',
+    rg: '',
+    ifp: '',
+    dataNascimento: '',
+    dataExpedicao: '',
+    orgaoExpedidor: '',
+    numeroHabilitacao: '',
   };
 }
 
@@ -412,6 +778,110 @@ function getExtractedCompanyPartnersTotal(extracted: PDFExtraido, names: string[
   }
 
   return names.length;
+}
+
+function getLastExtractedValue(
+  docs: UploadedDocument[],
+  pick: (extracted: PDFExtraido) => string | null | undefined,
+): string | null {
+  for (let index = docs.length - 1; index >= 0; index -= 1) {
+    const candidate = pick(docs[index].extracted);
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+function getContractSocialExtractionSummary(docs: UploadedDocument[]): {
+  cnpj: string | null;
+  razaoSocial: string | null;
+  inscricaoEstadual: string | null;
+  dataAbertura: string | null;
+} {
+  return {
+    cnpj: getLastExtractedValue(docs, (extracted) => extracted.cnpj),
+    razaoSocial: getLastExtractedValue(docs, (extracted) => extracted.razao_social),
+    inscricaoEstadual: getLastExtractedValue(docs, (extracted) => extracted.inscricao_estadual),
+    dataAbertura: getLastExtractedValue(docs, (extracted) => extracted.data_abertura),
+  };
+}
+
+function getCnpjCardExtractionSummary(docs: UploadedDocument[]): {
+  status: string | null;
+  dataInicio: string | null;
+  nomeFantasia: string | null;
+} {
+  return {
+    status: getLastExtractedValue(docs, (extracted) => extracted.status_cnpj),
+    dataInicio: getLastExtractedValue(docs, (extracted) => extracted.data_inicio_atividade),
+    nomeFantasia: getLastExtractedValue(docs, (extracted) => extracted.nome_fantasia),
+  };
+}
+
+type CompanyPartnerIdentitySummary = {
+  documentoTipo: IdentityDocumentType | null;
+  cpf: string;
+  rg: string;
+  ifp: string;
+  numeroHabilitacao: string;
+  dataNascimento: string;
+  dataExpedicao: string;
+  orgaoExpedidor: string;
+};
+
+function buildCompanyPartnerIdentityCopyText(
+  partnerName: string,
+  summary: CompanyPartnerIdentitySummary,
+): string {
+  const lines: string[] = [];
+  if (partnerName.trim()) lines.push(`Sócio: ${partnerName.trim()}`);
+  if (summary.documentoTipo) lines.push(`Documento: ${getIdentityDocTypeLabel(summary.documentoTipo)}`);
+  if (summary.cpf) lines.push(`CPF: ${formatCpfInput(summary.cpf)}`);
+  if (summary.rg) lines.push(`RG: ${summary.rg}`);
+  if (summary.ifp) lines.push(`IFP: ${summary.ifp}`);
+  if (summary.numeroHabilitacao) lines.push(`Nº da habilitação: ${summary.numeroHabilitacao}`);
+  if (summary.dataNascimento) lines.push(`Data de nascimento: ${summary.dataNascimento}`);
+  if (summary.dataExpedicao) lines.push(`Data de expedição: ${summary.dataExpedicao}`);
+  if (summary.orgaoExpedidor) lines.push(`Órgão expedidor: ${summary.orgaoExpedidor}`);
+  return lines.join('\n');
+}
+
+function getCompanyPartnerIdentitySummary(
+  partner: CompanyPartnerProfile,
+  identityDocs: UploadedDocument[],
+): CompanyPartnerIdentitySummary {
+  const linkedDocs = identityDocs.filter((document) => document.linkedEntityId === partner.id);
+  const documentTypeFromDocs = (() => {
+    for (let index = linkedDocs.length - 1; index >= 0; index -= 1) {
+      const detected = inferIdentityDocTypeFromExtraction(linkedDocs[index].extracted);
+      if (detected) return detected;
+    }
+    return null;
+  })();
+
+  return {
+    documentoTipo: partner.documento_tipo || documentTypeFromDocs || null,
+    cpf: partner.cpf || getLastExtractedValue(linkedDocs, (extracted) => extracted.cpf) || '',
+    rg: partner.rg || getLastExtractedValue(linkedDocs, (extracted) => extracted.rg) || '',
+    ifp: partner.ifp || getLastExtractedValue(linkedDocs, (extracted) => extracted.ifp) || '',
+    numeroHabilitacao:
+      partner.numeroHabilitacao ||
+      getLastExtractedValue(linkedDocs, (extracted) => extracted.numero_habilitacao) ||
+      '',
+    dataNascimento:
+      partner.dataNascimento ||
+      formatDateInput(getLastExtractedValue(linkedDocs, (extracted) => extracted.data_nascimento) || '') ||
+      '',
+    dataExpedicao:
+      partner.dataExpedicao ||
+      formatDateInput(getLastExtractedValue(linkedDocs, (extracted) => extracted.data_expedicao) || '') ||
+      '',
+    orgaoExpedidor:
+      partner.orgaoExpedidor ||
+      getLastExtractedValue(linkedDocs, (extracted) => extracted.orgao_expedidor) ||
+      '',
+  };
 }
 
 function getCompanyPartnerDocStatuses(
@@ -464,8 +934,18 @@ function mapDocumentsForPayload<TDocumentType extends string>(
         nome_completo: document.extracted.nome_completo || null,
         cpf: document.extracted.cpf || null,
         rg: document.extracted.rg || null,
+        ifp: document.extracted.ifp || null,
+        documento_identificacao_tipo: document.extracted.documento_identificacao_tipo || null,
+        data_expedicao: document.extracted.data_expedicao || null,
+        orgao_expedidor: document.extracted.orgao_expedidor || null,
+        numero_habilitacao: document.extracted.numero_habilitacao || null,
         cnpj: document.extracted.cnpj || null,
         razao_social: document.extracted.razao_social || null,
+        inscricao_estadual: document.extracted.inscricao_estadual || null,
+        data_abertura: document.extracted.data_abertura || null,
+        status_cnpj: document.extracted.status_cnpj || null,
+        data_inicio_atividade: document.extracted.data_inicio_atividade || null,
+        nome_fantasia: document.extracted.nome_fantasia || null,
         estado_civil: document.extracted.estado_civil || null,
         email: document.extracted.email || null,
         telefone: document.extracted.telefone || null,
@@ -500,6 +980,8 @@ function getCompanyRequirements(params: {
   partnerDocStatuses: CompanyPartnerDocStatus[];
   companyEmail: string;
   companyPhone: string;
+  companyAddress: string;
+  companyDataMode: CompanyDataMode;
 }): RequirementStatus[] {
   if (!params.enabled) return [];
 
@@ -513,6 +995,16 @@ function getCompanyRequirements(params: {
       label: 'Telefone e e-mail do titular da empresa',
       required: true,
       done: params.companyEmail.trim().length > 0 && params.companyPhone.trim().length > 0,
+    },
+    {
+      id: 'endereco_empresa',
+      label: 'Endereço da empresa (apenas modo manual)',
+      required: params.companyDataMode === 'manual',
+      done: params.companyDataMode !== 'manual' || params.companyAddress.trim().length > 0,
+      helper:
+        params.companyDataMode === 'manual'
+          ? 'Informe manualmente apenas se optar por preencher a proposta no modo manual.'
+          : 'A IA preenche automaticamente com base nos documentos enviados.',
     },
     {
       id: 'contrato_social',
@@ -636,6 +1128,14 @@ function getBeneficiaryRequirements(beneficiary: BeneficiaryForm): RequirementSt
     });
   }
 
+  requirements.push({
+    id: `${beneficiary.id}-selfie`,
+    label: BENEFICIARY_DOC_LABELS.selfie,
+    required: false,
+    done: hasUploadedDocs(beneficiary.documentos.selfie),
+    helper: 'Opcional para validação facial.',
+  });
+
   return requirements;
 }
 
@@ -703,10 +1203,12 @@ export default function ScannerDocumentos({
   const [primaryPhone, setPrimaryPhone] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
   const [companyPhone, setCompanyPhone] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
   const [companyCnpj, setCompanyCnpj] = useState('');
   const [companyLegalName, setCompanyLegalName] = useState('');
   const [companyEmailTouched, setCompanyEmailTouched] = useState(false);
   const [companyPhoneTouched, setCompanyPhoneTouched] = useState(false);
+  const [companyAddressTouched, setCompanyAddressTouched] = useState(false);
   const [companyPartners, setCompanyPartners] = useState<CompanyPartnerProfile[]>([]);
 
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryForm[]>([]);
@@ -721,7 +1223,10 @@ export default function ScannerDocumentos({
   const [selectedBeneficiaryDocType, setSelectedBeneficiaryDocType] = useState<BeneficiaryDocumentType>('identidade_cpf');
   const [selectedBeneficiaryManageDocType, setSelectedBeneficiaryManageDocType] = useState<BeneficiaryDocumentType>('identidade_cpf');
   const [expandedCompanyDocPanels, setExpandedCompanyDocPanels] = useState<Partial<Record<CompanyDocumentType, boolean>>>({});
+  const [expandedBeneficiaryDocPanels, setExpandedBeneficiaryDocPanels] = useState<Record<string, boolean>>({});
+  const [validationAttemptedStep, setValidationAttemptedStep] = useState<StepDefinition['id'] | null>(null);
   const [previewDialogDocument, setPreviewDialogDocument] = useState<UploadedDocument | null>(null);
+  const [previewRenderFailed, setPreviewRenderFailed] = useState(false);
   const [corretorOptions, setCorretorOptions] = useState<CorretorAssignableOption[]>([]);
   const [selectedCorretorId, setSelectedCorretorId] = useState('');
   const [loadingCorretorOptions, setLoadingCorretorOptions] = useState(false);
@@ -731,10 +1236,12 @@ export default function ScannerDocumentos({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingLabel, setProcessingLabel] = useState('');
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [scanFullResult, setScanFullResult] = useState<ScanFullBatchResult | null>(null);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scanFullInputRef = useRef<HTMLInputElement>(null);
   const uploadedDocumentsRef = useRef<UploadedDocument[]>([]);
 
   const visibleSteps = useMemo<StepDefinition[]>(() => {
@@ -856,9 +1363,36 @@ export default function ScannerDocumentos({
         partnerDocStatuses: companyPartnerDocStatuses,
         companyEmail,
         companyPhone,
+        companyAddress,
+        companyDataMode,
       }),
-    [category, hasEmployees, companyDocs, companyEmail, companyPartnerDocStatuses, companyPhone],
+    [
+      category,
+      companyAddress,
+      companyDataMode,
+      companyDocs,
+      companyEmail,
+      companyPartnerDocStatuses,
+      companyPhone,
+      hasEmployees,
+    ],
   );
+
+  const suggestedCompanyAddress = useMemo(() => {
+    const companyDocAddresses = Object.values(companyDocs)
+      .flatMap((docs) => docs || [])
+      .map((document) => document.extracted.endereco || null);
+    return getBestAddressCandidate(companyDocAddresses);
+  }, [companyDocs]);
+
+  useEffect(() => {
+    if (category !== 'pessoa_juridica') return;
+    if (companyAddressTouched) return;
+    if (companyAddress.trim().length > 0) return;
+    if (!suggestedCompanyAddress) return;
+
+    setCompanyAddress(suggestedCompanyAddress);
+  }, [category, companyAddress, companyAddressTouched, suggestedCompanyAddress]);
 
   const adesaoRequirements = useMemo(
     () =>
@@ -933,6 +1467,8 @@ export default function ScannerDocumentos({
   const partnerCountNumber = parsePositiveInt(partnerCount);
   const employeeCountNumber =
     category === 'pessoa_juridica' && hasEmployees ? parsePositiveInt(employeeCount) : 0;
+  const maxPartnersAllowed =
+    category === 'pessoa_juridica' ? Math.max(totalLivesNumber - employeeCountNumber, 1) : 1;
   const dependentsCountNumber =
     category === 'pessoa_juridica'
       ? Math.max(totalLivesNumber - partnerCountNumber - employeeCountNumber, 0)
@@ -969,6 +1505,149 @@ export default function ScannerDocumentos({
   };
 
   const currentStep = visibleSteps[currentStepIndex];
+
+  const getMissingByStep = useCallback(
+    (stepId: StepDefinition['id']): { missingIds: string[]; missingMessages: string[] } => {
+      const missingIds: string[] = [];
+      const missingMessages: string[] = [];
+      const appendMissing = (id: string, message: string) => {
+        missingIds.push(id);
+        missingMessages.push(message);
+      };
+
+      if (stepId === 'modalidade') {
+        if (!categoryComplete) {
+          appendMissing('modalidade-categoria', 'Selecione a modalidade da proposta.');
+        }
+        return { missingIds, missingMessages };
+      }
+
+      if (stepId === 'estrutura') {
+        if (totalLivesNumber <= 0) {
+          appendMissing('estrutura-total-vidas', 'Informe um total de vidas válido.');
+        }
+
+        if (category === 'pessoa_juridica') {
+          if (partnerCountNumber <= 0 || partnerCountNumber > totalLivesNumber) {
+            appendMissing('estrutura-socios', 'Quantidade de sócios inválida para o total de vidas.');
+          }
+
+          if (hasEmployees && employeeCountNumber <= 0) {
+            appendMissing('estrutura-funcionarios', 'Informe a quantidade de funcionários.');
+          }
+
+          if (partnerCountNumber + employeeCountNumber > totalLivesNumber && totalLivesNumber > 0) {
+            appendMissing('estrutura-distribuicao', 'A soma de sócios e funcionários não pode exceder o total de vidas.');
+          }
+        }
+
+        if (primaryEmail.trim().length === 0) {
+          appendMissing('estrutura-contato-email', 'Preencha o e-mail de contato principal.');
+        }
+        if (normalizePhone(primaryPhone).length < 10) {
+          appendMissing('estrutura-contato-telefone', 'Preencha o telefone principal com DDD.');
+        }
+
+        return { missingIds, missingMessages };
+      }
+
+      if (stepId === 'empresa') {
+        if (category !== 'pessoa_juridica') return { missingIds, missingMessages };
+
+        if (!companyDataMode) {
+          appendMissing('empresa-modo', 'Selecione como deseja preencher os dados da empresa.');
+        }
+
+        companyRequirements
+          .filter((item) => item.required && !item.done)
+          .forEach((item) => {
+            appendMissing(`empresa-${item.id}`, `Empresa: ${item.label}`);
+          });
+
+        return { missingIds, missingMessages };
+      }
+
+      if (stepId === 'beneficiarios') {
+        if (category === 'adesao') {
+          adesaoRequirements
+            .filter((item) => item.required && !item.done)
+            .forEach((item) => {
+              appendMissing(`beneficiarios-adesao-${item.id}`, `Adesão: ${item.label}`);
+            });
+        }
+
+        beneficiaries.forEach((beneficiary, index) => {
+          const requirements = beneficiaryRequirementsMap.get(beneficiary.id) || [];
+          requirements
+            .filter((item) => item.required && !item.done)
+            .forEach((item) => {
+              appendMissing(
+                item.id,
+                `Beneficiário ${index + 1} (${beneficiary.nome || formatRole(beneficiary.role)}): ${item.label}`,
+              );
+            });
+        });
+
+        return { missingIds, missingMessages };
+      }
+
+      if (!categoryComplete) {
+        appendMissing('resumo-modalidade', 'Selecione a modalidade da proposta.');
+      }
+      if (!structureComplete) {
+        appendMissing('resumo-estrutura', 'Conclua a estrutura da proposta (vidas + contato principal).');
+      }
+      companyRequirements
+        .filter((item) => item.required && !item.done)
+        .forEach((item) => appendMissing(`resumo-empresa-${item.id}`, `Empresa: ${item.label}`));
+      adesaoRequirements
+        .filter((item) => item.required && !item.done)
+        .forEach((item) => appendMissing(`resumo-adesao-${item.id}`, `Adesão: ${item.label}`));
+      beneficiaries.forEach((beneficiary, index) => {
+        const requirements = beneficiaryRequirementsMap.get(beneficiary.id) || [];
+        requirements
+          .filter((item) => item.required && !item.done)
+          .forEach((item) =>
+            appendMissing(
+              `resumo-${item.id}`,
+              `Beneficiário ${index + 1} (${beneficiary.nome || formatRole(beneficiary.role)}): ${item.label}`,
+            ),
+          );
+      });
+      return { missingIds, missingMessages };
+    },
+    [
+      adesaoRequirements,
+      beneficiaryRequirementsMap,
+      beneficiaries,
+      category,
+      categoryComplete,
+      companyDataMode,
+      companyRequirements,
+      structureComplete,
+      employeeCountNumber,
+      hasEmployees,
+      partnerCountNumber,
+      primaryEmail,
+      primaryPhone,
+      totalLivesNumber,
+    ],
+  );
+
+  const currentStepMissing = useMemo(
+    () => (currentStep ? getMissingByStep(currentStep.id) : { missingIds: [], missingMessages: [] }),
+    [currentStep, getMissingByStep],
+  );
+
+  const shouldHighlightCurrentStep = Boolean(currentStep && validationAttemptedStep === currentStep.id);
+  const currentStepMissingIdSet = useMemo(
+    () => new Set(currentStepMissing.missingIds),
+    [currentStepMissing.missingIds],
+  );
+  const isMissingField = useCallback(
+    (fieldId: string): boolean => shouldHighlightCurrentStep && currentStepMissingIdSet.has(fieldId),
+    [currentStepMissingIdSet, shouldHighlightCurrentStep],
+  );
 
   const selectedBeneficiary = useMemo(
     () => beneficiaries.find((beneficiary) => beneficiary.id === selectedBeneficiaryId) || null,
@@ -1009,7 +1688,7 @@ export default function ScannerDocumentos({
 
     const requirements = beneficiaryRequirementsMap.get(selectedBeneficiary.id) || [];
     const pendingDocTypes = requirements
-      .filter((requirement) => requirement.required && !requirement.done)
+      .filter((requirement) => !requirement.done)
       .map((requirement) => getBeneficiaryDocTypeFromLabel(requirement.label))
       .filter((docType): docType is BeneficiaryDocumentType => docType != null);
 
@@ -1128,6 +1807,37 @@ export default function ScannerDocumentos({
     }));
   }, []);
 
+  const toggleBeneficiaryDocPanel = useCallback((beneficiaryId: string) => {
+    setExpandedBeneficiaryDocPanels((prev) => ({
+      ...prev,
+      [beneficiaryId]: !(prev[beneficiaryId] ?? false),
+    }));
+  }, []);
+
+  const addCompanyPartner = useCallback(() => {
+    if (category !== 'pessoa_juridica') return;
+
+    const currentPartners = Math.max(companyPartners.length, parsePositiveInt(partnerCount));
+    if (currentPartners >= maxPartnersAllowed) {
+      toast.error('Limite de sócios atingido.', {
+        description: `Com ${totalLivesNumber} vida(s) e ${employeeCountNumber} funcionário(s), o máximo permitido é ${maxPartnersAllowed} sócio(s).`,
+      });
+      return;
+    }
+
+    setPartnerCount(String(currentPartners + 1));
+    toast.success('Sócio adicionado para revisão.', {
+      description: 'Preencha o nome e envie Identidade, CNH ou documento equivalente.',
+    });
+  }, [
+    category,
+    companyPartners.length,
+    employeeCountNumber,
+    maxPartnersAllowed,
+    partnerCount,
+    totalLivesNumber,
+  ]);
+
   const removeCompanyPartner = useCallback(
     (partnerId: string) => {
       const partner = companyPartners.find((item) => item.id === partnerId);
@@ -1149,6 +1859,7 @@ export default function ScannerDocumentos({
       }));
 
       setCompanyPartners((prev) => prev.filter((item) => item.id !== partnerId));
+      setPartnerCount(String(Math.max(companyPartners.length - 1, 1)));
 
       toast.success('Sócio removido da lista de validação.', {
         description:
@@ -1161,29 +1872,37 @@ export default function ScannerDocumentos({
   );
 
   const applyCompanyPartnerHints = useCallback(
-    (extracted: PDFExtraido) => {
+    (extraContractDocs: UploadedDocument[] = []) => {
       if (category !== 'pessoa_juridica') return;
 
-      const inferredNames = getExtractedCompanyPartners(extracted);
-      const inferredTotal = getExtractedCompanyPartnersTotal(extracted, inferredNames);
+      const contractDocs = [...(companyDocs.contrato_social || []), ...extraContractDocs];
+      if (contractDocs.length === 0) return;
+
+      const unifiedContract = getUnifiedExtractionFromDocuments(contractDocs);
+      const inferredNames = getExtractedCompanyPartners(unifiedContract);
+      const inferredTotal = getExtractedCompanyPartnersTotal(unifiedContract, inferredNames);
 
       if (inferredTotal <= 0) return;
 
       setCompanyPartners((prev) =>
         Array.from({ length: Math.max(prev.length, inferredTotal) }, (_, index) => {
           const existing = prev[index];
+          const fallback = createCompanyPartner(index);
           return {
-            id: existing?.id || createCompanyPartner(index).id,
+            ...fallback,
+            ...(existing || {}),
+            id: existing?.id || fallback.id,
+            // Contrato social é a fonte de verdade para os nomes dos sócios.
             nome: inferredNames[index] || existing?.nome || `Sócio ${index + 1}`,
           };
         }),
       );
 
-      toast.info('Contrato social analisado', {
-        description: `${inferredTotal} sócio(s) identificado(s). Revise a lista e remova quem não for sócio.`,
+      toast.info('Sócios revalidados pelo contrato social', {
+        description: `${inferredTotal} sócio(s) confirmado(s) com base no contrato social.`,
       });
     },
-    [category],
+    [category, companyDocs.contrato_social],
   );
 
   const applyExtractedHints = useCallback(
@@ -1192,12 +1911,7 @@ export default function ScannerDocumentos({
         const cnpjDigits = extracted.cnpj?.replace(/\D/g, '') || '';
 
         if (cnpjDigits.length > 0) {
-          const formattedCnpj = cnpjDigits
-            .replace(/^(\d{2})(\d)/, '$1.$2')
-            .replace(/^(\d{2}\.\d{3})(\d)/, '$1.$2')
-            .replace(/\.(\d{3})(\d)/, '.$1/$2')
-            .replace(/(\d{4})(\d)/, '$1-$2')
-            .slice(0, 18);
+          const formattedCnpj = formatCnpjInput(cnpjDigits);
           setCompanyCnpj((prev) => (prev.trim().length > 0 ? prev : formattedCnpj));
         }
 
@@ -1215,14 +1929,40 @@ export default function ScannerDocumentos({
           );
         }
 
+        if (extracted.endereco && !companyAddressTouched) {
+          setCompanyAddress((prev) => (prev.trim().length > 0 ? prev : extracted.endereco?.trim() || ''));
+        }
+
         const extractedPartnerName = extracted.nome_completo || extracted.nome_beneficiarios[0] || '';
-        if (target.docType === 'identidade_cpf_socios' && target.partnerId && extractedPartnerName) {
+        if (target.docType === 'identidade_cpf_socios' && target.partnerId) {
+          const detectedDocType = inferIdentityDocTypeFromExtraction(extracted);
+          const hintedBirthDate = extracted.data_nascimento ? formatDateInput(extracted.data_nascimento) : '';
+          const hintedIssueDate = extracted.data_expedicao ? formatDateInput(extracted.data_expedicao) : '';
+          const hintedCpf = formatCpfInput(extracted.cpf || '');
+          const hintedRg = formatRgInput(extracted.rg || '');
+          const hintedIfp = extracted.ifp?.trim() || '';
+          const hintedIssuer = extracted.orgao_expedidor?.trim() || '';
+          const hintedCnh = extracted.numero_habilitacao?.replace(/\D/g, '').slice(0, 20) || '';
+
           setCompanyPartners((prev) =>
             prev.map((partner) =>
               partner.id === target.partnerId
                 ? {
                     ...partner,
-                    nome: extractedPartnerName || partner.nome,
+                    nome:
+                      (companyDocs.contrato_social || []).length > 0
+                        ? partner.nome
+                        : isPlaceholderPartnerName(partner.nome)
+                          ? extractedPartnerName || partner.nome
+                          : partner.nome,
+                    documento_tipo: detectedDocType || partner.documento_tipo || null,
+                    cpf: hintedCpf || partner.cpf || '',
+                    rg: hintedRg || partner.rg || '',
+                    ifp: hintedIfp || partner.ifp || '',
+                    dataNascimento: hintedBirthDate || partner.dataNascimento || '',
+                    dataExpedicao: hintedIssueDate || partner.dataExpedicao || '',
+                    orgaoExpedidor: hintedIssuer || partner.orgaoExpedidor || '',
+                    numeroHabilitacao: hintedCnh || partner.numeroHabilitacao || '',
                   }
                 : partner,
             ),
@@ -1253,8 +1993,6 @@ export default function ScannerDocumentos({
             (extracted.idades[0] != null ? String(extracted.idades[0]) : '');
           const hintedCpf = beneficiary.cpf || formatCpfInput(extracted.cpf || '');
           const hintedRg = beneficiary.rg || formatRgInput(extracted.rg || '');
-          const hintedEmail = beneficiary.email || normalizeEmailInput(extracted.email || '');
-          const hintedPhone = beneficiary.telefone || formatPhoneInput(extracted.telefone || '');
 
           return {
             ...beneficiary,
@@ -1263,24 +2001,291 @@ export default function ScannerDocumentos({
             cpf: hintedCpf,
             rg: hintedRg,
             dataNascimento: beneficiary.dataNascimento || hintedBirthDate,
-            email: hintedEmail,
-            telefone: hintedPhone,
             estadoCivil: normalizedCivilStatus || beneficiary.estadoCivil,
           };
         }),
       );
+    },
+    [companyAddressTouched, companyDocs.contrato_social, companyEmailTouched, companyPhoneTouched],
+  );
 
-      const beneficiary = beneficiaries.find((item) => item.id === target.beneficiaryId);
-      if (beneficiary?.role === 'titular') {
-        if (extracted.email && primaryEmail.trim().length === 0) {
-          setPrimaryEmail(normalizeEmailInput(extracted.email));
+  const getRequirementLabelForTarget = useCallback((target: UploadTarget): string => {
+    if (target.scope === 'empresa') return COMPANY_DOC_LABELS[target.docType];
+    if (target.scope === 'adesao') return ADESAO_DOC_LABELS[target.docType];
+    return BENEFICIARY_DOC_LABELS[target.docType];
+  }, []);
+
+  const appendUploadedDocumentToTarget = useCallback((target: UploadTarget, uploaded: UploadedDocument) => {
+    if (target.scope === 'empresa') {
+      setCompanyDocs((prev) => ({
+        ...prev,
+        [target.docType]: [...(prev[target.docType] || []), uploaded],
+      }));
+      return;
+    }
+
+    if (target.scope === 'adesao') {
+      setAdesaoDocs((prev) => ({
+        ...prev,
+        [target.docType]: [...(prev[target.docType] || []), uploaded],
+      }));
+      setSelectedAdesaoManageDocType(target.docType);
+      return;
+    }
+
+    setBeneficiaries((prev) =>
+      prev.map((beneficiary) =>
+        beneficiary.id === target.beneficiaryId
+          ? {
+              ...beneficiary,
+              documentos: {
+                ...beneficiary.documentos,
+                [target.docType]: [...(beneficiary.documentos[target.docType] || []), uploaded],
+              },
+            }
+          : beneficiary,
+      ),
+    );
+    setSelectedBeneficiaryManageDocType(target.docType);
+  }, []);
+
+  const resolvePartnerIdForScanFull = useCallback(
+    (extracted: PDFExtraido): string | null => {
+      if (companyPartners.length === 0) return null;
+      const hintedName = extracted.nome_completo || extracted.nome_beneficiarios?.[0] || '';
+      if (hintedName) {
+        const matched = companyPartners.find((partner) => isLikelySamePerson(hintedName, partner.nome));
+        if (matched) return matched.id;
+      }
+
+      const pending = companyPartnerDocStatuses.find((status) => !status.done);
+      if (pending) return pending.partner.id;
+      return companyPartners[0]?.id || null;
+    },
+    [companyPartnerDocStatuses, companyPartners],
+  );
+
+  const resolveBeneficiaryIdForScanFull = useCallback(
+    (fileName: string, extracted: PDFExtraido): string | null => {
+      if (beneficiaries.length === 0) return null;
+
+      const hintedName = extracted.nome_completo || extracted.nome_beneficiarios?.[0] || '';
+      if (hintedName) {
+        const matched = beneficiaries.find((beneficiary) => isLikelySamePerson(hintedName, beneficiary.nome));
+        if (matched) return matched.id;
+      }
+
+      const normalizedFileName = normalizeTextMatch(fileName);
+      const matchedByFileName = beneficiaries.find((beneficiary) =>
+        beneficiary.nome ? normalizedFileName.includes(normalizeTextMatch(beneficiary.nome)) : false,
+      );
+      if (matchedByFileName) return matchedByFileName.id;
+
+      if (selectedBeneficiaryId && beneficiaries.some((beneficiary) => beneficiary.id === selectedBeneficiaryId)) {
+        return selectedBeneficiaryId;
+      }
+
+      return beneficiaries[0]?.id || null;
+    },
+    [beneficiaries, selectedBeneficiaryId],
+  );
+
+  const classifyScanFullTarget = useCallback(
+    (file: File, extracted: PDFExtraido): { target: UploadTarget | null; reason: string } => {
+      const fileName = normalizeTextMatch(file.name);
+
+      const hasIdentityData = Boolean(
+        extracted.cpf ||
+          extracted.rg ||
+          extracted.ifp ||
+          extracted.numero_habilitacao ||
+          extracted.data_nascimento ||
+          extracted.documento_identificacao_tipo,
+      );
+      const hasCompanyData = Boolean(
+        extracted.cnpj ||
+          extracted.razao_social ||
+          extracted.inscricao_estadual ||
+          (extracted.socios_detectados?.length || 0) > 0,
+      );
+      const hasCompanyRegistrationData = Boolean(
+        extracted.cnpj || extracted.razao_social || extracted.inscricao_estadual || extracted.nome_fantasia,
+      );
+      const hasAddressData = Boolean(extracted.endereco);
+      const hasHealthPlanData = Boolean(
+        extracted.operadora ||
+          extracted.tipo_plano ||
+          extracted.valor_atual != null ||
+          (extracted.idades?.length || 0) > 0,
+      );
+
+      const isContractKeyword = containsAnyKeyword(fileName, [
+        'contrato',
+        'social',
+        'qsa',
+        'socios',
+        'socio',
+      ]);
+      const isCnpjCardKeyword = containsAnyKeyword(fileName, [
+        'cartao cnpj',
+        'cartao_cnpj',
+        'comprovante de inscricao',
+        'receita',
+        'cnpj',
+      ]);
+      const isCompanyAddressKeyword = containsAnyKeyword(fileName, [
+        'endereco empresa',
+        'comprovante endereco empresa',
+        'sede',
+      ]);
+      const isAlteracaoKeyword = containsAnyKeyword(fileName, ['alteracao contratual', 'aditivo']);
+      const isEmployeesKeyword = containsAnyKeyword(fileName, ['gfip', 'funcionarios', 'funcionario', 'folha']);
+      const isEligibilityKeyword = containsAnyKeyword(fileName, ['elegibilidade', 'vinculo', 'associacao']);
+      const isAssociationKeyword = containsAnyKeyword(fileName, ['associacao', 'filiacao']);
+      const isCardKeyword = containsAnyKeyword(fileName, ['carteirinha', 'cartao plano', 'cartao do plano']);
+      const isPermanencyKeyword = containsAnyKeyword(fileName, ['carta permanencia', 'permanencia']);
+      const isMarriageKeyword = containsAnyKeyword(fileName, ['certidao casamento', 'casamento']);
+      const isUnionKeyword = containsAnyKeyword(fileName, ['uniao estavel', 'declaracao marital']);
+      const isBirthKeyword = containsAnyKeyword(fileName, ['certidao nascimento', 'nascimento']);
+      const isSelfieKeyword = containsAnyKeyword(fileName, ['selfie', 'rosto', 'face', 'foto rosto', 'foto face']);
+      const isResidenceKeyword = containsAnyKeyword(fileName, [
+        'comprovante residencia',
+        'residencia',
+        'endereco',
+        'conta luz',
+        'conta agua',
+      ]);
+      const isIdentityKeyword = containsAnyKeyword(fileName, [
+        'rg',
+        'identidade',
+        'cnh',
+        'habilitacao',
+        'ifp',
+        'cpf',
+      ]);
+
+      if (category === 'pessoa_juridica') {
+        if (isContractKeyword || ((extracted.socios_detectados?.length || 0) > 0 && hasCompanyData)) {
+          return { target: { scope: 'empresa', docType: 'contrato_social' }, reason: 'Contrato social/sócios' };
         }
-        if (extracted.telefone && normalizePhone(primaryPhone).length < 10) {
-          setPrimaryPhone(formatPhoneInput(extracted.telefone));
+        if (isAlteracaoKeyword) {
+          return { target: { scope: 'empresa', docType: 'alteracao_contratual' }, reason: 'Alteração contratual' };
+        }
+        if (isEmployeesKeyword) {
+          return { target: { scope: 'empresa', docType: 'relacao_funcionarios' }, reason: 'GFIP/funcionários' };
+        }
+        if (isCnpjCardKeyword || (Boolean(extracted.cnpj && extracted.razao_social) && !isContractKeyword)) {
+          return { target: { scope: 'empresa', docType: 'cartao_cnpj' }, reason: 'Cartão CNPJ' };
+        }
+        if (
+          isCompanyAddressKeyword ||
+          (hasAddressData &&
+            (hasCompanyRegistrationData || (!hasIdentityData && !hasHealthPlanData && !isResidenceKeyword)))
+        ) {
+          return {
+            target: { scope: 'empresa', docType: 'comprovante_endereco_empresa' },
+            reason: 'Comprovante de endereço da empresa',
+          };
+        }
+        if (isIdentityKeyword || hasIdentityData) {
+          const partnerId = resolvePartnerIdForScanFull(extracted) || undefined;
+          return {
+            target: { scope: 'empresa', docType: 'identidade_cpf_socios', partnerId },
+            reason: 'Identificação de sócio',
+          };
         }
       }
+
+      if (category === 'adesao') {
+        if (isEligibilityKeyword) {
+          return { target: { scope: 'adesao', docType: 'documento_elegibilidade' }, reason: 'Elegibilidade' };
+        }
+        if (isAssociationKeyword) {
+          return { target: { scope: 'adesao', docType: 'formulario_associacao' }, reason: 'Formulário de associação' };
+        }
+      }
+
+      const beneficiaryId = resolveBeneficiaryIdForScanFull(file.name, extracted);
+      if (beneficiaryId) {
+        if (isCardKeyword || hasHealthPlanData) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'carteirinha_plano_atual' },
+            reason: 'Carteirinha do plano',
+          };
+        }
+        if (isPermanencyKeyword) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'carta_permanencia' },
+            reason: 'Carta de permanência',
+          };
+        }
+        if (isMarriageKeyword) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'certidao_casamento' },
+            reason: 'Certidão de casamento',
+          };
+        }
+        if (isUnionKeyword) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'declaracao_uniao_estavel' },
+            reason: 'Declaração de união estável',
+          };
+        }
+        if (isBirthKeyword) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'certidao_nascimento' },
+            reason: 'Certidão de nascimento',
+          };
+        }
+        if (isSelfieKeyword) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'selfie' },
+            reason: 'Selfie do beneficiário',
+          };
+        }
+        if (isResidenceKeyword || hasAddressData) {
+          if (category === 'pessoa_juridica' && hasCompanyRegistrationData) {
+            return {
+              target: { scope: 'empresa', docType: 'comprovante_endereco_empresa' },
+              reason: 'Endereço com dados cadastrais da empresa',
+            };
+          }
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'comprovante_residencia' },
+            reason: 'Comprovante de residência',
+          };
+        }
+        if (isIdentityKeyword || hasIdentityData) {
+          return {
+            target: { scope: 'beneficiario', beneficiaryId, docType: 'identidade_cpf' },
+            reason: 'Identidade/CPF do beneficiário',
+          };
+        }
+      }
+
+      if (category === 'pessoa_juridica') {
+        if (hasCompanyData) {
+          return { target: { scope: 'empresa', docType: 'contrato_social' }, reason: 'Sinais societários detectados' };
+        }
+        if (hasAddressData) {
+          return {
+            target: { scope: 'empresa', docType: 'comprovante_endereco_empresa' },
+            reason: 'Endereço empresarial detectado',
+          };
+        }
+      }
+
+      return { target: null, reason: 'Sem classificação automática confiável' };
     },
-    [beneficiaries, companyEmailTouched, companyPhoneTouched, primaryEmail, primaryPhone],
+    [
+      beneficiaries,
+      category,
+      companyPartnerDocStatuses,
+      companyPartners,
+      resolveBeneficiaryIdForScanFull,
+      resolvePartnerIdForScanFull,
+      selectedBeneficiaryId,
+    ],
   );
 
   const processFilesUpload = useCallback(
@@ -1308,14 +2313,10 @@ export default function ScannerDocumentos({
       setIsProcessing(true);
       setProcessingProgress(0);
 
-      const requirementLabel =
-        target.scope === 'empresa'
-          ? COMPANY_DOC_LABELS[target.docType]
-          : target.scope === 'adesao'
-            ? ADESAO_DOC_LABELS[target.docType]
-            : BENEFICIARY_DOC_LABELS[target.docType];
+      const requirementLabel = getRequirementLabelForTarget(target);
 
       const uploadedFiles: string[] = [];
+      const uploadedContractDocs: UploadedDocument[] = [];
       const failedFiles: string[] = [];
 
       for (let index = 0; index < validFiles.length; index += 1) {
@@ -1340,11 +2341,13 @@ export default function ScannerDocumentos({
           };
 
           const extracted = await apiService.extrairDocumentoProxy(file, extractionContext);
-          const previewUrl = URL.createObjectURL(file);
+          const inferredFileType = inferDocumentMimeType(file.name, file.type);
+          const previewBlob = file.slice(0, file.size, inferredFileType);
+          const previewUrl = URL.createObjectURL(previewBlob);
           const uploaded: UploadedDocument = {
             id: `${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
             fileName: file.name,
-            fileType: file.type || 'application/octet-stream',
+            fileType: inferredFileType,
             fileSize: file.size,
             uploadedAt: new Date().toISOString(),
             extracted,
@@ -1356,36 +2359,10 @@ export default function ScannerDocumentos({
                 : null,
           };
 
-          if (target.scope === 'empresa') {
-            setCompanyDocs((prev) => ({
-              ...prev,
-              [target.docType]: [...(prev[target.docType] || []), uploaded],
-            }));
-          } else if (target.scope === 'adesao') {
-            setAdesaoDocs((prev) => ({
-              ...prev,
-              [target.docType]: [...(prev[target.docType] || []), uploaded],
-            }));
-            setSelectedAdesaoManageDocType(target.docType);
-          } else {
-            setBeneficiaries((prev) =>
-              prev.map((beneficiary) =>
-                beneficiary.id === target.beneficiaryId
-                  ? {
-                      ...beneficiary,
-                      documentos: {
-                        ...beneficiary.documentos,
-                        [target.docType]: [...(beneficiary.documentos[target.docType] || []), uploaded],
-                      },
-                    }
-                  : beneficiary,
-              ),
-            );
-            setSelectedBeneficiaryManageDocType(target.docType);
-          }
+          appendUploadedDocumentToTarget(target, uploaded);
 
           if (target.scope === 'empresa' && target.docType === 'contrato_social') {
-            applyCompanyPartnerHints(extracted);
+            uploadedContractDocs.push(uploaded);
           }
 
           applyExtractedHints(target, extracted);
@@ -1395,6 +2372,10 @@ export default function ScannerDocumentos({
           const message = uploadError instanceof Error ? uploadError.message : 'Erro ao processar documento';
           failedFiles.push(`${file.name} (${message})`);
         }
+      }
+
+      if (uploadedContractDocs.length > 0) {
+        applyCompanyPartnerHints(uploadedContractDocs);
       }
 
       setProcessingProgress(100);
@@ -1422,13 +2403,171 @@ export default function ScannerDocumentos({
         setActiveUploadTarget(null);
       }, 250);
     },
-    [applyCompanyPartnerHints, applyExtractedHints, beneficiaries, category, onDadosExtraidos],
+    [
+      appendUploadedDocumentToTarget,
+      applyCompanyPartnerHints,
+      applyExtractedHints,
+      beneficiaries,
+      category,
+      getRequirementLabelForTarget,
+      onDadosExtraidos,
+    ],
+  );
+
+  const processScanFullUpload = useCallback(
+    async (files: File[]) => {
+      const validFiles: File[] = [];
+      const validationErrors: string[] = [];
+
+      files.forEach((file) => {
+        const validationError = validateFile(file);
+        if (validationError) {
+          validationErrors.push(`${file.name}: ${validationError}`);
+          return;
+        }
+        validFiles.push(file);
+      });
+
+      if (validFiles.length === 0) {
+        setError(validationErrors[0] || 'Nenhum arquivo válido foi selecionado para o ScanFULL.');
+        return;
+      }
+
+      setError('');
+      setScanFullResult(null);
+      setPendingUploadTarget(null);
+      setActiveUploadTarget(null);
+      setIsProcessing(true);
+      setProcessingProgress(0);
+      setProcessingLabel(`ScanFULL (0/${validFiles.length})`);
+
+      const distributedCounter = new Map<string, number>();
+      const uploadedFiles: string[] = [];
+      const uploadedContractDocs: UploadedDocument[] = [];
+      const unclassifiedFiles: string[] = [];
+      const failedFiles: string[] = [];
+
+      for (let index = 0; index < validFiles.length; index += 1) {
+        const file = validFiles[index];
+        const progress = Math.round((index / validFiles.length) * 100);
+        setProcessingProgress(progress);
+        setProcessingLabel(`ScanFULL (${index + 1}/${validFiles.length})`);
+
+        try {
+          const extractionContext: DocumentoExtractionContext = {
+            scope: 'empresa',
+            doc_type: 'scanfull',
+            proposal_category: category || undefined,
+          };
+
+          const extracted = await apiService.extrairDocumentoProxy(file, extractionContext);
+          const classification = classifyScanFullTarget(file, extracted);
+
+          if (!classification.target) {
+            unclassifiedFiles.push(`${file.name} (${classification.reason})`);
+            continue;
+          }
+
+          const requirementLabel = getRequirementLabelForTarget(classification.target);
+          const inferredFileType = inferDocumentMimeType(file.name, file.type);
+          const previewBlob = file.slice(0, file.size, inferredFileType);
+          const previewUrl = URL.createObjectURL(previewBlob);
+          const uploaded: UploadedDocument = {
+            id: `${Date.now()}-scanfull-${index}-${Math.random().toString(16).slice(2)}`,
+            fileName: file.name,
+            fileType: inferredFileType,
+            fileSize: file.size,
+            uploadedAt: new Date().toISOString(),
+            extracted,
+            requirementLabel,
+            previewUrl,
+            linkedEntityId:
+              classification.target.scope === 'empresa' &&
+              classification.target.docType === 'identidade_cpf_socios'
+                ? classification.target.partnerId || null
+                : null,
+          };
+
+          appendUploadedDocumentToTarget(classification.target, uploaded);
+
+          if (classification.target.scope === 'empresa' && classification.target.docType === 'contrato_social') {
+            uploadedContractDocs.push(uploaded);
+          }
+
+          applyExtractedHints(classification.target, extracted);
+          onDadosExtraidos?.(extracted);
+          uploadedFiles.push(file.name);
+          distributedCounter.set(requirementLabel, (distributedCounter.get(requirementLabel) || 0) + 1);
+        } catch (uploadError: unknown) {
+          const message = uploadError instanceof Error ? uploadError.message : 'Erro ao processar documento';
+          failedFiles.push(`${file.name} (${message})`);
+        }
+      }
+
+      if (uploadedContractDocs.length > 0) {
+        applyCompanyPartnerHints(uploadedContractDocs);
+      }
+
+      setProcessingProgress(100);
+
+      const distributedSummary = Array.from(distributedCounter.entries()).map(
+        ([label, count]) => `${label}: ${count}`,
+      );
+      setScanFullResult({
+        processed: uploadedFiles.length + unclassifiedFiles.length,
+        classified: uploadedFiles.length,
+        unclassified: unclassifiedFiles.length,
+        distributedSummary,
+      });
+
+      if (uploadedFiles.length > 0) {
+        toast.success('ScanFULL concluído', {
+          description: `${uploadedFiles.length} arquivo(s) classificados automaticamente.`,
+        });
+      }
+
+      if (unclassifiedFiles.length > 0) {
+        toast.warning('ScanFULL com arquivos não classificados', {
+          description: unclassifiedFiles.slice(0, 2).join(' · '),
+        });
+      }
+
+      const allErrors = [...validationErrors, ...failedFiles];
+      if (allErrors.length > 0) {
+        const description = allErrors.slice(0, 2).join(' · ');
+        setError(description);
+        toast.error('Alguns arquivos não foram processados no ScanFULL', {
+          description,
+        });
+      }
+
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingLabel('');
+        setProcessingProgress(0);
+      }, 250);
+    },
+    [
+      appendUploadedDocumentToTarget,
+      applyCompanyPartnerHints,
+      applyExtractedHints,
+      category,
+      classifyScanFullTarget,
+      getRequirementLabelForTarget,
+      onDadosExtraidos,
+    ],
   );
 
   const triggerUpload = (target: UploadTarget) => {
     setPendingUploadTarget(target);
     setActiveUploadTarget(target);
     fileInputRef.current?.click();
+  };
+
+  const triggerScanFullUpload = () => {
+    setPendingUploadTarget(null);
+    setActiveUploadTarget(null);
+    scanFullInputRef.current?.click();
   };
 
   const renderInlineUploadProgress = (target: UploadTarget) => {
@@ -1439,7 +2578,10 @@ export default function ScannerDocumentos({
     return (
       <div className="mt-2 space-y-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-2">
         <div className="flex items-center justify-between text-[11px] text-white/75">
-          <span>Processando: {processingLabel || 'documento'}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 className="h-3 w-3 animate-spin text-[#F0D67C]" />
+            Processando: {processingLabel || 'documento'}
+          </span>
           <span>{processingProgress}%</span>
         </div>
         <Progress value={processingProgress} className="h-2" />
@@ -1459,6 +2601,17 @@ export default function ScannerDocumentos({
     }
 
     await processFilesUpload(files, pendingUploadTarget);
+    event.target.value = '';
+  };
+
+  const handleScanFullInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+      event.target.value = '';
+      return;
+    }
+
+    await processScanFullUpload(files);
     event.target.value = '';
   };
 
@@ -1532,6 +2685,102 @@ export default function ScannerDocumentos({
     }
   }, [beneficiaries, selectedBeneficiaryId]);
 
+  useEffect(() => {
+    if (category !== 'pessoa_juridica') return;
+    if (beneficiaries.length === 0) return;
+    if (companyPartners.length === 0) return;
+
+    const identityDocs = companyDocs.identidade_cpf_socios || [];
+
+    setBeneficiaries((prev) => {
+      let hasChanges = false;
+      let socioIndex = 0;
+
+      const next = prev.map((beneficiary) => {
+        if (beneficiary.role !== 'socio') return beneficiary;
+
+        const partner = companyPartners[socioIndex];
+        socioIndex += 1;
+        if (!partner) return beneficiary;
+
+        const summary = getCompanyPartnerIdentitySummary(partner, identityDocs);
+        const currentName = beneficiary.nome.trim();
+        const nextBeneficiary: BeneficiaryForm = { ...beneficiary };
+
+        if (
+          partner.nome?.trim() &&
+          (!currentName ||
+            isPlaceholderPartnerName(currentName) ||
+            normalizeTextMatch(currentName) === normalizeTextMatch(formatRole('socio')))
+        ) {
+          nextBeneficiary.nome = partner.nome.trim();
+          hasChanges = true;
+        }
+
+        if (!nextBeneficiary.cpf && summary.cpf) {
+          nextBeneficiary.cpf = formatCpfInput(summary.cpf);
+          hasChanges = true;
+        }
+
+        if (!nextBeneficiary.rg && summary.rg) {
+          nextBeneficiary.rg = formatRgInput(summary.rg);
+          hasChanges = true;
+        }
+
+        if (!nextBeneficiary.dataNascimento && summary.dataNascimento) {
+          nextBeneficiary.dataNascimento = summary.dataNascimento;
+          hasChanges = true;
+        }
+
+        if (!nextBeneficiary.idade && summary.dataNascimento) {
+          const inferredAge = inferAgeFromBirthDate(summary.dataNascimento);
+          if (inferredAge) {
+            nextBeneficiary.idade = inferredAge;
+            hasChanges = true;
+          }
+        }
+
+        return nextBeneficiary;
+      });
+
+      return hasChanges ? next : prev;
+    });
+  }, [
+    beneficiaries.length,
+    category,
+    companyDocs.identidade_cpf_socios,
+    companyPartners,
+  ]);
+
+  const beneficiaryDisplayNames = useMemo(() => {
+    const names = new Map<string, string>();
+    let socioIndex = 0;
+
+    beneficiaries.forEach((beneficiary) => {
+      const explicitName = beneficiary.nome.trim();
+      if (explicitName) {
+        names.set(beneficiary.id, explicitName);
+        if (beneficiary.role === 'socio') socioIndex += 1;
+        return;
+      }
+
+      if (category === 'pessoa_juridica' && beneficiary.role === 'socio') {
+        const partnerName = companyPartners[socioIndex]?.nome?.trim();
+        if (partnerName) {
+          names.set(beneficiary.id, partnerName);
+        } else {
+          names.set(beneficiary.id, formatRole(beneficiary.role));
+        }
+        socioIndex += 1;
+        return;
+      }
+
+      names.set(beneficiary.id, formatRole(beneficiary.role));
+    });
+
+    return names;
+  }, [beneficiaries, category, companyPartners]);
+
   const updateBeneficiary = <K extends keyof BeneficiaryForm>(
     beneficiaryId: string,
     field: K,
@@ -1567,6 +2816,7 @@ export default function ScannerDocumentos({
       toast.error('Pré-visualização indisponível para este arquivo.');
       return;
     }
+    setPreviewRenderFailed(false);
     setPreviewDialogDocument(document);
   }, []);
 
@@ -1583,6 +2833,55 @@ export default function ScannerDocumentos({
     link.target = '_blank';
     link.click();
   }, []);
+
+  const copyExtractedFromDocument = useCallback(async (document: UploadedDocument) => {
+    const text = buildExtractionCopyText(document.extracted);
+    if (!text) {
+      toast.error('Não há dados extraídos para copiar neste arquivo.');
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(text);
+      toast.success('Dados copiados da extração', {
+        description: `${document.fileName}`,
+      });
+    } catch {
+      toast.error('Não foi possível copiar os dados extraídos.');
+    }
+  }, []);
+
+  const copyExtractionText = useCallback(async (text: string, successMessage: string) => {
+    if (!text.trim()) {
+      toast.error('Não há dados extraídos para copiar.');
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(text);
+      toast.success(successMessage);
+    } catch {
+      toast.error('Não foi possível copiar os dados extraídos.');
+    }
+  }, []);
+
+  const copyPartnerIdentityData = useCallback(
+    async (partnerName: string, summary: CompanyPartnerIdentitySummary) => {
+      const text = buildCompanyPartnerIdentityCopyText(partnerName, summary);
+      if (!text) {
+        toast.error('Não há dados extraídos deste sócio para copiar.');
+        return;
+      }
+
+      try {
+        await copyTextToClipboard(text);
+        toast.success('Dados do sócio copiados');
+      } catch {
+        toast.error('Não foi possível copiar os dados do sócio.');
+      }
+    },
+    [],
+  );
 
   const removeCompanyUploadedDocument = useCallback(
     (docType: CompanyDocumentType, documentId: string) => {
@@ -1652,39 +2951,57 @@ export default function ScannerDocumentos({
     [beneficiaries, revokeDocumentPreview],
   );
 
+  const formatMissingDescription = useCallback((messages: string[]): string => {
+    const shortList = messages.slice(0, 4).join(' · ');
+    const moreCount = Math.max(messages.length - 4, 0);
+    return moreCount > 0 ? `${shortList} · +${moreCount} pendência(s)` : shortList;
+  }, []);
+
+  useEffect(() => {
+    if (!validationAttemptedStep) return;
+
+    const { missingIds, missingMessages } = getMissingByStep(validationAttemptedStep);
+    if (missingIds.length === 0) {
+      setValidationAttemptedStep(null);
+      setError('');
+      return;
+    }
+
+    if (currentStep?.id === validationAttemptedStep) {
+      setError(formatMissingDescription(missingMessages));
+    }
+  }, [currentStep?.id, formatMissingDescription, getMissingByStep, validationAttemptedStep]);
+
   const goNextStep = () => {
     if (!currentStep) return;
+    const { missingIds, missingMessages } = getMissingByStep(currentStep.id);
+    if (missingIds.length > 0) {
+      setValidationAttemptedStep(currentStep.id);
+      const description = formatMissingDescription(missingMessages);
+      setError(description || 'Complete os requisitos desta etapa antes de avançar.');
+      toast.error('Complete os requisitos desta etapa antes de avançar.', {
+        description,
+      });
+      return;
+    }
 
     if (currentStep.id === 'estrutura') {
-      const hasPrimaryContact =
-        primaryEmail.trim().length > 0 && normalizePhone(primaryPhone).length >= 10;
-      if (!hasPrimaryContact) {
-        setError('Preencha e-mail e telefone principal antes de avançar.');
-        toast.error('Preencha e-mail e telefone principal antes de avançar.');
-        return;
-      }
-
       const structureBuilt = buildBeneficiaryStructure();
       if (!structureBuilt) {
+        setValidationAttemptedStep(currentStep.id);
         toast.error('Revise os dados da estrutura antes de avançar.');
         return;
       }
-
-      setCurrentStepIndex((prev) => Math.min(prev + 1, visibleSteps.length - 1));
-      return;
     }
 
-    const canProceed = stepCompletion[currentStep.id];
-
-    if (!canProceed) {
-      toast.error('Complete os requisitos desta etapa antes de avançar.');
-      return;
-    }
-
+    setValidationAttemptedStep(null);
+    setError('');
     setCurrentStepIndex((prev) => Math.min(prev + 1, visibleSteps.length - 1));
   };
 
   const goPreviousStep = () => {
+    setValidationAttemptedStep(null);
+    setError('');
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
@@ -1741,23 +3058,28 @@ export default function ScannerDocumentos({
     setPrimaryPhone('');
     setCompanyEmail('');
     setCompanyPhone('');
+    setCompanyAddress('');
     setCompanyCnpj('');
     setCompanyLegalName('');
     setCompanyEmailTouched(false);
     setCompanyPhoneTouched(false);
+    setCompanyAddressTouched(false);
     setCompanyPartners([]);
     setBeneficiaries([]);
     setCompanyDocs({});
     setAdesaoDocs({});
     setCompanyDataMode('');
+    setScanFullResult(null);
     setSelectedAdesaoDocType('documento_elegibilidade');
     setSelectedAdesaoManageDocType('documento_elegibilidade');
     setSelectedBeneficiaryId('');
     setSelectedBeneficiaryDocType('identidade_cpf');
     setSelectedBeneficiaryManageDocType('identidade_cpf');
     setExpandedCompanyDocPanels({});
+    setExpandedBeneficiaryDocPanels({});
     setPreviewDialogDocument(null);
     setCurrentStepIndex(0);
+    setValidationAttemptedStep(null);
     setError('');
     setPendingUploadTarget(null);
   };
@@ -1791,12 +3113,28 @@ export default function ScannerDocumentos({
 
       const companyDocumentsPayload = mapDocumentsForPayload(companyDocs);
       const adesaoDocumentsPayload = mapDocumentsForPayload(adesaoDocs);
-      const companyPartnersPayload = companyPartnerDocStatuses.map((status) => ({
-        id: status.partner.id,
-        nome: status.partner.nome.trim() || null,
-        documento_identidade_cpf_anexado: status.done,
-        total_arquivos_vinculados: status.filesCount,
-      }));
+      const contractSocialSummary = getContractSocialExtractionSummary(companyDocs.contrato_social || []);
+      const cnpjCardSummary = getCnpjCardExtractionSummary(companyDocs.cartao_cnpj || []);
+      const partnerIdentityDocs = companyDocs.identidade_cpf_socios || [];
+      const companyPartnersPayload = companyPartnerDocStatuses.map((status) => {
+        const identitySummary = getCompanyPartnerIdentitySummary(status.partner, partnerIdentityDocs);
+        return {
+          id: status.partner.id,
+          nome: status.partner.nome.trim() || null,
+          documento_identidade_cpf_anexado: status.done,
+          total_arquivos_vinculados: status.filesCount,
+          documento_tipo_identificado: identitySummary.documentoTipo,
+          cpf: identitySummary.cpf ? identitySummary.cpf.replace(/\D/g, '').slice(0, 11) : null,
+          rg: identitySummary.rg ? identitySummary.rg.replace(/\D/g, '') : null,
+          ifp: identitySummary.ifp || null,
+          numero_habilitacao: identitySummary.numeroHabilitacao
+            ? identitySummary.numeroHabilitacao.replace(/\D/g, '')
+            : null,
+          data_nascimento: identitySummary.dataNascimento || null,
+          data_expedicao: identitySummary.dataExpedicao || null,
+          orgao_expedidor: identitySummary.orgaoExpedidor || null,
+        };
+      });
 
       const beneficiaryPayload = beneficiaries.map((beneficiary) => {
         const documentsPayload = mapDocumentsForPayload(beneficiary.documentos);
@@ -1835,10 +3173,16 @@ export default function ScannerDocumentos({
             total_dependentes: dependentsCountNumber,
             empresa_com_funcionarios: category === 'pessoa_juridica' ? hasEmployees : false,
             socios_empresa: category === 'pessoa_juridica' ? companyPartnersPayload : [],
-            empresa: category === 'pessoa_juridica'
+                empresa: category === 'pessoa_juridica'
               ? {
                   razao_social: companyLegalName || null,
                   cnpj: companyCnpj.replace(/\D/g, '') || null,
+                  endereco: companyAddress || null,
+                  inscricao_estadual: contractSocialSummary.inscricaoEstadual || null,
+                  data_abertura: contractSocialSummary.dataAbertura || null,
+                  status_cnpj: cnpjCardSummary.status || null,
+                  data_inicio_atividade: cnpjCardSummary.dataInicio || null,
+                  nome_fantasia: cnpjCardSummary.nomeFantasia || null,
                 }
               : null,
           },
@@ -1851,8 +3195,14 @@ export default function ScannerDocumentos({
               ? {
                   email: companyEmail,
                   telefone: companyPhone,
+                  endereco: companyAddress || null,
                   razao_social: companyLegalName || null,
                   cnpj: companyCnpj.replace(/\D/g, '') || null,
+                  inscricao_estadual: contractSocialSummary.inscricaoEstadual || null,
+                  data_abertura: contractSocialSummary.dataAbertura || null,
+                  status_cnpj: cnpjCardSummary.status || null,
+                  data_inicio_atividade: cnpjCardSummary.dataInicio || null,
+                  nome_fantasia: cnpjCardSummary.nomeFantasia || null,
                 }
               : null,
           documentos_empresa: companyDocumentsPayload,
@@ -1919,8 +3269,8 @@ export default function ScannerDocumentos({
   };
 
   return (
-    <Card className="border-[#D4AF37]/20 bg-[#0a0a0a]/90 backdrop-blur-sm">
-      <CardHeader data-tour="admin-scanner" className="space-y-4">
+    <Card data-tour="admin-scanner" className="border-[#D4AF37]/20 bg-[#0a0a0a]/90 backdrop-blur-sm">
+      <CardHeader className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-white">
@@ -1954,6 +3304,8 @@ export default function ScannerDocumentos({
                     return;
                   }
 
+                  setValidationAttemptedStep(null);
+                  setError('');
                   setCurrentStepIndex(index);
                 }}
                 className={`rounded-lg border px-3 py-2 text-left transition-colors ${
@@ -1974,7 +3326,11 @@ export default function ScannerDocumentos({
 
       <CardContent className="space-y-6">
         {currentStep.id === 'modalidade' && (
-          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div
+            className={`space-y-4 rounded-xl border bg-white/[0.02] p-4 ${
+              isMissingField('modalidade-categoria') ? PANEL_ERROR_CLASS : 'border-white/10'
+            }`}
+          >
             <Label className="text-white/80">Escolha a modalidade da proposta</Label>
             <Select
               value={category}
@@ -1989,23 +3345,30 @@ export default function ScannerDocumentos({
                 setEmployeeCount('0');
                 setCompanyEmail('');
                 setCompanyPhone('');
+                setCompanyAddress('');
                 setCompanyCnpj('');
                 setCompanyLegalName('');
                 setCompanyEmailTouched(false);
                 setCompanyPhoneTouched(false);
+                setCompanyAddressTouched(false);
                 setCompanyDataMode('');
+                setScanFullResult(null);
                 setSelectedAdesaoDocType('documento_elegibilidade');
                 setSelectedAdesaoManageDocType('documento_elegibilidade');
                 setSelectedBeneficiaryId('');
                 setSelectedBeneficiaryDocType('identidade_cpf');
                 setSelectedBeneficiaryManageDocType('identidade_cpf');
                 setExpandedCompanyDocPanels({});
+                setExpandedBeneficiaryDocPanels({});
                 setPreviewDialogDocument(null);
+                setValidationAttemptedStep(null);
                 setError('');
                 setCurrentStepIndex(0);
               }}
             >
-              <SelectTrigger className={DARK_SELECT_TRIGGER}>
+              <SelectTrigger
+                className={`${DARK_SELECT_TRIGGER} ${isMissingField('modalidade-categoria') ? FIELD_ERROR_CLASS : ''}`}
+              >
                 <SelectValue placeholder="Selecione Adesão, Pessoa Física ou Pessoa Jurídica" />
               </SelectTrigger>
               <SelectContent className={DARK_SELECT_CONTENT}>
@@ -2018,12 +3381,16 @@ export default function ScannerDocumentos({
         )}
 
         {currentStep.id === 'estrutura' && (
-          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div
+            className={`space-y-4 rounded-xl border bg-white/[0.02] p-4 ${
+              shouldHighlightCurrentStep && currentStepMissing.missingIds.length > 0 ? PANEL_ERROR_CLASS : 'border-white/10'
+            }`}
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-white/80">Total de vidas da proposta</Label>
                 <Input
-                  className={DARK_INPUT}
+                  className={`${DARK_INPUT} ${isMissingField('estrutura-total-vidas') ? FIELD_ERROR_CLASS : ''}`}
                   type="number"
                   min={1}
                   value={totalLives}
@@ -2035,7 +3402,7 @@ export default function ScannerDocumentos({
                 <div className="space-y-2">
                   <Label className="text-white/80">Quantidade de sócios</Label>
                   <Input
-                    className={DARK_INPUT}
+                    className={`${DARK_INPUT} ${isMissingField('estrutura-socios') ? FIELD_ERROR_CLASS : ''}`}
                     type="number"
                     min={1}
                     max={totalLivesNumber || 1}
@@ -2052,7 +3419,11 @@ export default function ScannerDocumentos({
             </div>
 
             {category === 'pessoa_juridica' && (
-              <div className="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3">
+              <div
+                className={`space-y-3 rounded-lg border bg-black/20 p-3 ${
+                  isMissingField('estrutura-funcionarios') ? PANEL_ERROR_CLASS : 'border-white/10'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={hasEmployees}
@@ -2075,7 +3446,7 @@ export default function ScannerDocumentos({
                   <div className="space-y-2">
                     <Label className="text-white/80">Quantidade de funcionários</Label>
                     <Input
-                      className={DARK_INPUT}
+                      className={`${DARK_INPUT} ${isMissingField('estrutura-funcionarios') ? FIELD_ERROR_CLASS : ''}`}
                       type="number"
                       min={1}
                       max={Math.max(totalLivesNumber - partnerCountNumber, 1)}
@@ -2088,7 +3459,11 @@ export default function ScannerDocumentos({
             )}
 
             {category === 'pessoa_juridica' && (
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white/75">
+              <div
+                className={`rounded-lg border bg-black/20 p-3 text-sm text-white/75 ${
+                  isMissingField('estrutura-distribuicao') ? PANEL_ERROR_CLASS : 'border-white/10'
+                }`}
+              >
                 <p>
                   Distribuição automática: <span className="text-white">Sócios {partnerCountNumber}</span> ·{' '}
                   <span className="text-white">Funcionários {employeeCountNumber}</span> ·{' '}
@@ -2103,7 +3478,7 @@ export default function ScannerDocumentos({
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
                   <Input
-                    className={`${DARK_INPUT} pl-9`}
+                    className={`${DARK_INPUT} pl-9 ${isMissingField('estrutura-contato-email') ? FIELD_ERROR_CLASS : ''}`}
                     value={primaryEmail}
                     onChange={(event) => setPrimaryEmail(normalizeEmailInput(event.target.value))}
                     placeholder="contato@cliente.com"
@@ -2116,7 +3491,7 @@ export default function ScannerDocumentos({
                 <div className="relative">
                   <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
                   <Input
-                    className={`${DARK_INPUT} pl-9`}
+                    className={`${DARK_INPUT} pl-9 ${isMissingField('estrutura-contato-telefone') ? FIELD_ERROR_CLASS : ''}`}
                     value={primaryPhone}
                     onChange={(event) => setPrimaryPhone(formatPhoneInput(event.target.value))}
                     placeholder="(11) 99999-9999"
@@ -2176,12 +3551,16 @@ export default function ScannerDocumentos({
         )}
 
         {currentStep.id === 'empresa' && (
-          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div
+            className={`space-y-4 rounded-xl border bg-white/[0.02] p-4 ${
+              shouldHighlightCurrentStep && currentStepMissing.missingIds.length > 0 ? PANEL_ERROR_CLASS : 'border-white/10'
+            }`}
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-white/80">E-mail da empresa</Label>
                 <Input
-                  className={DARK_INPUT}
+                  className={`${DARK_INPUT} ${isMissingField('empresa-contato_empresa') ? FIELD_ERROR_CLASS : ''}`}
                   value={companyEmail}
                   onChange={(event) => {
                     setCompanyEmailTouched(true);
@@ -2193,7 +3572,7 @@ export default function ScannerDocumentos({
               <div className="space-y-2">
                 <Label className="text-white/80">Telefone da empresa</Label>
                 <Input
-                  className={DARK_INPUT}
+                  className={`${DARK_INPUT} ${isMissingField('empresa-contato_empresa') ? FIELD_ERROR_CLASS : ''}`}
                   value={companyPhone}
                   onChange={(event) => {
                     setCompanyPhoneTouched(true);
@@ -2204,7 +3583,11 @@ export default function ScannerDocumentos({
               </div>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-white/10 bg-black/25 p-3">
+            <div
+              className={`space-y-3 rounded-xl border bg-black/25 p-3 ${
+                isMissingField('empresa-modo') ? PANEL_ERROR_CLASS : 'border-white/10'
+              }`}
+            >
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-white">Como deseja preencher os dados da empresa?</p>
                 <p className="text-xs text-white/60">
@@ -2212,10 +3595,13 @@ export default function ScannerDocumentos({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <button
                   type="button"
-                  onClick={() => setCompanyDataMode('scanner')}
+                  onClick={() => {
+                    setCompanyDataMode('scanner');
+                    setScanFullResult(null);
+                  }}
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                     companyDataMode === 'scanner'
                       ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#F0D67C]'
@@ -2228,7 +3614,26 @@ export default function ScannerDocumentos({
 
                 <button
                   type="button"
-                  onClick={() => setCompanyDataMode('manual')}
+                  onClick={() => {
+                    setCompanyDataMode('scanfull');
+                    setScanFullResult(null);
+                  }}
+                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                    companyDataMode === 'scanfull'
+                      ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#F0D67C]'
+                      : 'border-white/15 bg-black/20 text-white/80 hover:border-white/30'
+                  }`}
+                >
+                  <p className="text-sm font-semibold">ScanFULL (IA em lote)</p>
+                  <p className="text-xs text-current/80">Envia tudo de uma vez e distribui automaticamente.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompanyDataMode('manual');
+                    setScanFullResult(null);
+                  }}
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                     companyDataMode === 'manual'
                       ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#F0D67C]'
@@ -2245,13 +3650,70 @@ export default function ScannerDocumentos({
                   Selecione uma opção para continuar.
                 </p>
               )}
+              {companyDataMode !== 'manual' && (
+                <p className="text-xs text-white/55">
+                  O endereço da empresa será preenchido automaticamente pela IA com base nos documentos enviados.
+                </p>
+              )}
             </div>
 
-            {companyDataMode === 'scanner' && (
+            {(companyDataMode === 'scanner' || companyDataMode === 'scanfull') && (
               <>
+                {companyDataMode === 'scanfull' && (
+                  <div className="space-y-3 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-white">1. ScanFULL: envie todos os arquivos</p>
+                      <p className="text-xs text-white/65">
+                        A IA vai analisar um por um, classificar por tipo de documento e preencher os campos relacionados.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" onClick={triggerScanFullUpload} disabled={isProcessing}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Enviar lote completo (ScanFULL)
+                      </Button>
+                    </div>
+
+                    {isProcessing && !activeUploadTarget && (
+                      <div className="space-y-2 rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-2">
+                        <div className="flex items-center justify-between text-[11px] text-white/75">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin text-[#F0D67C]" />
+                            Processando: {processingLabel || 'ScanFULL'}
+                          </span>
+                          <span>{processingProgress}%</span>
+                        </div>
+                        <Progress value={processingProgress} className="h-2" />
+                      </div>
+                    )}
+
+                    {scanFullResult && (
+                      <div className="rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs text-white/80">
+                        <p>
+                          <span className="text-white/55">Arquivos processados:</span> {scanFullResult.processed}
+                        </p>
+                        <p>
+                          <span className="text-white/55">Classificados automaticamente:</span> {scanFullResult.classified}
+                        </p>
+                        <p>
+                          <span className="text-white/55">Não classificados:</span> {scanFullResult.unclassified}
+                        </p>
+                        {scanFullResult.distributedSummary.length > 0 && (
+                          <p className="text-white/65">
+                            {scanFullResult.distributedSummary.join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-3 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-white">1. Anexe os documentos da empresa</p>
+                    <p className="text-sm font-semibold text-white">
+                      {companyDataMode === 'scanfull' ? '2. Revise e ajuste por categoria' : '1. Anexe os documentos da empresa'}
+                    </p>
                     <p className="text-xs text-white/65">
                       Envie os arquivos por categoria para preencher CNPJ, razão social e sócios automaticamente.
                     </p>
@@ -2269,11 +3731,26 @@ export default function ScannerDocumentos({
                         const isDone = requirement?.done ?? hasUploadedDocs(companyDocs[docType]);
                         const docsForType = companyDocs[docType] || [];
                         const filesCount = docsForType.length;
+                        const contractSocialSummary =
+                          docType === 'contrato_social' ? getContractSocialExtractionSummary(docsForType) : null;
+                        const cnpjCardSummary =
+                          docType === 'cartao_cnpj' ? getCnpjCardExtractionSummary(docsForType) : null;
+                        const unifiedContractExtraction =
+                          docType === 'contrato_social' ? getUnifiedExtractionFromDocuments(docsForType) : null;
+                        const unifiedContractFields = unifiedContractExtraction
+                          ? getExtractionFields(unifiedContractExtraction)
+                          : [];
                         const uploadTarget: UploadTarget = { scope: 'empresa', docType };
                         const isExpanded = expandedCompanyDocPanels[docType] ?? true;
+                        const isMissingCompanyDoc = isMissingField(`empresa-${docType}`);
 
                         return (
-                          <div key={docType} className="rounded-lg border border-white/10 bg-black/25 p-3">
+                          <div
+                            key={docType}
+                            className={`rounded-lg border bg-black/25 p-3 ${
+                              isMissingCompanyDoc ? PANEL_ERROR_CLASS : 'border-white/10'
+                            }`}
+                          >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <p className="text-sm text-white/90">{COMPANY_DOC_LABELS[docType]}</p>
@@ -2308,6 +3785,91 @@ export default function ScannerDocumentos({
                               <div className="mt-2 space-y-2">
                                 {requirement?.helper && (
                                   <p className="text-xs text-white/45">{requirement.helper}</p>
+                                )}
+
+                                {docType === 'contrato_social' && contractSocialSummary && (
+                                  <div className="rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 p-2.5">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                      Dados extraídos do contrato social
+                                    </p>
+                                    <div className="mt-1.5 space-y-1 text-xs text-white/85">
+                                      <p>
+                                        <span className="text-white/55">CNPJ:</span>{' '}
+                                        {contractSocialSummary.cnpj
+                                          ? formatCnpjInput(contractSocialSummary.cnpj)
+                                          : 'Não identificado'}
+                                      </p>
+                                      <p>
+                                        <span className="text-white/55">Razão social:</span>{' '}
+                                        {contractSocialSummary.razaoSocial || 'Não identificada'}
+                                      </p>
+                                      {contractSocialSummary.inscricaoEstadual && (
+                                        <p>
+                                          <span className="text-white/55">Inscrição estadual:</span>{' '}
+                                          {contractSocialSummary.inscricaoEstadual}
+                                        </p>
+                                      )}
+                                      <p>
+                                        <span className="text-white/55">Data de abertura:</span>{' '}
+                                        {contractSocialSummary.dataAbertura || 'Não identificada'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {docType === 'contrato_social' && unifiedContractFields.length > 0 && (
+                                  <div className="rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 p-2.5">
+                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                        Resumo geral (todos os arquivos)
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className={DARK_OUTLINE_BUTTON}
+                                        onClick={() => {
+                                          if (!unifiedContractExtraction) return;
+                                          void copyExtractionText(
+                                            buildExtractionCopyText(unifiedContractExtraction),
+                                            'Resumo geral do contrato social copiado',
+                                          );
+                                        }}
+                                      >
+                                        <Copy className="mr-1.5 h-4 w-4" />
+                                        Copiar resumo
+                                      </Button>
+                                    </div>
+                                    <div className="space-y-0.5 text-xs text-white/85">
+                                      {unifiedContractFields.map((field) => (
+                                        <p key={`${docType}-general-${field.label}`}>
+                                          <span className="text-white/55">{field.label}:</span> {field.value}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {docType === 'cartao_cnpj' && cnpjCardSummary && (
+                                  <div className="rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 p-2.5">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                      Dados extraídos do cartão CNPJ
+                                    </p>
+                                    <div className="mt-1.5 space-y-1 text-xs text-white/85">
+                                      <p>
+                                        <span className="text-white/55">Status:</span>{' '}
+                                        {cnpjCardSummary.status || 'Não identificado'}
+                                      </p>
+                                      <p>
+                                        <span className="text-white/55">Data de início:</span>{' '}
+                                        {cnpjCardSummary.dataInicio || 'Não identificada'}
+                                      </p>
+                                      <p>
+                                        <span className="text-white/55">Nome fantasia:</span>{' '}
+                                        {cnpjCardSummary.nomeFantasia || 'Não identificado'}
+                                      </p>
+                                    </div>
+                                  </div>
                                 )}
 
                                 <div className="flex flex-wrap items-center gap-2">
@@ -2346,43 +3908,85 @@ export default function ScannerDocumentos({
                                 {docsForType.length > 0 && (
                                   <div className="space-y-2 rounded-lg border border-white/10 bg-black/35 p-2.5">
                                     <p className="text-xs font-medium text-white/80">Arquivos anexados</p>
-                                    {docsForType.map((document) => (
-                                      <div
-                                        key={document.id}
-                                        className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 md:flex-row md:items-center md:justify-between"
-                                      >
-                                        <div className="min-w-0">
-                                          <p className="truncate text-sm text-white/90">{document.fileName}</p>
-                                          <p className="text-xs text-white/55">
-                                            {formatFileSize(document.fileSize)} ·{' '}
-                                            {new Date(document.uploadedAt).toLocaleString('pt-BR')}
-                                          </p>
-                                        </div>
+                                    {docsForType.map((document) => {
+                                      const showPerDocumentExtraction = docType !== 'contrato_social';
+                                      const extractionFields = showPerDocumentExtraction
+                                        ? getExtractionFields(document.extracted)
+                                        : [];
+                                      return (
+                                        <div
+                                          key={document.id}
+                                          className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                                        >
+                                          <div className="min-w-0">
+                                            <p className="truncate text-sm text-white/90">{document.fileName}</p>
+                                            <p className="text-xs text-white/55">
+                                              {formatFileSize(document.fileSize)} ·{' '}
+                                              {new Date(document.uploadedAt).toLocaleString('pt-BR')}
+                                            </p>
+                                          </div>
 
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            className={DARK_OUTLINE_BUTTON}
-                                            onClick={() => previewUploadedDocument(document)}
-                                          >
-                                            <Eye className="mr-1.5 h-4 w-4" />
-                                            Abrir
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
-                                            onClick={() => removeCompanyUploadedDocument(docType, document.id)}
-                                          >
-                                            <Trash2 className="mr-1.5 h-4 w-4" />
-                                            Remover
-                                          </Button>
+                                          {showPerDocumentExtraction && (
+                                            extractionFields.length > 0 ? (
+                                              <div className="rounded-md border border-white/10 bg-black/35 p-2 text-xs text-white/85">
+                                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                                  Dados lidos pela IA
+                                                </p>
+                                                <div className="space-y-0.5">
+                                                  {extractionFields.map((field) => (
+                                                    <p key={`${document.id}-${field.label}`}>
+                                                      <span className="text-white/55">{field.label}:</span> {field.value}
+                                                    </p>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <p className="text-xs text-white/50">
+                                                A IA não retornou dados estruturados para este arquivo.
+                                              </p>
+                                            )
+                                          )}
+
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              className={DARK_OUTLINE_BUTTON}
+                                              onClick={() => previewUploadedDocument(document)}
+                                            >
+                                              <Eye className="mr-1.5 h-4 w-4" />
+                                              Abrir
+                                            </Button>
+                                            {showPerDocumentExtraction && (
+                                              <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className={DARK_OUTLINE_BUTTON}
+                                                onClick={() => {
+                                                  void copyExtractedFromDocument(document);
+                                                }}
+                                                disabled={extractionFields.length === 0}
+                                              >
+                                                <Copy className="mr-1.5 h-4 w-4" />
+                                                Copiar dados
+                                              </Button>
+                                            )}
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
+                                              onClick={() => removeCompanyUploadedDocument(docType, document.id)}
+                                            >
+                                              <Trash2 className="mr-1.5 h-4 w-4" />
+                                              Remover
+                                            </Button>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -2399,39 +4003,77 @@ export default function ScannerDocumentos({
                 </div>
 
                 {companyPartnerDocStatuses.length > 0 && (
-                  <div className="space-y-2 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
+                  <div
+                    className={`space-y-2 rounded-xl border bg-[#D4AF37]/5 p-3 ${
+                      isMissingField('empresa-identidade_cpf_socios') ? PANEL_ERROR_CLASS : 'border-[#D4AF37]/20'
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white">Guia de pendências · ID e CPF dos sócios</p>
-                      <Badge
-                        variant={pendingCompanyPartnerDocStatuses.length === 0 ? 'success' : 'warning'}
-                        className={
-                          pendingCompanyPartnerDocStatuses.length === 0
-                            ? CHECKLIST_BADGE_DONE
-                            : CHECKLIST_BADGE_PENDING
-                        }
-                      >
-                        {pendingCompanyPartnerDocStatuses.length === 0
-                          ? 'Concluído'
-                          : `${pendingCompanyPartnerDocStatuses.length} pendente(s)`}
-                      </Badge>
+                      <p className="text-sm font-semibold text-white">ID e CPF dos sócios</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={pendingCompanyPartnerDocStatuses.length === 0 ? 'success' : 'warning'}
+                          className={
+                            pendingCompanyPartnerDocStatuses.length === 0
+                              ? CHECKLIST_BADGE_DONE
+                              : CHECKLIST_BADGE_PENDING
+                          }
+                        >
+                          {pendingCompanyPartnerDocStatuses.length === 0
+                            ? 'Todos concluídos'
+                            : `${pendingCompanyPartnerDocStatuses.length} pendente(s)`}
+                        </Badge>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={DARK_OUTLINE_BUTTON}
+                          onClick={addCompanyPartner}
+                          disabled={isProcessing || companyPartners.length >= maxPartnersAllowed}
+                        >
+                          <Plus className="mr-1.5 h-4 w-4" />
+                          Adicionar sócio
+                        </Button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-white/65">
-                      Esta área mostra apenas os sócios que ainda precisam de documento vinculado.
+                      Envie Identidade, CNH ou documento equivalente de cada sócio. Se a IA não identificar todos, adicione manualmente.
                     </p>
 
-                    {pendingCompanyPartnerDocStatuses.length === 0 ? (
-                      <p className="rounded-lg border border-green-500/30 bg-green-500/10 p-2 text-xs text-green-100">
-                        Todos os sócios já possuem documento de ID/CPF anexado.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-                        {pendingCompanyPartnerDocStatuses.map((status, index) => (
-                          <div key={status.partner.id} className="rounded-lg border border-white/10 bg-black/25 p-2.5">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                      {companyPartnerDocStatuses.map((status, index) => {
+                        const identitySummary = getCompanyPartnerIdentitySummary(
+                          status.partner,
+                          companyDocs.identidade_cpf_socios || [],
+                        );
+                        const hasIdentityData = Boolean(
+                          identitySummary.cpf ||
+                            identitySummary.rg ||
+                            identitySummary.ifp ||
+                            identitySummary.numeroHabilitacao ||
+                            identitySummary.dataNascimento ||
+                            identitySummary.dataExpedicao ||
+                            identitySummary.orgaoExpedidor ||
+                            identitySummary.documentoTipo,
+                        );
+
+                        return (
+                          <div
+                            key={status.partner.id}
+                            className={`rounded-lg border bg-black/25 p-2.5 ${
+                              isMissingField('empresa-identidade_cpf_socios') && !status.done
+                                ? PANEL_ERROR_CLASS
+                                : 'border-white/10'
+                            }`}
+                          >
                             <div className="mb-2 flex items-start justify-between gap-2">
-                              <p className="text-xs text-white/55">Pendente {index + 1}</p>
-                              <Badge variant="warning" className={CHECKLIST_BADGE_PENDING}>
-                                Pendente
+                              <p className="text-xs text-white/55">Sócio {index + 1}</p>
+                              <Badge
+                                variant={status.done ? 'success' : 'warning'}
+                                className={status.done ? CHECKLIST_BADGE_DONE : CHECKLIST_BADGE_PENDING}
+                              >
+                                {status.done ? 'Concluído' : 'Pendente'}
                               </Badge>
                             </div>
 
@@ -2442,6 +4084,53 @@ export default function ScannerDocumentos({
                                 onChange={(event) => updateCompanyPartnerName(status.partner.id, event.target.value)}
                                 placeholder={`Nome do sócio ${index + 1}`}
                               />
+
+                              {hasIdentityData && (
+                                <div className="rounded-md border border-white/10 bg-black/35 p-2 text-xs text-white/85">
+                                  <p>
+                                    <span className="text-white/55">Documento:</span>{' '}
+                                    {getIdentityDocTypeLabel(identitySummary.documentoTipo)}
+                                  </p>
+                                  <p>
+                                    <span className="text-white/55">CPF:</span>{' '}
+                                    {identitySummary.cpf ? formatCpfInput(identitySummary.cpf) : 'Não identificado'}
+                                  </p>
+                                  {identitySummary.rg && (
+                                    <p>
+                                      <span className="text-white/55">RG:</span> {identitySummary.rg}
+                                    </p>
+                                  )}
+                                  {identitySummary.ifp && (
+                                    <p>
+                                      <span className="text-white/55">IFP:</span> {identitySummary.ifp}
+                                    </p>
+                                  )}
+                                  {identitySummary.numeroHabilitacao && (
+                                    <p>
+                                      <span className="text-white/55">Nº da habilitação:</span>{' '}
+                                      {identitySummary.numeroHabilitacao}
+                                    </p>
+                                  )}
+                                  {identitySummary.dataNascimento && (
+                                    <p>
+                                      <span className="text-white/55">Data de nascimento:</span>{' '}
+                                      {identitySummary.dataNascimento}
+                                    </p>
+                                  )}
+                                  {identitySummary.dataExpedicao && (
+                                    <p>
+                                      <span className="text-white/55">Data de expedição:</span>{' '}
+                                      {identitySummary.dataExpedicao}
+                                    </p>
+                                  )}
+                                  {identitySummary.orgaoExpedidor && (
+                                    <p>
+                                      <span className="text-white/55">Órgão expedidor:</span>{' '}
+                                      {identitySummary.orgaoExpedidor}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
 
                               <div className="flex flex-wrap gap-2">
                                 <Button
@@ -2457,7 +4146,20 @@ export default function ScannerDocumentos({
                                   disabled={isProcessing}
                                 >
                                   <Upload className="mr-2 h-4 w-4" />
-                                  Anexar ID/CPF deste sócio
+                                  {status.done ? 'Atualizar ID/CPF deste sócio' : 'Anexar ID/CPF deste sócio'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className={DARK_OUTLINE_BUTTON}
+                                  onClick={() => {
+                                    void copyPartnerIdentityData(status.partner.nome, identitySummary);
+                                  }}
+                                  disabled={!hasIdentityData}
+                                >
+                                  <Copy className="mr-1.5 h-4 w-4" />
+                                  Copiar dados do sócio
                                 </Button>
                                 <Button
                                   type="button"
@@ -2478,9 +4180,9 @@ export default function ScannerDocumentos({
                               })}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </>
@@ -2511,17 +4213,27 @@ export default function ScannerDocumentos({
                       className={DARK_INPUT}
                       value={companyCnpj}
                       onChange={(event) => {
-                        const digits = event.target.value.replace(/\D/g, '').slice(0, 14);
-                        const formatted = digits
-                          .replace(/^(\d{2})(\d)/, '$1.$2')
-                          .replace(/^(\d{2}\.\d{3})(\d)/, '$1.$2')
-                          .replace(/\.(\d{3})(\d)/, '.$1/$2')
-                          .replace(/(\d{4})(\d)/, '$1-$2');
-                        setCompanyCnpj(formatted);
+                        setCompanyCnpj(formatCnpjInput(event.target.value));
                       }}
                       placeholder="00.000.000/0000-00"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white/80">Endereço da empresa</Label>
+                  <Input
+                    className={`${DARK_INPUT} ${isMissingField('empresa-endereco_empresa') ? FIELD_ERROR_CLASS : ''}`}
+                    value={companyAddress}
+                    onChange={(event) => {
+                      setCompanyAddressTouched(true);
+                      setCompanyAddress(event.target.value);
+                    }}
+                    placeholder="Rua, número, bairro, cidade/UF, CEP"
+                  />
+                  <p className="text-xs text-white/55">
+                    Campo obrigatório apenas no preenchimento manual.
+                  </p>
                 </div>
 
                 <p className="text-xs text-white/55">
@@ -2533,14 +4245,25 @@ export default function ScannerDocumentos({
         )}
 
         {currentStep.id === 'beneficiarios' && (
-          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div
+            className={`space-y-4 rounded-xl border bg-white/[0.02] p-4 ${
+              shouldHighlightCurrentStep && currentStepMissing.missingIds.length > 0 ? PANEL_ERROR_CLASS : 'border-white/10'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-white">Documentação individual dos beneficiários</h3>
               <Badge variant="info">{beneficiaries.length} beneficiário(s)</Badge>
             </div>
 
             {category === 'adesao' && (
-              <div className="space-y-3 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
+              <div
+                className={`space-y-3 rounded-xl border bg-[#D4AF37]/5 p-3 ${
+                  shouldHighlightCurrentStep &&
+                  currentStepMissing.missingIds.some((item) => item.startsWith('beneficiarios-adesao-'))
+                    ? PANEL_ERROR_CLASS
+                    : 'border-[#D4AF37]/20'
+                }`}
+              >
                 <p className="text-sm font-semibold text-white">Documentos obrigatórios de Adesão</p>
                 <div className="flex flex-wrap gap-2">
                   <Select
@@ -2624,49 +4347,89 @@ export default function ScannerDocumentos({
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {selectedAdesaoDocs.map((document) => (
-                        <div
-                          key={document.id}
-                          className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 md:flex-row md:items-center md:justify-between"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-white/90">{document.fileName}</p>
-                            <p className="text-xs text-white/55">
-                              {formatFileSize(document.fileSize)} · {new Date(document.uploadedAt).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
+                      {selectedAdesaoDocs.map((document) => {
+                        const extractionFields = getExtractionFields(document.extracted);
+                        return (
+                          <div
+                            key={document.id}
+                            className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-white/90">{document.fileName}</p>
+                              <p className="text-xs text-white/55">
+                                {formatFileSize(document.fileSize)} · {new Date(document.uploadedAt).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className={DARK_OUTLINE_BUTTON}
-                              onClick={() => previewUploadedDocument(document)}
-                            >
-                              <Eye className="mr-1.5 h-4 w-4" />
-                              Pré-visualizar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
-                              onClick={() => removeAdesaoUploadedDocument(selectedAdesaoManageDocType, document.id)}
-                            >
-                              <Trash2 className="mr-1.5 h-4 w-4" />
-                              Remover
-                            </Button>
+                            {extractionFields.length > 0 ? (
+                              <div className="rounded-md border border-white/10 bg-black/35 p-2 text-xs text-white/85">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                  Dados lidos pela IA
+                                </p>
+                                <div className="space-y-0.5">
+                                  {extractionFields.map((field) => (
+                                    <p key={`${document.id}-${field.label}`}>
+                                      <span className="text-white/55">{field.label}:</span> {field.value}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-white/50">
+                                A IA não retornou dados estruturados para este arquivo.
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className={DARK_OUTLINE_BUTTON}
+                                onClick={() => previewUploadedDocument(document)}
+                              >
+                                <Eye className="mr-1.5 h-4 w-4" />
+                                Pré-visualizar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className={DARK_OUTLINE_BUTTON}
+                                onClick={() => {
+                                  void copyExtractedFromDocument(document);
+                                }}
+                                disabled={extractionFields.length === 0}
+                              >
+                                <Copy className="mr-1.5 h-4 w-4" />
+                                Copiar dados
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
+                                onClick={() => removeAdesaoUploadedDocument(selectedAdesaoManageDocType, document.id)}
+                              >
+                                <Trash2 className="mr-1.5 h-4 w-4" />
+                                Remover
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                   {adesaoRequirements.map((requirement) => (
-                    <div key={requirement.id} className="rounded-lg border border-white/10 bg-black/20 p-2">
+                    <div
+                      key={requirement.id}
+                      className={`rounded-lg border bg-black/20 p-2 ${
+                        isMissingField(`beneficiarios-adesao-${requirement.id}`) ? PANEL_ERROR_CLASS : 'border-white/10'
+                      }`}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm text-white/90">{requirement.label}</p>
                         <Badge
@@ -2692,7 +4455,7 @@ export default function ScannerDocumentos({
                   <SelectContent className={DARK_SELECT_CONTENT}>
                     {beneficiaries.map((beneficiary, index) => (
                       <SelectItem className={DARK_SELECT_ITEM} key={beneficiary.id} value={beneficiary.id}>
-                        {index + 1}. {beneficiary.nome || formatRole(beneficiary.role)}
+                        {index + 1}. {beneficiaryDisplayNames.get(beneficiary.id) || formatRole(beneficiary.role)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -2746,7 +4509,7 @@ export default function ScannerDocumentos({
                   })}
                 {beneficiaryUploadOptions.length === 0 && (
                   <p className="text-xs text-green-200/80">
-                    Beneficiário sem pendências obrigatórias de upload.
+                    Beneficiário sem pendências de upload.
                   </p>
                 )}
 
@@ -2782,49 +4545,84 @@ export default function ScannerDocumentos({
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {selectedBeneficiaryDocs.map((document) => (
-                        <div
-                          key={document.id}
-                          className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-white/90">{document.fileName}</p>
-                            <p className="text-xs text-white/55">
-                              {formatFileSize(document.fileSize)} · {new Date(document.uploadedAt).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
+                      {selectedBeneficiaryDocs.map((document) => {
+                        const extractionFields = getExtractionFields(document.extracted);
+                        return (
+                          <div
+                            key={document.id}
+                            className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-white/90">{document.fileName}</p>
+                              <p className="text-xs text-white/55">
+                                {formatFileSize(document.fileSize)} · {new Date(document.uploadedAt).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className={DARK_OUTLINE_BUTTON}
-                              onClick={() => previewUploadedDocument(document)}
-                            >
-                              <Eye className="mr-1.5 h-4 w-4" />
-                              Pré-visualizar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
-                              onClick={() => {
-                                if (!selectedBeneficiary) return;
-                                removeBeneficiaryUploadedDocument(
-                                  selectedBeneficiary.id,
-                                  selectedBeneficiaryManageDocType,
-                                  document.id,
-                                );
-                              }}
-                            >
-                              <Trash2 className="mr-1.5 h-4 w-4" />
-                              Remover
-                            </Button>
+                            {extractionFields.length > 0 ? (
+                              <div className="rounded-md border border-white/10 bg-black/35 p-2 text-xs text-white/85">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                  Dados lidos pela IA
+                                </p>
+                                <div className="space-y-0.5">
+                                  {extractionFields.map((field) => (
+                                    <p key={`${document.id}-${field.label}`}>
+                                      <span className="text-white/55">{field.label}:</span> {field.value}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-white/50">
+                                A IA não retornou dados estruturados para este arquivo.
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className={DARK_OUTLINE_BUTTON}
+                                onClick={() => previewUploadedDocument(document)}
+                              >
+                                <Eye className="mr-1.5 h-4 w-4" />
+                                Pré-visualizar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className={DARK_OUTLINE_BUTTON}
+                                onClick={() => {
+                                  void copyExtractedFromDocument(document);
+                                }}
+                                disabled={extractionFields.length === 0}
+                              >
+                                <Copy className="mr-1.5 h-4 w-4" />
+                                Copiar dados
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
+                                onClick={() => {
+                                  if (!selectedBeneficiary) return;
+                                  removeBeneficiaryUploadedDocument(
+                                    selectedBeneficiary.id,
+                                    selectedBeneficiaryManageDocType,
+                                    document.id,
+                                  );
+                                }}
+                              >
+                                <Trash2 className="mr-1.5 h-4 w-4" />
+                                Remover
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -2833,9 +4631,10 @@ export default function ScannerDocumentos({
               <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
                 <p className="font-medium text-white">Como funciona a validação inteligente</p>
                 <p className="mt-1">1. Nome, idade e estado civil são obrigatórios por beneficiário.</p>
-                <p>2. O checklist ajusta automaticamente casamento e certidão de nascimento.</p>
-                <p>3. Cada upload fica vinculado ao beneficiário selecionado.</p>
-                <p>4. Você pode selecionar e enviar vários arquivos de uma vez.</p>
+                <p>2. Casado/união estável exige anexo de comprovação conjugal.</p>
+                <p>3. Selfie é opcional e não bloqueia a conclusão do checklist.</p>
+                <p>4. Cada upload fica vinculado ao beneficiário selecionado.</p>
+                <p>5. Você pode selecionar e enviar vários arquivos de uma vez.</p>
               </div>
             </div>
 
@@ -2844,9 +4643,22 @@ export default function ScannerDocumentos({
                 const requirements = beneficiaryRequirementsMap.get(beneficiary.id) || [];
                 const requiredTotal = requirements.filter((item) => item.required).length;
                 const requiredDone = requirements.filter((item) => item.required && item.done).length;
+                const beneficiaryMissingRequired = requirements.some(
+                  (item) => item.required && isMissingField(item.id),
+                );
+                const beneficiaryDocEntries = (
+                  Object.entries(beneficiary.documentos) as Array<[BeneficiaryDocumentType, UploadedDocument[] | undefined]>
+                ).filter(([, docs]) => hasUploadedDocs(docs));
+                const beneficiaryDocsCount = beneficiaryDocEntries.reduce((total, [, docs]) => total + (docs?.length || 0), 0);
+                const beneficiaryDocsExpanded = expandedBeneficiaryDocPanels[beneficiary.id] ?? false;
 
                 return (
-                  <div key={beneficiary.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                  <div
+                    key={beneficiary.id}
+                    className={`rounded-xl border bg-black/20 p-4 ${
+                      beneficiaryMissingRequired ? PANEL_ERROR_CLASS : 'border-white/10'
+                    }`}
+                  >
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <UserRound className="h-4 w-4 text-[#D4AF37]" />
@@ -2854,19 +4666,33 @@ export default function ScannerDocumentos({
                           Beneficiário {index + 1} · {formatRole(beneficiary.role)}
                         </p>
                       </div>
-                      <Badge
-                        variant={requiredDone === requiredTotal ? 'success' : 'warning'}
-                        className={requiredDone === requiredTotal ? CHECKLIST_BADGE_DONE : CHECKLIST_BADGE_PENDING}
-                      >
-                        {requiredDone}/{requiredTotal}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={requiredDone === requiredTotal ? 'success' : 'warning'}
+                          className={requiredDone === requiredTotal ? CHECKLIST_BADGE_DONE : CHECKLIST_BADGE_PENDING}
+                        >
+                          {requiredDone}/{requiredTotal}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2 text-xs text-white/80 hover:bg-white/10 hover:text-white"
+                          onClick={() => toggleBeneficiaryDocPanel(beneficiary.id)}
+                        >
+                          {beneficiaryDocsExpanded ? 'Ocultar anexos' : 'Expandir anexos'}
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${beneficiaryDocsExpanded ? 'rotate-180' : ''}`}
+                          />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                       <div className="space-y-1">
                         <Label className="text-white/70">Nome</Label>
                         <Input
-                          className={DARK_INPUT}
+                          className={`${DARK_INPUT} ${isMissingField(`${beneficiary.id}-nome`) ? FIELD_ERROR_CLASS : ''}`}
                           value={beneficiary.nome}
                           onChange={(event) => updateBeneficiary(beneficiary.id, 'nome', event.target.value)}
                           placeholder="Nome completo"
@@ -2876,7 +4702,7 @@ export default function ScannerDocumentos({
                       <div className="space-y-1">
                         <Label className="text-white/70">Idade</Label>
                         <Input
-                          className={DARK_INPUT}
+                          className={`${DARK_INPUT} ${isMissingField(`${beneficiary.id}-idade`) ? FIELD_ERROR_CLASS : ''}`}
                           type="number"
                           min={0}
                           max={120}
@@ -2892,7 +4718,9 @@ export default function ScannerDocumentos({
                           value={beneficiary.estadoCivil}
                           onValueChange={(value) => updateBeneficiary(beneficiary.id, 'estadoCivil', value as CivilStatus)}
                         >
-                          <SelectTrigger className={DARK_SELECT_TRIGGER}>
+                          <SelectTrigger
+                            className={`${DARK_SELECT_TRIGGER} ${isMissingField(`${beneficiary.id}-estado-civil`) ? FIELD_ERROR_CLASS : ''}`}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className={DARK_SELECT_CONTENT}>
@@ -2922,6 +4750,9 @@ export default function ScannerDocumentos({
                               <SelectItem className={DARK_SELECT_ITEM} value="declaracao">Declaração</SelectItem>
                             </SelectContent>
                           </Select>
+                          <p className="text-[11px] text-[#F0D67C]/90">
+                            Anexe o documento correspondente no upload segmentado deste beneficiário.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -2989,7 +4820,12 @@ export default function ScannerDocumentos({
 
                     <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
                       {requirements.map((requirement) => (
-                        <div key={requirement.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+                        <div
+                          key={requirement.id}
+                          className={`rounded-lg border bg-black/30 px-3 py-2 ${
+                            isMissingField(requirement.id) ? PANEL_ERROR_CLASS : 'border-white/10'
+                          }`}
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm text-white/90">{requirement.label}</p>
                             <Badge
@@ -2999,9 +4835,112 @@ export default function ScannerDocumentos({
                               {requirement.done ? 'OK' : requirement.required ? 'Pendente' : 'Opcional'}
                             </Badge>
                           </div>
+                          {requirement.helper && <p className="mt-1 text-xs text-white/50">{requirement.helper}</p>}
                         </div>
                       ))}
                     </div>
+
+                    {beneficiaryDocsExpanded && (
+                      <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-black/25 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-white">Anexos deste beneficiário</p>
+                          <Badge variant="info">{beneficiaryDocsCount} arquivo(s)</Badge>
+                        </div>
+
+                        {beneficiaryDocEntries.length === 0 ? (
+                          <p className="text-xs text-white/55">
+                            Nenhum documento anexado para este beneficiário ainda.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {beneficiaryDocEntries.map(([docType, docs]) => (
+                              <div key={`${beneficiary.id}-${docType}`} className="rounded-lg border border-white/10 bg-black/30 p-2.5">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <p className="text-xs font-medium text-white/90">{BENEFICIARY_DOC_LABELS[docType]}</p>
+                                  <Badge variant="outline" className={CHECKLIST_BADGE_OPTIONAL}>
+                                    {(docs || []).length} arquivo(s)
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2">
+                                  {(docs || []).map((document) => {
+                                    const extractionFields = getExtractionFields(document.extracted);
+
+                                    return (
+                                      <div
+                                        key={document.id}
+                                        className="flex flex-col gap-2 rounded-md border border-white/10 bg-black/35 px-3 py-2"
+                                      >
+                                        <div className="min-w-0">
+                                          <p className="truncate text-sm text-white/90">{document.fileName}</p>
+                                          <p className="text-xs text-white/55">
+                                            {formatFileSize(document.fileSize)} · {new Date(document.uploadedAt).toLocaleString('pt-BR')}
+                                          </p>
+                                        </div>
+
+                                        {extractionFields.length > 0 ? (
+                                          <div className="rounded-md border border-white/10 bg-black/35 p-2 text-xs text-white/85">
+                                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#F0D67C]">
+                                              Dados lidos pela IA
+                                            </p>
+                                            <div className="space-y-0.5">
+                                              {extractionFields.map((field) => (
+                                                <p key={`${document.id}-${field.label}`}>
+                                                  <span className="text-white/55">{field.label}:</span> {field.value}
+                                                </p>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs text-white/50">
+                                            A IA não retornou dados estruturados para este arquivo.
+                                          </p>
+                                        )}
+
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className={DARK_OUTLINE_BUTTON}
+                                            onClick={() => previewUploadedDocument(document)}
+                                          >
+                                            <Eye className="mr-1.5 h-4 w-4" />
+                                            Abrir
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className={DARK_OUTLINE_BUTTON}
+                                            onClick={() => {
+                                              void copyExtractedFromDocument(document);
+                                            }}
+                                            disabled={extractionFields.length === 0}
+                                          >
+                                            <Copy className="mr-1.5 h-4 w-4" />
+                                            Copiar dados
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-red-50"
+                                            onClick={() => removeBeneficiaryUploadedDocument(beneficiary.id, docType, document.id)}
+                                          >
+                                            <Trash2 className="mr-1.5 h-4 w-4" />
+                                            Remover
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -3020,6 +4959,9 @@ export default function ScannerDocumentos({
                     <span className="text-white/50">Sócios/Funcionários/Dependentes:</span>{' '}
                     {partnerCountNumber}/{employeeCountNumber}/{dependentsCountNumber}
                   </p>
+                )}
+                {category === 'pessoa_juridica' && (
+                  <p><span className="text-white/50">Endereço da empresa:</span> {companyAddress || '—'}</p>
                 )}
                 <p><span className="text-white/50">Contato principal:</span> {primaryEmail || '—'} · {primaryPhone || '—'}</p>
                 <p><span className="text-white/50">Responsável CRM:</span> {assignedCorretorLabel}</p>
@@ -3107,11 +5049,23 @@ export default function ScannerDocumentos({
           className="hidden"
         />
 
+        <input
+          ref={scanFullInputRef}
+          type="file"
+          multiple
+          accept={FILE_INPUT_ACCEPT}
+          onChange={(event) => {
+            void handleScanFullInput(event);
+          }}
+          className="hidden"
+        />
+
         <Dialog
           open={Boolean(previewDialogDocument)}
           onOpenChange={(open) => {
             if (!open) {
               setPreviewDialogDocument(null);
+              setPreviewRenderFailed(false);
             }
           }}
         >
@@ -3131,15 +5085,35 @@ export default function ScannerDocumentos({
             </DialogHeader>
 
             <div className="flex h-[68vh] items-center justify-center bg-black px-3 py-3">
-              {previewDialogDocument && isPreviewableDocument(previewDialogDocument) ? (
-                <iframe
-                  title={`preview-${previewDialogDocument.id}`}
-                  src={previewDialogDocument.previewUrl || undefined}
-                  className="h-full w-full rounded-md border border-white/10 bg-black"
-                />
+              {previewDialogDocument &&
+              isPreviewableDocument(previewDialogDocument) &&
+              !previewRenderFailed ? (
+                isImagePreviewDocument(previewDialogDocument) ? (
+                  <img
+                    src={previewDialogDocument.previewUrl || undefined}
+                    alt={previewDialogDocument.fileName}
+                    className="h-full w-full rounded-md border border-white/10 bg-black object-contain"
+                    onError={() => {
+                      setPreviewRenderFailed(true);
+                    }}
+                  />
+                ) : (
+                  <iframe
+                    title={`preview-${previewDialogDocument.id}`}
+                    src={previewDialogDocument.previewUrl || undefined}
+                    className="h-full w-full rounded-md border border-white/10 bg-black"
+                    onError={() => {
+                      setPreviewRenderFailed(true);
+                    }}
+                  />
+                )
               ) : (
                 <div className="space-y-2 text-center">
-                  <p className="text-sm text-white/80">Pré-visualização não disponível para este formato.</p>
+                  <p className="text-sm text-white/80">
+                    {previewRenderFailed
+                      ? 'Falha ao renderizar este arquivo no navegador.'
+                      : 'Pré-visualização não disponível para este formato.'}
+                  </p>
                   <p className="text-xs text-white/55">Use o botão abaixo para baixar e abrir localmente.</p>
                 </div>
               )}

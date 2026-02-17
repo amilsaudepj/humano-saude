@@ -50,17 +50,20 @@ export default function DashboardLayout({
       {/* Main Content - Com margem para a sidebar */}
       <div className="relative z-10 transition-all duration-300 lg:ml-20">
         {/* Top Bar — Notification Bell */}
-        <div data-tour="admin-topbar" className="flex items-center justify-end px-4 lg:px-6 pt-4 lg:pt-5">
+        <div
+          data-tour="admin-topbar"
+          className="fixed inset-x-0 top-0 z-40 flex items-center justify-end gap-2 border-b border-white/10 bg-[#050505]/90 px-4 py-3 backdrop-blur-xl lg:static lg:z-auto lg:justify-end lg:border-0 lg:bg-transparent lg:px-6 lg:pt-5 lg:pb-0"
+        >
           <NotificationBell corretorId="admin" />
+          <GuidedTour role="admin" triggerMode="inline" />
         </div>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-6 pt-2 lg:pt-3">{children}</main>
+        <main className="p-4 pt-20 lg:p-6 lg:pt-3">{children}</main>
       </div>
       
       {/* Toast Notifications */}
       <Toaster position="top-right" richColors closeButton />
-      <GuidedTour role="admin" />
 
       <style jsx global>{`
         .admin-panel [data-slot="button"][class*="bg-[#D4AF37]"],
