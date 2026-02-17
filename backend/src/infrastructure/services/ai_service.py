@@ -6,6 +6,7 @@ import base64
 import io
 import json
 import os
+import re
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -291,11 +292,49 @@ JSON:
             "confianca": "alta"
         }
 
+        def normalizar_idade(valor: object) -> Optional[int]:
+            if isinstance(valor, bool) or valor is None:
+                return None
+
+            idade_normalizada: Optional[int] = None
+
+            if isinstance(valor, int):
+                idade_normalizada = valor
+            elif isinstance(valor, float):
+                if valor.is_integer():
+                    idade_normalizada = int(valor)
+            elif isinstance(valor, str):
+                texto = valor.strip()
+                if not texto:
+                    return None
+
+                if texto.isdigit():
+                    idade_normalizada = int(texto)
+                else:
+                    numero = None
+                    try:
+                        numero = float(texto.replace(",", "."))
+                    except ValueError:
+                        match = re.search(r"\b(\d{1,3})\b", texto)
+                        if match:
+                            numero = float(match.group(1))
+
+                    if numero is not None and float(numero).is_integer():
+                        idade_normalizada = int(numero)
+
+            if idade_normalizada is None:
+                return None
+
+            if 0 <= idade_normalizada <= 120:
+                return idade_normalizada
+
+            return None
+
         if "idades" in dados and isinstance(dados["idades"], list):
-            resultado["idades"] = [
-                int(idade) for idade in dados["idades"]
-                if isinstance(idade, (int, float, str)) and str(idade).isdigit()
+            idades_normalizadas = [
+                normalizar_idade(idade) for idade in dados["idades"]
             ]
+            resultado["idades"] = [idade for idade in idades_normalizadas if idade is not None]
 
         if "operadora" in dados and dados["operadora"]:
             resultado["operadora"] = str(dados["operadora"]).upper().strip()
