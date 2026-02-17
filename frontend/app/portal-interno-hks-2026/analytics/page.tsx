@@ -6,7 +6,7 @@
 // =====================================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Eye,
   MousePointer,
@@ -18,7 +18,6 @@ import {
   Tablet,
   MapPin,
   FileText,
-  ArrowUpRight,
   PieChart,
   Users,
   Chrome,
@@ -81,6 +80,44 @@ const FLAG_MAP: Record<string, string> = {
 
 function getFlag(country: string) { return FLAG_MAP[country] || '🌐'; }
 
+type ApiResponseShape = {
+  success?: boolean;
+  error?: string;
+  errorCode?: string;
+  details?: Record<string, unknown>;
+};
+
+function normalizeGa4ApiErrorMessage(rawMessage: string): string {
+  const message = rawMessage.trim();
+  if (!message) return 'Erro ao carregar dados do GA4.';
+
+  const lower = message.toLowerCase();
+  const apiDisabled =
+    lower.includes('analyticsdata.googleapis.com') &&
+    (lower.includes('has not been used') || lower.includes('disabled') || lower.includes('desativ'));
+
+  if (apiDisabled) {
+    const projectMatch = message.match(/project\s+(\d+)/i);
+    const projectLabel = projectMatch?.[1] ? ` no projeto ${projectMatch[1]}` : '';
+    return `GA4 conectado, mas a API Google Analytics Data está desativada${projectLabel}. Ative analyticsdata.googleapis.com no Google Cloud e aguarde alguns minutos.`;
+  }
+
+  if (lower.includes('permission_denied') || lower.includes('does not have sufficient permissions')) {
+    return 'Credencial Google sem permissão de leitura nesta propriedade GA4. Adicione o Service Account como Viewer/Analyst na propriedade.';
+  }
+
+  return `Erro GA4: ${message}`;
+}
+
+function getFirstApiError(responses: ApiResponseShape[]): string | null {
+  for (const response of responses) {
+    if (response.success === false && typeof response.error === 'string' && response.error.trim()) {
+      return response.error;
+    }
+  }
+  return null;
+}
+
 // =====================================================
 // TYPES
 // =====================================================
@@ -134,13 +171,14 @@ export default function AnalyticsPage() {
         fetch(`/api/analytics/outbound${qs}`).then(r => r.json()).catch(() => null),
       ]);
 
-      const responses = [kR, tR, sR, pR, coR, ciR, dR, bR, aR, oR].filter(Boolean);
-      const ga4ConfigResponse = responses.find((r: any) => r?.errorCode === 'GA4_NOT_CONFIGURED');
-      const ga4NotConfigured = responses.some((r: any) =>
+      const responses = [kR, tR, sR, pR, coR, ciR, dR, bR, aR, oR].filter(Boolean) as ApiResponseShape[];
+      const ga4ConfigResponse = responses.find((r) => r?.errorCode === 'GA4_NOT_CONFIGURED');
+      const ga4NotConfigured = responses.some((r) =>
         r?.errorCode === 'GA4_NOT_CONFIGURED' ||
-        typeof r?.error === 'string' && r.error.toLowerCase().includes('ga4 não configurado')
+        (typeof r?.error === 'string' && r.error.toLowerCase().includes('ga4 não configurado'))
       );
-      const hasApiError = responses.some((r: any) => r?.success === false);
+      const hasApiError = responses.some((r) => r?.success === false);
+      const firstApiError = getFirstApiError(responses);
 
       setData({
         kpis: kR?.success ? kR.data : null,
@@ -162,11 +200,15 @@ export default function AnalyticsPage() {
           `GA4 não configurado no servidor.${missing ? ` ${missing}` : ' Configure Property ID numérico + credenciais da Service Account Google.'}`
         );
       } else if (hasApiError) {
-        setError('Erro ao carregar dados do GA4. Verifique as credenciais.');
+        if (firstApiError) {
+          setError(normalizeGa4ApiErrorMessage(firstApiError));
+        } else {
+          setError('Erro ao carregar dados do GA4. Verifique as credenciais.');
+        }
       } else {
         setError(null);
       }
-    } catch (e) {
+    } catch {
       setError('Erro ao carregar dados do GA4. Verifique as credenciais.');
     } finally {
       setLoading(false);

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, type HTMLAttributes, type ReactNode }
 import { Button } from '@/components/ui/button';
 import ScannerDocumentos from '../components/ScannerDocumentos';
 import Logo from '../components/Logo';
+import RealtimeVisitors from '@/components/dashboard/RealtimeVisitors';
 import {
   Activity,
   AlertTriangle,
@@ -174,7 +175,7 @@ export default function DashboardPage() {
     <div className="container mx-auto space-y-6 px-4 py-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
         <div data-tour="admin-overview" className="flex items-center gap-4">
-          <Logo variant="1" size="lg" className="max-w-[240px]" />
+          <Logo variant="1" size="lg" className="max-w-[240px]" withBackground={false} />
           <div className="h-12 w-px bg-white/10" />
           <div>
             <h1 className="font-[family-name:var(--font-heading)] text-3xl font-bold text-white">
@@ -187,6 +188,7 @@ export default function DashboardPage() {
         </div>
 
         <div data-tour="admin-period-filters" className="flex flex-wrap items-center gap-2">
+          <RealtimeVisitors className="mr-1" showTopPage={false} />
           {PERIOD_OPTIONS.map((option) => {
             const active = period === option.value;
             return (

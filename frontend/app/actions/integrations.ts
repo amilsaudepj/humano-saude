@@ -1,11 +1,12 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { createServiceClient } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
-import type { IntegrationSettingInsert, IntegrationSettingUpdate } from '@/lib/types/database';
 import { logger } from '@/lib/logger';
+import { clearGA4AvailabilityCache } from '@/lib/google-analytics';
 
 const PORTAL = '/portal-interno-hks-2026';
+const supabase = createServiceClient();
 
 // ========================================
 // LISTAR INTEGRAÇÕES
@@ -40,10 +41,11 @@ export async function getIntegrationByName(name: string) {
       .from('integration_settings')
       .select('*')
       .eq('integration_name', name)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
     if (error) return { success: false, data: null, error: error.message };
-    return { success: true, data };
+    return { success: true, data: Array.isArray(data) && data.length > 0 ? data[0] : null };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Erro inesperado';
     return { success: false, data: null, error: msg };
@@ -61,11 +63,18 @@ export async function upsertIntegration(input: {
   is_active?: boolean;
 }) {
   try {
-    const { data: existing } = await supabase
+    const { data: existingRows, error: existingError } = await supabase
       .from('integration_settings')
       .select('id')
       .eq('integration_name', input.integration_name)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (existingError) {
+      return { success: false, error: existingError.message };
+    }
+
+    const existing = Array.isArray(existingRows) && existingRows.length > 0 ? existingRows[0] : null;
 
     if (existing) {
       // Update
@@ -167,15 +176,18 @@ export async function getSystemConfig() {
       .from('integration_settings')
       .select('config, encrypted_credentials')
       .eq('integration_name', 'system_config')
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       return { success: false, data: null, error: error.message };
     }
 
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+
     return {
       success: true,
-      data: data ? { ...data.config, ...data.encrypted_credentials } : null,
+      data: row ? { ...row.config, ...row.encrypted_credentials } : null,
     };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Erro inesperado';
@@ -185,19 +197,50 @@ export async function getSystemConfig() {
 
 export async function saveSystemConfig(config: Record<string, unknown>) {
   try {
-    const { whatsapp_api_token, smtp_host, smtp_port, smtp_user, ...publicConfig } = config;
+    const sensitiveKeys = [
+      'whatsapp_api_token',
+      'whatsapp_webhook_verify_token',
+      'meta_access_token',
+      'meta_app_secret',
+      'meta_page_access_token',
+      'tiktok_access_token',
+      'x_bearer_token',
+      'x_api_key',
+      'x_api_secret',
+      'linkedin_access_token',
+      'google_ads_refresh_token',
+      'openai_api_key',
+      'google_ai_api_key',
+      'smtp_host',
+      'smtp_port',
+      'smtp_user',
+    ] as const;
+
+    const normalize = (value: unknown): string => {
+      if (typeof value === 'number' && Number.isFinite(value)) return `${value}`;
+      if (typeof value === 'string') return value.trim();
+      return '';
+    };
+
+    const encryptedCredentials: Record<string, unknown> = {};
+    const publicConfig: Record<string, unknown> = { ...config };
+
+    for (const key of sensitiveKeys) {
+      encryptedCredentials[key] = normalize(config[key]);
+      delete publicConfig[key];
+    }
 
     const result = await upsertIntegration({
       integration_name: 'system_config',
-      encrypted_credentials: {
-        whatsapp_api_token: whatsapp_api_token || '',
-        smtp_host: smtp_host || '',
-        smtp_port: smtp_port || '',
-        smtp_user: smtp_user || '',
-      },
+      encrypted_credentials: encryptedCredentials,
       config: publicConfig,
       is_active: true,
     });
+
+    if (result.success) {
+      clearGA4AvailabilityCache();
+      revalidatePath(`${PORTAL}/analytics`);
+    }
 
     revalidatePath(`${PORTAL}/configuracoes`);
     return result;
@@ -217,13 +260,15 @@ export async function getAdminProfile() {
       .from('integration_settings')
       .select('config')
       .eq('integration_name', 'admin_profile')
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       return { success: false, data: null, error: error.message };
     }
 
-    return { success: true, data: data?.config || null };
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    return { success: true, data: row?.config || null };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Erro inesperado';
     return { success: false, data: null, error: msg };

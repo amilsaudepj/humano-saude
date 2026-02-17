@@ -666,15 +666,72 @@ export async function trackWhatsAppAction(
   cardId: string,
   corretorId: string,
   mensagem: string,
+  options?: {
+    leadId?: string | null;
+    metadata?: Record<string, unknown>;
+    interactionTitle?: string;
+  },
 ): Promise<R> {
   try {
     const sb = createServiceClient();
-    await sb.from('crm_interacoes').insert({
-      card_id: cardId, corretor_id: corretorId,
-      tipo: 'whatsapp', titulo: 'WhatsApp enviado',
-      descricao: mensagem, metadata: { tracked: true },
+    const nowIso = new Date().toISOString();
+    const leadId = options?.leadId ?? null;
+    const metadata = {
+      tracked: true,
+      ...(options?.metadata ?? {}),
+    };
+
+    const { error: interactionError } = await sb.from('crm_interacoes').insert({
+      card_id: cardId,
+      corretor_id: corretorId,
+      lead_id: leadId,
+      tipo: 'whatsapp',
+      titulo: options?.interactionTitle ?? 'WhatsApp enviado',
+      descricao: mensagem,
+      metadata,
     });
-    await sb.from('crm_cards').update({ updated_at: new Date().toISOString() }).eq('id', cardId);
+    if (interactionError) throw interactionError;
+
+    const { error: cardError } = await sb
+      .from('crm_cards')
+      .update({ updated_at: nowIso })
+      .eq('id', cardId);
+    if (cardError) throw cardError;
+
+    if (leadId) {
+      const { error: leadError } = await sb
+        .from('insurance_leads')
+        .update({ last_contact_at: nowIso })
+        .eq('id', leadId);
+
+      if (leadError) {
+        logger.warn('[trackWhatsAppAction] lead update warning', {
+          message: leadError.message,
+          details: leadError.details,
+          hint: leadError.hint,
+          code: leadError.code,
+        });
+      }
+
+      const { error: logError } = await sb.from('interaction_logs').insert({
+        lead_id: leadId,
+        card_id: cardId,
+        corretor_id: corretorId,
+        channel: 'whatsapp',
+        message: mensagem,
+        metadata,
+      });
+
+      if (logError) {
+        logger.warn('[trackWhatsAppAction] interaction_logs warning', {
+          message: logError.message,
+          details: logError.details,
+          hint: logError.hint,
+          code: logError.code,
+        });
+      }
+    }
+
     return { success: true };
   } catch (e) {
     logger.error('[trackWhatsAppAction]', e);

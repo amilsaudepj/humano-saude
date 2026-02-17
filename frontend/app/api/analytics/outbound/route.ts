@@ -4,17 +4,14 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getOutboundClicks, normalizeDate, isGA4Available } from '@/lib/google-analytics';
+import { getOutboundClicks, normalizeDate } from '@/lib/google-analytics';
+import { getGA4UnavailableResponse } from '@/app/api/analytics/_shared';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!(await isGA4Available())) {
-      return NextResponse.json({
-        success: true,
-        data: { clicks: [], summary: { whatsapp: 0, appstore: 0, playstore: 0, external: 0, total: 0 } },
-      });
-    }
+    const unavailableResponse = await getGA4UnavailableResponse();
+    if (unavailableResponse) return unavailableResponse;
 
     const { searchParams } = new URL(request.url);
     const start = normalizeDate(searchParams.get('start'));

@@ -4,14 +4,14 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopPages, normalizeDate, isGA4Available } from '@/lib/google-analytics';
+import { getTopPages, normalizeDate } from '@/lib/google-analytics';
+import { getGA4UnavailableResponse } from '@/app/api/analytics/_shared';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!(await isGA4Available())) {
-      return NextResponse.json({ success: true, data: [] });
-    }
+    const unavailableResponse = await getGA4UnavailableResponse();
+    if (unavailableResponse) return unavailableResponse;
 
     const { searchParams } = new URL(request.url);
     const start = normalizeDate(searchParams.get('start'));

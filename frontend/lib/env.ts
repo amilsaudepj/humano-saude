@@ -60,6 +60,7 @@ const envSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_HOTJAR_SITE_ID: z.string().optional(),
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
   NEXT_PUBLIC_GTM_ID: z.string().optional(),
   // Google Ads
@@ -91,7 +92,9 @@ const FEATURE_GROUPS: Record<string, { envs: string[]; label: string }> = {
   meta_ads:  { envs: ['META_ACCESS_TOKEN', 'META_AD_ACCOUNT_ID'], label: 'Meta Ads' },
   analytics: { envs: ['GA4_PROPERTY_ID', 'GOOGLE_CLIENT_EMAIL', 'GOOGLE_PRIVATE_KEY'], label: 'Google Analytics' },
   ai:        { envs: ['OPENAI_API_KEY'], label: 'IA (OpenAI)' },
+  gemini:    { envs: ['GOOGLE_AI_API_KEY'], label: 'Gemini (Google AI Studio)' },
   vertex_ai: { envs: ['GOOGLE_SERVICE_ACCOUNT_JSON'], label: 'Vertex AI (OCR)' },
+  hotjar:    { envs: ['NEXT_PUBLIC_HOTJAR_SITE_ID'], label: 'Hotjar' },
   rate_limit:{ envs: ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'], label: 'Rate Limiting' },
   cron:      { envs: ['CRON_SECRET'], label: 'Cron Jobs protegidos' },
 };
@@ -113,10 +116,6 @@ export function validateEnv(): EnvValidationResult {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    const errors = parsed.error.issues.map(
-      (issue) => `  ❌ ${issue.path.join('.')}: ${issue.message}`
-    );
-
     // Separar erros de obrigatórias vs opcionais
     const criticalFields = [
       'NEXT_PUBLIC_SUPABASE_URL',

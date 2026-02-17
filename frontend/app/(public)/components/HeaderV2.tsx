@@ -5,13 +5,6 @@ import Image from 'next/image';
 
 export default function HeaderV2() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Bloquear scroll do body quando menu mobile está aberto
   useEffect(() => {
@@ -22,7 +15,7 @@ export default function HeaderV2() {
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      const offset = -80;
+      const offset = window.innerWidth < 1024 ? -116 : -96;
       const y = el.getBoundingClientRect().top + window.pageYOffset + offset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
@@ -68,15 +61,15 @@ export default function HeaderV2() {
       <header
         className={`fixed top-[32px] left-0 right-0 z-[9999] transition-all duration-300 bg-black shadow-lg`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-18 lg:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[72px] sm:h-18 lg:h-20 flex items-center justify-between">
           {/* Logo */}
-          <button onClick={() => scrollTo('hero')} className="relative cursor-pointer flex-shrink-0">
+          <button onClick={() => scrollTo('hero')} className="relative cursor-pointer flex-shrink-0 py-1 sm:py-0">
             <Image
               src="/images/logos/LOGO 1 SEM FUNDO.png"
               alt="Humano Saúde"
               width={160}
               height={50}
-              className={`h-10 lg:h-12 w-auto transition-all duration-300`}
+              className={`h-9 sm:h-10 lg:h-12 w-auto rounded-sm bg-black transition-all duration-300`}
               priority
             />
           </button>
@@ -159,7 +152,7 @@ export default function HeaderV2() {
               alt="Humano Saúde"
               width={120}
               height={40}
-              className="h-8 w-auto"
+              className="h-8 w-auto rounded-sm bg-black"
             />
             <button
               onClick={() => setIsMenuOpen(false)}

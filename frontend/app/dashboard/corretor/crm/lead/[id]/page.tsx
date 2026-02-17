@@ -36,6 +36,7 @@ import {
   moveCardStage, markCardAsSold, trackWhatsAppAction, trackEmailAction,
   updateLeadOrigin,
 } from '@/app/actions/crm-card-detail';
+import { PlaybookActions, type PlaybookSendPayload } from './components/PlaybookActions';
 
 // ========================================
 // CONSTANTS
@@ -114,6 +115,15 @@ type PlaybookAction =
   | 'reuniao'
   | 'docs'
   | 'schedule';
+
+function normalizeWhatsAppPhone(raw?: string | null): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('55') && digits.length >= 12) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
 
 // ========================================
 // CONFETTI
@@ -1034,11 +1044,67 @@ export default function LeadDetailPage() {
 
   const handleWhatsApp = async () => {
     if (!detail?.lead?.whatsapp || !corretorId) return;
-    const phone = detail.lead.whatsapp.replace(/\D/g, '');
-    await trackWhatsAppAction(cardId, corretorId, '');
-    window.open(`https://wa.me/55${phone}`, '_blank');
+    const phone = normalizeWhatsAppPhone(detail.lead.whatsapp);
+    if (!phone) {
+      toast.error('WhatsApp inválido para este lead.');
+      return;
+    }
+    await trackWhatsAppAction(cardId, corretorId, '', {
+      leadId: detail.lead_id,
+      metadata: { source: 'quick_action' },
+    });
+    window.open(`https://wa.me/${phone}`, '_blank', 'noopener,noreferrer');
     toast.success('WhatsApp aberto'); fetchDetail();
   };
+
+  const handleWhatsAppClick = useCallback(async ({
+    message,
+    phase,
+    dayId,
+    dayLabel,
+  }: PlaybookSendPayload) => {
+    if (!detail || !corretorId) {
+      toast.error('Sessão de corretor não encontrada.');
+      return;
+    }
+
+    const phone = normalizeWhatsAppPhone(detail.lead?.whatsapp);
+    if (!phone) {
+      toast.error('Lead sem WhatsApp válido.');
+      return;
+    }
+
+    const finalMessage = message.trim();
+    if (!finalMessage) {
+      toast.error('Mensagem vazia para envio.');
+      return;
+    }
+
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+
+    const track = await trackWhatsAppAction(cardId, corretorId, finalMessage, {
+      leadId: detail.lead_id,
+      interactionTitle: 'Playbook de Vendas (WhatsApp)',
+      metadata: {
+        source: 'sales_playbook',
+        phase,
+        day_id: dayId,
+        day_label: dayLabel,
+      },
+    });
+
+    if (!track.success) {
+      toast.error(track.error ?? 'Nao foi possivel registrar a interacao.');
+      return;
+    }
+
+    toast.success('Mensagem preparada no WhatsApp.');
+    fetchDetail();
+  }, [cardId, corretorId, detail, fetchDetail]);
 
   const registerPlaybookInteraction = useCallback(async (
     tipo: CrmInteracaoTipo,
@@ -1068,7 +1134,7 @@ export default function LeadDetailPage() {
       return;
     }
 
-    const phone = detail.lead?.whatsapp?.replace(/\D/g, '') ?? '';
+    const phone = normalizeWhatsAppPhone(detail.lead?.whatsapp);
     const email = detail.lead?.email ?? '';
     const leadFirstName = detail.lead?.nome?.trim().split(/\s+/)[0] ?? 'cliente';
 
@@ -1093,7 +1159,10 @@ export default function LeadDetailPage() {
         return;
       }
 
-      await trackWhatsAppAction(cardId, corretorId, message);
+      await trackWhatsAppAction(cardId, corretorId, message, {
+        leadId: detail.lead_id,
+        metadata: { source: 'ai_playbook', action, interaction_type: interactionType },
+      });
       if (interactionType !== 'whatsapp') {
         await registerPlaybookInteraction(
           interactionType,
@@ -1103,7 +1172,7 @@ export default function LeadDetailPage() {
         );
       }
 
-      window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank');
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       toast.success('Ação do playbook executada no WhatsApp.');
     };
 
@@ -1130,7 +1199,7 @@ export default function LeadDetailPage() {
         'Ligação iniciada via playbook de vendas',
         { source: 'ai_playbook', action },
       );
-      window.open(`tel:+55${phone}`, '_self');
+      window.open(`tel:+${phone}`, '_self');
       toast.success('Abrindo discador.');
     };
 
@@ -1648,6 +1717,22 @@ export default function LeadDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Playbook Cadenciado */}
+            <PlaybookActions
+              cardId={cardId}
+              leadId={detail.lead_id ?? null}
+              leadName={detail.lead?.nome ?? detail.titulo}
+              leadWhatsapp={detail.lead?.whatsapp ?? null}
+              companyProfile={detail.lead?.tipo_contratacao ?? detail.lead?.origem ?? null}
+              currentPrice={detail.lead?.valor_atual ?? null}
+              estimatedEconomy={
+                typeof detail.lead?.valor_atual === 'number' && typeof detail.valor_estimado === 'number'
+                  ? Math.max(detail.lead.valor_atual - detail.valor_estimado, 0)
+                  : null
+              }
+              onWhatsAppClick={handleWhatsAppClick}
+            />
 
             {/* AI Copilot */}
             <AICopilot

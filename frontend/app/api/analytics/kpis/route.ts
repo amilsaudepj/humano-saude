@@ -4,24 +4,14 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getKPIs, normalizeDate, getGA4AvailabilityDiagnostics } from '@/lib/google-analytics';
+import { getKPIs, normalizeDate } from '@/lib/google-analytics';
+import { getGA4UnavailableResponse } from '@/app/api/analytics/_shared';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const diagnostics = await getGA4AvailabilityDiagnostics();
-    if (!diagnostics.available) {
-      return NextResponse.json(
-        {
-          success: false,
-          errorCode: 'GA4_NOT_CONFIGURED',
-          error: 'GA4 não configurado',
-          details: diagnostics,
-          data: null,
-        },
-        { status: 200 }
-      );
-    }
+    const unavailableResponse = await getGA4UnavailableResponse();
+    if (unavailableResponse) return unavailableResponse;
 
     const { searchParams } = new URL(request.url);
     const start = normalizeDate(searchParams.get('start'));

@@ -11,9 +11,10 @@ import { Radio } from 'lucide-react';
 
 interface RealtimeVisitorsProps {
   className?: string;
+  showTopPage?: boolean;
 }
 
-export default function RealtimeVisitors({ className }: RealtimeVisitorsProps) {
+export default function RealtimeVisitors({ className, showTopPage = true }: RealtimeVisitorsProps) {
   const [activeUsers, setActiveUsers] = useState(0);
   const [topPage, setTopPage] = useState<string>('');
 
@@ -25,7 +26,12 @@ export default function RealtimeVisitors({ className }: RealtimeVisitorsProps) {
         setActiveUsers(json.data.activeUsers ?? 0);
         if (json.data.pages && json.data.pages.length > 0) {
           setTopPage(json.data.pages[0].page || '');
+        } else {
+          setTopPage('');
         }
+      } else {
+        setActiveUsers(0);
+        setTopPage('');
       }
     } catch {
       // silencioso
@@ -33,9 +39,13 @@ export default function RealtimeVisitors({ className }: RealtimeVisitorsProps) {
   }, []);
 
   useEffect(() => {
-    fetchRealtime();
-    const interval = setInterval(fetchRealtime, 5000);
-    return () => clearInterval(interval);
+    const refresh = () => { void fetchRealtime(); };
+    const initial = window.setTimeout(refresh, 0);
+    const interval = window.setInterval(refresh, 5000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
   }, [fetchRealtime]);
 
   return (
@@ -64,7 +74,7 @@ export default function RealtimeVisitors({ className }: RealtimeVisitorsProps) {
         <span className="text-[10px] text-gray-500">LIVE</span>
       </div>
 
-      {topPage && (
+      {showTopPage && topPage && (
         <span className="hidden text-[10px] text-gray-600 md:inline truncate max-w-[150px]">
           📄 {topPage}
         </span>

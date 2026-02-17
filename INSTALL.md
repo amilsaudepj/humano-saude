@@ -55,8 +55,12 @@ META_PIXEL_ID=""
 NEXT_PUBLIC_META_PIXEL_ID=""
 
 # ─── Google Analytics (Opcional) ──────────────
+# Tracking no frontend (gtag)
 NEXT_PUBLIC_GA_MEASUREMENT_ID=""
 NEXT_PUBLIC_GTM_ID=""
+# Data API no backend/admin (obrigatório para página GA4 do painel)
+GA4_PROPERTY_ID="" # Somente números (ex.: 123456789)
+GOOGLE_APPLICATION_CREDENTIALS_JSON="" # JSON da Service Account
 
 # ─── Cron / Segurança ────────────────────────
 CRON_SECRET="gere_uma_chave_aleatoria_aqui"

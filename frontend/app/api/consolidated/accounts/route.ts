@@ -31,15 +31,17 @@ function asRecord(value: unknown): Record<string, unknown> {
 function extractGa4PropertyFromSettingsRow(row: Record<string, unknown>): string | null {
   const config = asRecord(row.config);
   const encrypted = asRecord(row.encrypted_credentials);
-  return (
+  const explicitPropertyId =
     toPropertyId(row.ga4_property_id) ||
     toPropertyId(row.google_analytics_property_id) ||
     toPropertyId(config.ga4_property_id) ||
     toPropertyId(config.google_analytics_property_id) ||
-    toPropertyId(config.google_analytics_id) ||
     toPropertyId(encrypted.ga4_property_id) ||
-    null
-  );
+    null;
+
+  if (explicitPropertyId) return explicitPropertyId;
+
+  return toPropertyId(config.google_analytics_id) || null;
 }
 
 // =====================================================

@@ -54,29 +54,89 @@ const LEAD_ACTION_TYPE = 'offsite_conversion.fb_pixel_lead';
 // OBTER CREDENCIAIS (Supabase ou env)
 // =====================================================
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function firstNonEmpty(...values: Array<unknown>): string {
+  for (const value of values) {
+    const normalized = asString(value);
+    if (normalized) return normalized;
+  }
+  return '';
+}
+
+function normalizeMetaAdAccountId(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) return '';
+  return normalized.startsWith('act_') ? normalized.slice(4) : normalized;
+}
+
 async function getCredentials(): Promise<{
   accessToken: string;
   adAccountId: string;
 }> {
-  const accessToken = process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN || '';
+  let accessToken = firstNonEmpty(
+    process.env.META_ACCESS_TOKEN,
+    process.env.FACEBOOK_ACCESS_TOKEN,
+  );
+  let adAccountId = normalizeMetaAdAccountId(
+    firstNonEmpty(
+      process.env.META_AD_ACCOUNT_ID,
+      process.env.FACEBOOK_AD_ACCOUNT_ID,
+    )
+  );
 
-  // Tentar buscar account ID dinâmico do integration_settings
-  let adAccountId = process.env.META_AD_ACCOUNT_ID || process.env.FACEBOOK_AD_ACCOUNT_ID || '';
+  if (accessToken && adAccountId) {
+    return { accessToken, adAccountId };
+  }
 
   try {
     const supabase = createServiceClient();
     const { data } = await supabase
       .from('integration_settings')
-      .select('meta_ad_account_id')
-      .eq('is_default', true)
-      .limit(1)
-      .single();
+      .select('integration_name, config, encrypted_credentials, meta_ad_account_id, updated_at')
+      .in('integration_name', ['system_config', 'meta_ads'])
+      .order('updated_at', { ascending: false })
+      .limit(10);
 
-    if (data?.meta_ad_account_id) {
-      adAccountId = data.meta_ad_account_id;
+    if (Array.isArray(data)) {
+      for (const rawRow of data) {
+        const row = rawRow as Record<string, unknown>;
+        const rowConfig = asRecord(row.config);
+        const rowCredentials = asRecord(row.encrypted_credentials);
+
+        if (!accessToken) {
+          accessToken = firstNonEmpty(
+            rowCredentials.meta_access_token,
+            rowConfig.meta_access_token,
+            rowCredentials.facebook_access_token,
+            rowConfig.facebook_access_token,
+          );
+        }
+
+        if (!adAccountId) {
+          adAccountId = normalizeMetaAdAccountId(
+            firstNonEmpty(
+              row.meta_ad_account_id,
+              rowConfig.meta_ad_account_id,
+              rowCredentials.meta_ad_account_id,
+              rowConfig.facebook_ad_account_id,
+              rowCredentials.facebook_ad_account_id,
+            )
+          );
+        }
+
+        if (accessToken && adAccountId) break;
+      }
     }
   } catch {
-    // Usa env var
+    // segue com env como fallback
   }
 
   return { accessToken, adAccountId };

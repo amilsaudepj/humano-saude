@@ -4,14 +4,14 @@
 // =====================================================
 
 import { NextResponse } from 'next/server';
-import { getRealtimeData, isGA4Available } from '@/lib/google-analytics';
+import { getRealtimeData } from '@/lib/google-analytics';
+import { getGA4UnavailableResponse } from '@/app/api/analytics/_shared';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
-    if (!(await isGA4Available())) {
-      return NextResponse.json({ success: true, data: { activeUsers: 0, pages: [] } });
-    }
+    const unavailableResponse = await getGA4UnavailableResponse();
+    if (unavailableResponse) return unavailableResponse;
 
     const data = await getRealtimeData();
     return NextResponse.json({ success: true, data: data || { activeUsers: 0, pages: [] } });

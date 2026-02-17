@@ -21,6 +21,13 @@ let cachedGA4PropertyAt = 0;
 let cachedGA4MeasurementHint: string | null | undefined;
 let cachedGA4MeasurementAt = 0;
 
+export function clearGA4AvailabilityCache(): void {
+  cachedGA4PropertyId = undefined;
+  cachedGA4PropertyAt = 0;
+  cachedGA4MeasurementHint = undefined;
+  cachedGA4MeasurementAt = 0;
+}
+
 function parseCredentialJson(raw: string, source: string): { client_email?: string; private_key?: string } | null {
   const value = raw.trim();
   if (!value) return null;
@@ -75,28 +82,34 @@ function getCredentials(): { client_email?: string; private_key?: string } | nul
 
 function extractPropertyId(config?: Record<string, unknown> | null): string | null {
   if (!config) return null;
-  return (
+  const explicitPropertyId =
     toPropertyId(config.ga4_property_id) ||
     toPropertyId(config.google_analytics_property_id) ||
-    toPropertyId(config.google_analytics_id) ||
     toPropertyId(config.ga4PropertyId) ||
     toPropertyId(config.googleAnalyticsPropertyId) ||
-    null
-  );
+    null;
+
+  if (explicitPropertyId) return explicitPropertyId;
+
+  // Campo legado que em projetos antigos era usado de forma ambígua.
+  return toPropertyId(config.google_analytics_id) || null;
 }
 
 function extractMeasurementId(config?: Record<string, unknown> | null): string | null {
   if (!config) return null;
-  return (
+  const explicitMeasurementId =
     toMeasurementId(config.ga_measurement_id) ||
     toMeasurementId(config.ga4_measurement_id) ||
     toMeasurementId(config.google_analytics_measurement_id) ||
-    toMeasurementId(config.google_analytics_id) ||
     toMeasurementId(config.gaMeasurementId) ||
     toMeasurementId(config.ga4MeasurementId) ||
     toMeasurementId(config.googleAnalyticsMeasurementId) ||
-    null
-  );
+    null;
+
+  if (explicitMeasurementId) return explicitMeasurementId;
+
+  // Campo legado que em projetos antigos era usado de forma ambígua.
+  return toMeasurementId(config.google_analytics_id) || null;
 }
 
 function resolvePropertyIdFromEnv(): string | null {

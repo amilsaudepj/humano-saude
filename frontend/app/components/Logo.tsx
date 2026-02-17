@@ -12,6 +12,7 @@ interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl"
   className?: string
   showText?: boolean // Se false, mostra apenas o ícone
+  withBackground?: boolean
 }
 
 const sizeMap = {
@@ -32,7 +33,8 @@ export default function Logo({
   variant = "1", 
   size = "md", 
   className,
-  showText = true 
+  showText = true,
+  withBackground = true,
 }: LogoProps) {
   const logoPath = `/images/logos/LOGO ${variant} SEM FUNDO.png`
   const dimensions = showText ? sizeMap[size] : iconSizeMap[size]
@@ -45,7 +47,7 @@ export default function Logo({
         width={dimensions.width}
         height={dimensions.height}
         priority
-        className="object-contain"
+        className={cn("rounded-sm object-contain", withBackground && "bg-black")}
       />
     </div>
   )
@@ -64,7 +66,8 @@ export function LogoGold({
   size = "md",
   className,
   showText = true,
-  goldIntensity = 50
+  goldIntensity = 50,
+  withBackground = true,
 }: LogoGoldProps) {
   const logoPath = `/images/logos/LOGO ${variant} SEM FUNDO.png`
   const dimensions = showText ? sizeMap[size] : iconSizeMap[size]
@@ -78,7 +81,7 @@ export function LogoGold({
           width={dimensions.width}
           height={dimensions.height}
           priority
-          className="object-contain transition-all duration-300"
+          className={cn("rounded-sm object-contain transition-all duration-300", withBackground && "bg-black")}
         />
         
         {/* Gold Gradient Overlay */}
@@ -117,7 +120,8 @@ export function LogoIcon({
 export function LogoWithGradientText({ 
   variant = "1",
   size = "md",
-  className
+  className,
+  withBackground = true,
 }: LogoProps) {
   const logoPath = `/images/logos/LOGO ${variant} SEM FUNDO.png`
   const dimensions = sizeMap[size]
@@ -130,7 +134,7 @@ export function LogoWithGradientText({
         width={dimensions.width}
         height={dimensions.height}
         priority
-        className="object-contain"
+        className={cn("rounded-sm object-contain", withBackground && "bg-black")}
       />
       
       <div className="flex flex-col">

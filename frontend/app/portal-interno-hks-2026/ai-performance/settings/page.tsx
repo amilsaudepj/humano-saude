@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Settings, Key, Globe, Brain, Save, CheckCircle, AlertTriangle,
-  RefreshCw, Database, Zap, Shield, Eye, EyeOff, ExternalLink
+  Settings, Globe, Brain, Save, CheckCircle,
+  Database, Zap, Shield, Eye, EyeOff
 } from 'lucide-react';
 
 interface IntegrationStatus {
@@ -12,11 +12,13 @@ interface IntegrationStatus {
   connected: boolean;
   envVar: string;
   description: string;
+  hint?: string;
 }
 
 export default function AISettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
 
   // Settings state
   const [aiModel, setAiModel] = useState('gpt-4o');
@@ -29,21 +31,14 @@ export default function AISettingsPage() {
 
   const [showKeys, setShowKeys] = useState(false);
 
-  const integrations: IntegrationStatus[] = [
-    { name: 'OpenAI', key: 'openai', connected: false, envVar: 'OPENAI_API_KEY', description: 'Motor GPT-4o para análise inteligente (Camadas 1 e 2)' },
-    { name: 'Meta Marketing API', key: 'meta', connected: false, envVar: 'META_ACCESS_TOKEN + META_AD_ACCOUNT_ID', description: 'Dados de campanhas, ad sets e anúncios' },
-    { name: 'Google Analytics 4', key: 'ga4', connected: false, envVar: 'GOOGLE_APPLICATION_CREDENTIALS_JSON + GA4_PROPERTY_ID', description: 'Tráfego, sessões, fontes e dados realtime' },
-    { name: 'Supabase', key: 'supabase', connected: true, envVar: 'NEXT_PUBLIC_SUPABASE_URL', description: 'Banco de dados, auth e storage' },
-  ];
-
   useEffect(() => {
     // Check integrations status
     async function checkStatus() {
       try {
-        const res = await fetch('/api/ai/analytics-insight?period=last_7d');
+        const res = await fetch('/api/ai/performance/integrations', { cache: 'no-store' });
         const json = await res.json();
-        if (json.success && json.data?.integrations) {
-          // Update based on response
+        if (json.success && Array.isArray(json.data)) {
+          setIntegrations(json.data as IntegrationStatus[]);
         }
       } catch { /* silent */ }
       setLoading(false);
@@ -87,13 +82,18 @@ export default function AISettingsPage() {
               <h2 className="text-sm font-semibold text-[#D4AF37] flex items-center gap-2">
                 <Globe className="h-4 w-4" /> Status das Integrações
               </h2>
-              <button
-                onClick={() => setShowKeys(!showKeys)}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                {showKeys ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                {showKeys ? 'Ocultar' : 'Mostrar'} env vars
-              </button>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-500">
+                  {integrations.filter((item) => item.connected).length}/{integrations.length || 0} conectadas
+                </span>
+                <button
+                  onClick={() => setShowKeys(!showKeys)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showKeys ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  {showKeys ? 'Ocultar' : 'Mostrar'} env vars
+                </button>
+              </div>
             </div>
             <div className="divide-y divide-white/5">
               {integrations.map(int => (
@@ -104,6 +104,9 @@ export default function AISettingsPage() {
                       <div>
                         <p className="text-sm font-medium text-white">{int.name}</p>
                         <p className="text-xs text-gray-500">{int.description}</p>
+                        {int.hint && (
+                          <p className="text-[11px] text-amber-400/80 mt-1">{int.hint}</p>
+                        )}
                         {showKeys && (
                           <code className="text-[10px] text-gray-600 mt-1 block">{int.envVar}</code>
                         )}
@@ -139,6 +142,8 @@ export default function AISettingsPage() {
                     <option value="gpt-4o">GPT-4o (Recomendado)</option>
                     <option value="gpt-4o-mini">GPT-4o Mini (Econômico)</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="gemini-2.0-flash-001">Gemini 2.0 Flash (Vertex)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (AI Studio)</option>
                   </select>
                 </div>
                 <div>
