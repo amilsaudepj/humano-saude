@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
         <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-8">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <Logo className="h-12" />
+            <Logo className="h-12" withBackground={false} />
           </div>
 
           {/* Título */}

@@ -33,6 +33,13 @@ export default function EscalaAutomaticaPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizationSummary, setOptimizationSummary] = useState<{
+    adsAnalyzed: number;
+    paused: number;
+    scaled: number;
+    noAction: number;
+  } | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{
     campaignId: string;
     campaignName: string;
@@ -54,10 +61,19 @@ export default function EscalaAutomaticaPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/ai/campaign-insights?period=last_7d');
-        const json = await res.json();
-        if (json.success && json.data?.campaigns) {
-          setCampaigns(json.data.campaigns);
+        const [insightsRes, optimizeRes] = await Promise.all([
+          fetch('/api/ai/campaign-insights?period=last_7d'),
+          fetch('/api/ads/optimize?days=7&limit=30'),
+        ]);
+
+        const insightsJson = await insightsRes.json();
+        if (insightsJson.success && insightsJson.data?.campaigns) {
+          setCampaigns(insightsJson.data.campaigns);
+        }
+
+        const optimizeJson = await optimizeRes.json();
+        if (optimizeJson.success && optimizeJson.summary) {
+          setOptimizationSummary(optimizeJson.summary);
         }
       } catch { /* silent */ }
       setLoading(false);
@@ -93,6 +109,40 @@ export default function EscalaAutomaticaPage() {
     setAnalyzing(false);
   };
 
+  const optimizeNow = async () => {
+    setOptimizing(true);
+    try {
+      const res = await fetch('/api/ads/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules: {} }),
+      });
+      const json = await res.json();
+
+      if (json.success && json.summary) {
+        setOptimizationSummary(json.summary);
+
+        const recs: typeof recommendations = (json.logs || [])
+          .filter((l: { actionType: string }) => l.actionType === 'PAUSE' || l.actionType === 'SCALE')
+          .slice(0, 8)
+          .map((l: { adId: string; adName: string; actionType: string; reason: string }, i: number) => ({
+            campaignId: l.adId || `opt-${i}`,
+            campaignName: l.adName || 'Anúncio',
+            action: l.actionType === 'PAUSE' ? 'Pausar anúncio' : 'Escalar orçamento',
+            reason: l.reason || 'Regra automática aplicada',
+            currentBudget: 0,
+            suggestedBudget: 0,
+            confidence: 0.9,
+          }));
+
+        if (recs.length > 0) {
+          setRecommendations(recs);
+        }
+      }
+    } catch { /* silent */ }
+    setOptimizing(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between border-b border-[#D4AF37]/20 pb-6">
@@ -103,14 +153,24 @@ export default function EscalaAutomaticaPage() {
           </h1>
           <p className="mt-2 text-gray-400">Budget dinâmico baseado em performance real — Camada 5 + IA</p>
         </div>
-        <button
-          onClick={analyzeScale}
-          disabled={analyzing}
-          className="flex items-center gap-2 rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#bf953f] disabled:opacity-50"
-        >
-          {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-          {analyzing ? 'Analisando...' : 'Analisar Escala'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={analyzeScale}
+            disabled={analyzing}
+            className="flex items-center gap-2 rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#bf953f] disabled:opacity-50"
+          >
+            {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            {analyzing ? 'Analisando...' : 'Analisar Escala'}
+          </button>
+          <button
+            onClick={optimizeNow}
+            disabled={optimizing}
+            className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+          >
+            {optimizing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {optimizing ? 'Otimizando...' : 'Otimizar Agora'}
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -119,6 +179,27 @@ export default function EscalaAutomaticaPage() {
         </div>
       ) : (
         <>
+          {optimizationSummary && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
+                <p className="text-xs text-gray-500">Ads analisados</p>
+                <p className="mt-1 text-2xl font-bold text-white">{optimizationSummary.adsAnalyzed}</p>
+              </div>
+              <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+                <p className="text-xs text-red-300">Pausados</p>
+                <p className="mt-1 text-2xl font-bold text-red-300">{optimizationSummary.paused}</p>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <p className="text-xs text-emerald-300">Escalados</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-300">{optimizationSummary.scaled}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
+                <p className="text-xs text-gray-500">Sem ação</p>
+                <p className="mt-1 text-2xl font-bold text-white">{optimizationSummary.noAction}</p>
+              </div>
+            </div>
+          )}
+
           {/* Scale Rules */}
           <div className="rounded-lg border border-[#D4AF37]/20 bg-[#0a0a0a]">
             <div className="border-b border-[#D4AF37]/20 p-4">

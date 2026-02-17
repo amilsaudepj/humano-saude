@@ -1,32 +1,19 @@
 // =====================================================
 // API — /api/cron/audit-campaigns
 // Cron Job — Camada 5 (Ads Auditor)
-// Vercel Cron: every 30 minutes
+// Vercel Cron: diário (07:00)
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { AdsAuditor } from '@/lib/services/ads-auditor';
-import { createServiceClient } from '@/lib/supabase';
+import { resolveMetaRuntimeConfig } from '@/lib/meta-config-resolver';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60s max
 
-async function getCredentials(): Promise<{ accessToken: string; adAccountId: string }> {
-  const accessToken = process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN || '';
-  let adAccountId = process.env.META_AD_ACCOUNT_ID || process.env.FACEBOOK_AD_ACCOUNT_ID || '';
-
-  try {
-    const supabase = createServiceClient();
-    const { data } = await supabase
-      .from('integration_settings')
-      .select('setting_value')
-      .eq('setting_key', 'meta_ad_account_id')
-      .single();
-    if (data?.setting_value) adAccountId = data.setting_value;
-  } catch { /* fallback to env */ }
-
-  return { accessToken, adAccountId };
+function normalizeAdAccountId(value: string): string {
+  return value.replace(/^act_/i, '').trim();
 }
 
 export async function GET(request: NextRequest) {
@@ -39,16 +26,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { accessToken, adAccountId } = await getCredentials();
+    const resolvedMeta = await resolveMetaRuntimeConfig({
+      preferIntegration: true,
+      allowEnvFallback: false,
+      requiredAdAccountId: process.env.META_REQUIRED_AD_ACCOUNT_ID,
+    });
 
-    if (!accessToken || !adAccountId) {
+    if (!resolvedMeta.isConfigured) {
       return NextResponse.json(
-        { success: false, error: 'Meta credentials not configured' },
-        { status: 400 }
+        {
+          success: false,
+          error: 'Meta credentials not configured',
+          missing: resolvedMeta.missing,
+          source: resolvedMeta.source,
+        },
+        { status: 503 }
       );
     }
 
-    const auditor = new AdsAuditor(accessToken, adAccountId);
+    if (!resolvedMeta.accountMatchesRequirement) {
+      return NextResponse.json(
+        { success: false, error: 'Active Meta account does not match required account' },
+        { status: 412 }
+      );
+    }
+
+    const auditor = new AdsAuditor(
+      resolvedMeta.config.accessToken || '',
+      normalizeAdAccountId(resolvedMeta.config.adAccountId || '')
+    );
     const result = await auditor.runAudit();
 
     logger.info(
@@ -65,6 +71,8 @@ export async function GET(request: NextRequest) {
         alertsGenerated: result.alerts_generated,
         opportunitiesFound: result.opportunities_found,
         durationMs: result.duration_ms,
+        configSource: resolvedMeta.source,
+        adAccountId: resolvedMeta.config.adAccountId || null,
         timestamp: new Date().toISOString(),
       },
     });

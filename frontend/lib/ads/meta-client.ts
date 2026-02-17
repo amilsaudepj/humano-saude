@@ -22,20 +22,31 @@ const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 // CONFIGURAÇÃO
 // =====================================================
 
-export function getMetaConfig(): MetaAdsConfig {
-  const accessToken = process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN || '';
-  const adAccountId = process.env.META_AD_ACCOUNT_ID || process.env.FACEBOOK_AD_ACCOUNT_ID || '';
-  const pageId = process.env.META_PAGE_ID || '';
-  const pixelId = process.env.META_PIXEL_ID || process.env.FACEBOOK_PIXEL_ID || '';
-  const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN || '';
-  const instagramId = process.env.META_INSTAGRAM_ID || '';
+export function getMetaConfig(overrides?: Partial<MetaAdsConfig>): MetaAdsConfig {
+  const envAccessToken = process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN || '';
+  const envAdAccountId = process.env.META_AD_ACCOUNT_ID || process.env.FACEBOOK_AD_ACCOUNT_ID || '';
+  const envPageId = process.env.META_PAGE_ID || '';
+  const envPixelId = process.env.META_PIXEL_ID || process.env.FACEBOOK_PIXEL_ID || '';
+  const envPageAccessToken = process.env.META_PAGE_ACCESS_TOKEN || '';
+  const envInstagramId = process.env.META_INSTAGRAM_ID || '';
+
+  const accessToken = overrides?.accessToken || envAccessToken;
+  const adAccountId = overrides?.adAccountId || envAdAccountId;
+  const pageId = overrides?.pageId || envPageId;
+  const pixelId = overrides?.pixelId || envPixelId;
+  const pageAccessToken = overrides?.pageAccessToken || envPageAccessToken;
+  const instagramId = overrides?.instagramId || envInstagramId;
 
   return { accessToken, adAccountId, pageId, pixelId, pageAccessToken, instagramId };
 }
 
-export function isMetaConfigured(): boolean {
-  const config = getMetaConfig();
+export function isMetaConfigured(overrides?: Partial<MetaAdsConfig>): boolean {
+  const config = getMetaConfig(overrides);
   return !!(config.accessToken && config.adAccountId && config.pageId);
+}
+
+function normalizeAdAccountId(accountId: string): string {
+  return accountId.replace(/^act_/i, '').trim();
 }
 
 // =====================================================
@@ -96,9 +107,10 @@ async function metaApiCall<T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'DELETE' = 'GET',
   body?: Record<string, unknown>,
-  accessToken?: string
+  accessToken?: string,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<T> {
-  const token = accessToken || getMetaConfig().accessToken;
+  const token = accessToken || getMetaConfig(configOverrides).accessToken;
   if (!token) throw new Error('META_ACCESS_TOKEN não configurado');
 
   const url = endpoint.startsWith('http') ? endpoint : `${META_API_BASE}${endpoint}`;
@@ -138,15 +150,18 @@ async function metaApiCall<T>(
 
 export async function uploadImageToMeta(
   imageUrl: string,
-  accountId?: string
+  accountId?: string,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<string> {
-  const config = getMetaConfig();
-  const acctId = accountId || config.adAccountId;
+  const config = getMetaConfig(configOverrides);
+  const acctId = normalizeAdAccountId(accountId || config.adAccountId);
 
   const data = await metaApiCall<{ images: Record<string, { hash: string }> }>(
     `/act_${acctId}/adimages`,
     'POST',
-    { url: imageUrl }
+    { url: imageUrl },
+    undefined,
+    configOverrides
   );
 
   const firstKey = Object.keys(data.images)[0];
@@ -163,10 +178,12 @@ export async function uploadImageToMeta(
 
 export async function createCampaign(
   accountId: string,
-  params: CampaignParams
+  params: CampaignParams,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ id: string }> {
+  const normalizedAccountId = normalizeAdAccountId(accountId);
   return metaApiCall<{ id: string }>(
-    `/act_${accountId}/campaigns`,
+    `/act_${normalizedAccountId}/campaigns`,
     'POST',
     {
       name: params.name,
@@ -174,7 +191,9 @@ export async function createCampaign(
       status: params.status,
       special_ad_categories: params.special_ad_categories,
       // Orçamento no nível do AdSet (não da campanha)
-    }
+    },
+    undefined,
+    configOverrides
   );
 }
 
@@ -211,8 +230,10 @@ export function buildTargeting(audience: string): FacebookTargeting {
 
 export async function createAdSet(
   accountId: string,
-  params: AdSetParams
+  params: AdSetParams,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ id: string }> {
+  const normalizedAccountId = normalizeAdAccountId(accountId);
   const body: Record<string, unknown> = {
     name: params.name,
     campaign_id: params.campaign_id,
@@ -236,24 +257,40 @@ export async function createAdSet(
     body.attribution_spec = params.attribution_spec;
   }
 
-  return metaApiCall<{ id: string }>(`/act_${accountId}/adsets`, 'POST', body);
+  return metaApiCall<{ id: string }>(
+    `/act_${normalizedAccountId}/adsets`,
+    'POST',
+    body,
+    undefined,
+    configOverrides
+  );
 }
 
 export async function updateAdSetBudget(
   adSetId: string,
-  newBudgetCents: number
+  newBudgetCents: number,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ success: boolean }> {
   return metaApiCall<{ success: boolean }>(
     `/${adSetId}`,
     'POST',
-    { daily_budget: newBudgetCents }
+    { daily_budget: newBudgetCents },
+    undefined,
+    configOverrides
   );
 }
 
 export async function getAdSetDetails(
-  adSetId: string
+  adSetId: string,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ id: string; daily_budget: string; status: string }> {
-  return metaApiCall(`/${adSetId}?fields=id,daily_budget,status`);
+  return metaApiCall(
+    `/${adSetId}?fields=id,daily_budget,status`,
+    'GET',
+    undefined,
+    undefined,
+    configOverrides
+  );
 }
 
 export async function deleteAdSet(adSetId: string): Promise<void> {
@@ -266,14 +303,16 @@ export async function deleteAdSet(adSetId: string): Promise<void> {
 
 export async function createAdCreative(
   accountId: string,
-  params: AdCreativeParams
+  params: AdCreativeParams,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ id: string }> {
-  const config = getMetaConfig();
+  const config = getMetaConfig(configOverrides);
+  const normalizedAccountId = normalizeAdAccountId(accountId);
   // Em dev mode, Page Access Token evita erro 1885183
   const token = config.pageAccessToken || config.accessToken;
 
   const response = await fetch(
-    `${META_API_BASE}/act_${accountId}/adcreatives`,
+    `${META_API_BASE}/act_${normalizedAccountId}/adcreatives`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -301,9 +340,11 @@ export async function createAdCreative(
 
 export async function createAd(
   accountId: string,
-  params: AdParams
+  params: AdParams,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ id: string }> {
-  const config = getMetaConfig();
+  const config = getMetaConfig(configOverrides);
+  const normalizedAccountId = normalizeAdAccountId(accountId);
   const pixelId = config.pixelId;
 
   const body: Record<string, unknown> = {
@@ -326,17 +367,26 @@ export async function createAd(
   // UTM tags automáticas
   body.url_tags = 'utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}';
 
-  return metaApiCall<{ id: string }>(`/act_${accountId}/ads`, 'POST', body);
+  return metaApiCall<{ id: string }>(
+    `/act_${normalizedAccountId}/ads`,
+    'POST',
+    body,
+    undefined,
+    configOverrides
+  );
 }
 
 export async function updateAdStatus(
   adId: string,
-  status: 'ACTIVE' | 'PAUSED'
+  status: 'ACTIVE' | 'PAUSED',
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<{ success: boolean }> {
   return metaApiCall<{ success: boolean }>(
     `/${adId}`,
     'POST',
-    { status }
+    { status },
+    undefined,
+    configOverrides
   );
 }
 
@@ -345,13 +395,18 @@ export async function updateAdStatus(
 // =====================================================
 
 export async function getActiveAds(
-  accountId?: string
+  accountId?: string,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<Array<{ id: string; name: string; status: string; adset_id: string; campaign_id: string }>> {
-  const config = getMetaConfig();
-  const acctId = accountId || config.adAccountId;
+  const config = getMetaConfig(configOverrides);
+  const acctId = normalizeAdAccountId(accountId || config.adAccountId);
 
   const data = await metaApiCall<{ data: Array<Record<string, string>> }>(
-    `/act_${acctId}/ads?fields=id,name,status,adset_id,campaign_id&filtering=[{"field":"effective_status","operator":"IN","value":["ACTIVE","PENDING_REVIEW","PREAPPROVED"]}]&limit=500`
+    `/act_${acctId}/ads?fields=id,name,status,adset_id,campaign_id&filtering=[{"field":"effective_status","operator":"IN","value":["ACTIVE","PENDING_REVIEW","PREAPPROVED"]}]&limit=500`,
+    'GET',
+    undefined,
+    undefined,
+    configOverrides
   );
 
   return (data.data || []).map((ad) => ({
@@ -365,10 +420,11 @@ export async function getActiveAds(
 
 export async function getAdInsights(
   accountId?: string,
-  datePreset: string = 'last_7d'
+  datePreset: string = 'last_7d',
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<AdMetrics[]> {
-  const config = getMetaConfig();
-  const acctId = accountId || config.adAccountId;
+  const config = getMetaConfig(configOverrides);
+  const acctId = normalizeAdAccountId(accountId || config.adAccountId);
 
   const fields = [
     'ad_id', 'ad_name', 'adset_id', 'campaign_id',
@@ -377,7 +433,11 @@ export async function getAdInsights(
   ].join(',');
 
   const data = await metaApiCall<{ data: Array<Record<string, unknown>> }>(
-    `/act_${acctId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&limit=500`
+    `/act_${acctId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&limit=500`,
+    'GET',
+    undefined,
+    undefined,
+    configOverrides
   );
 
   return (data.data || []).map((row) => {
@@ -426,17 +486,24 @@ export async function getAdInsights(
 
 export async function getCampaigns(
   accountId?: string,
-  status?: string
+  status?: string,
+  configOverrides?: Partial<MetaAdsConfig>
 ): Promise<Array<{ id: string; name: string; status: string; objective: string; daily_budget: string }>> {
-  const config = getMetaConfig();
-  const acctId = accountId || config.adAccountId;
+  const config = getMetaConfig(configOverrides);
+  const acctId = normalizeAdAccountId(accountId || config.adAccountId);
 
   let url = `/act_${acctId}/campaigns?fields=id,name,status,objective,daily_budget&limit=100`;
   if (status) {
     url += `&filtering=[{"field":"effective_status","operator":"IN","value":["${status}"]}]`;
   }
 
-  const data = await metaApiCall<{ data: Array<{ id: string; name: string; status: string; objective: string; daily_budget: string }> }>(url);
+  const data = await metaApiCall<{ data: Array<{ id: string; name: string; status: string; objective: string; daily_budget: string }> }>(
+    url,
+    'GET',
+    undefined,
+    undefined,
+    configOverrides
+  );
   return data.data || [];
 }
 
@@ -449,7 +516,7 @@ export async function uploadVideoToMeta(
   accountId?: string
 ): Promise<{ video_id: string }> {
   const config = getMetaConfig();
-  const acctId = accountId || config.adAccountId;
+  const acctId = normalizeAdAccountId(accountId || config.adAccountId);
 
   return metaApiCall<{ video_id: string }>(
     `/act_${acctId}/advideos`,

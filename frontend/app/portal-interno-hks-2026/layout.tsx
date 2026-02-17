@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import DockSidebar from '../components/DockSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -44,7 +45,9 @@ export default function DashboardLayout({
 
       {/* DockSidebar Enterprise - 25 itens, 8 grupos, Framer Motion */}
       <div data-tour="admin-sidebar">
-        <DockSidebar />
+        <Suspense fallback={null}>
+          <DockSidebar />
+        </Suspense>
       </div>
 
       {/* Main Content - Com margem para a sidebar */}

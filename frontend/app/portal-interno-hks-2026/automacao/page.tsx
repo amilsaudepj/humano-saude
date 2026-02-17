@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bot, Zap, Clock, CheckCircle, Play, Pause, Settings, ArrowRight, MessageSquare, Mail, Bell, Loader2, Workflow, FileText, Phone, Send, UserPlus, Trophy, XCircle, Calendar } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Bot, Zap, Clock, CheckCircle, Play, Pause, Settings, ArrowRight, MessageSquare, Mail, Bell, Loader2, Workflow, UserPlus, Trophy, XCircle, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAutomacoes, toggleAutomacao, getCrmWorkflows, toggleCrmWorkflow, type Automacao, type CrmWorkflow } from '@/app/actions/automacoes';
 
@@ -58,11 +59,18 @@ const workflowActionIcons: Record<string, typeof Zap> = {
   notify: Bell,
 };
 
+type AutomacaoSection = 'automacoes' | 'workflows';
+const DEFAULT_SECTION: AutomacaoSection = 'automacoes';
+
 export default function AutomacaoPage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [automations, setAutomations] = useState<Automacao[]>([]);
   const [workflows, setWorkflows] = useState<CrmWorkflow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'automacoes' | 'workflows'>('automacoes');
+  const sectionParam = searchParams.get('section');
+  const activeSection: AutomacaoSection = sectionParam === 'workflows' ? 'workflows' : DEFAULT_SECTION;
 
   useEffect(() => {
     Promise.all([getAutomacoes(), getCrmWorkflows()]).then(([autos, wfs]) => {
@@ -90,6 +98,17 @@ export default function AutomacaoPage() {
   const activeCount = automations.filter((a) => a.ativa).length + workflows.filter(w => w.is_active).length;
   const totalExecutions = automations.reduce((sum, a) => sum + a.execucoes, 0) + workflows.reduce((sum, w) => sum + w.execution_count, 0);
   const totalCount = automations.length + workflows.length;
+
+  function handleSectionChange(nextSection: AutomacaoSection) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextSection === DEFAULT_SECTION) {
+      params.delete('section');
+    } else {
+      params.set('section', nextSection);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
   if (loading) {
     return (
@@ -130,7 +149,7 @@ export default function AutomacaoPage() {
       {/* Section Toggle */}
       <div className="flex gap-2">
         <button
-          onClick={() => setActiveSection('automacoes')}
+          onClick={() => handleSectionChange('automacoes')}
           className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeSection === 'automacoes'
               ? 'bg-[#D4AF37] text-white'
@@ -140,7 +159,7 @@ export default function AutomacaoPage() {
           <Bot className="h-4 w-4" /> Automações IA ({automations.length})
         </button>
         <button
-          onClick={() => setActiveSection('workflows')}
+          onClick={() => handleSectionChange('workflows')}
           className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeSection === 'workflows'
               ? 'bg-[#D4AF37] text-white'

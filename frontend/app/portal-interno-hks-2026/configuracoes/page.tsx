@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Save,
   Building,
@@ -42,6 +43,7 @@ interface Config {
   // Meta
   meta_access_token: string;
   meta_ad_account_id: string;
+  meta_business_id: string;
   meta_app_id: string;
   meta_app_secret: string;
   meta_page_id: string;
@@ -49,10 +51,17 @@ interface Config {
   meta_instagram_id: string;
   meta_pixel_id: string;
   meta_test_event_code: string;
+  meta_webhook_verify_token: string;
 
   // Google Analytics
   ga4_property_id: string;
   ga4_measurement_id: string;
+  gtm_id: string;
+  google_service_account_json: string;
+  google_application_credentials_json: string;
+  google_client_email: string;
+  google_private_key: string;
+  google_project_id: string;
 
   // TikTok
   tiktok_access_token: string;
@@ -81,6 +90,18 @@ interface Config {
   openai_api_key: string;
   google_ai_api_key: string;
 
+  // Infra / email / automacao
+  resend_api_key: string;
+  resend_from_email: string;
+  resend_webhook_secret: string;
+  upstash_redis_rest_url: string;
+  upstash_redis_rest_token: string;
+  supabase_url: string;
+  supabase_anon_key: string;
+  supabase_service_role_key: string;
+  n8n_webhook_url: string;
+  n8n_webhook_secret: string;
+
   // SMTP
   smtp_host: string;
   smtp_port: string;
@@ -106,6 +127,7 @@ const DEFAULT_CONFIG: Config = {
 
   meta_access_token: '',
   meta_ad_account_id: '',
+  meta_business_id: '',
   meta_app_id: '',
   meta_app_secret: '',
   meta_page_id: '',
@@ -113,9 +135,16 @@ const DEFAULT_CONFIG: Config = {
   meta_instagram_id: '',
   meta_pixel_id: '',
   meta_test_event_code: '',
+  meta_webhook_verify_token: '',
 
   ga4_property_id: '',
   ga4_measurement_id: '',
+  gtm_id: '',
+  google_service_account_json: '',
+  google_application_credentials_json: '',
+  google_client_email: '',
+  google_private_key: '',
+  google_project_id: '',
 
   tiktok_access_token: '',
   tiktok_advertiser_id: '',
@@ -137,6 +166,16 @@ const DEFAULT_CONFIG: Config = {
 
   openai_api_key: '',
   google_ai_api_key: '',
+  resend_api_key: '',
+  resend_from_email: '',
+  resend_webhook_secret: '',
+  upstash_redis_rest_url: '',
+  upstash_redis_rest_token: '',
+  supabase_url: '',
+  supabase_anon_key: '',
+  supabase_service_role_key: '',
+  n8n_webhook_url: '',
+  n8n_webhook_secret: '',
 
   smtp_host: '',
   smtp_port: '587',
@@ -191,6 +230,7 @@ type IntegrationFieldKey =
   | 'whatsapp_webhook_verify_token'
   | 'meta_access_token'
   | 'meta_ad_account_id'
+  | 'meta_business_id'
   | 'meta_app_id'
   | 'meta_app_secret'
   | 'meta_page_id'
@@ -198,8 +238,15 @@ type IntegrationFieldKey =
   | 'meta_instagram_id'
   | 'meta_pixel_id'
   | 'meta_test_event_code'
+  | 'meta_webhook_verify_token'
   | 'ga4_property_id'
   | 'ga4_measurement_id'
+  | 'gtm_id'
+  | 'google_service_account_json'
+  | 'google_application_credentials_json'
+  | 'google_client_email'
+  | 'google_private_key'
+  | 'google_project_id'
   | 'tiktok_access_token'
   | 'tiktok_advertiser_id'
   | 'tiktok_pixel_id'
@@ -214,19 +261,35 @@ type IntegrationFieldKey =
   | 'google_ads_refresh_token'
   | 'hotjar_site_id'
   | 'openai_api_key'
-  | 'google_ai_api_key';
+  | 'google_ai_api_key'
+  | 'resend_api_key'
+  | 'resend_from_email'
+  | 'resend_webhook_secret'
+  | 'upstash_redis_rest_url'
+  | 'upstash_redis_rest_token'
+  | 'supabase_url'
+  | 'supabase_anon_key'
+  | 'supabase_service_role_key'
+  | 'n8n_webhook_url'
+  | 'n8n_webhook_secret';
 type SmtpFieldKey = 'smtp_host' | 'smtp_port' | 'smtp_user';
 type IntegrationGuideId =
   | 'whatsapp_business'
   | 'meta_ads'
   | 'meta_pixel'
   | 'ga4'
+  | 'gtm'
   | 'tiktok_ads'
   | 'x_ads'
   | 'linkedin_ads'
   | 'google_ads'
   | 'hotjar'
-  | 'ai_keys';
+  | 'ai_keys'
+  | 'vertex_ai'
+  | 'resend'
+  | 'upstash'
+  | 'supabase'
+  | 'n8n';
 
 type IntegrationGuideStep = {
   title: string;
@@ -241,6 +304,9 @@ type IntegrationFieldDefinition = {
   helperText?: string;
   sensitive?: boolean;
   inputMode?: 'text' | 'numeric';
+  docsUrl?: string;
+  providerField?: string;
+  providerPath?: string;
 };
 
 type IntegrationGuide = {
@@ -299,11 +365,13 @@ const INTEGRATION_GUIDES: IntegrationGuide[] = [
     fields: [
       { key: 'meta_access_token', label: 'Access Token', placeholder: 'Token com permissões ads_read/ads_management', sensitive: true },
       { key: 'meta_ad_account_id', label: 'Ad Account ID', placeholder: 'act_1234567890' },
+      { key: 'meta_business_id', label: 'Business ID', placeholder: 'ID do Business Manager' },
       { key: 'meta_app_id', label: 'App ID', placeholder: 'ID do app Meta' },
       { key: 'meta_app_secret', label: 'App Secret', placeholder: 'Segredo do app Meta', sensitive: true },
       { key: 'meta_page_id', label: 'Page ID', placeholder: 'ID da página do Facebook' },
       { key: 'meta_page_access_token', label: 'Page Access Token', placeholder: 'Token da página', sensitive: true },
       { key: 'meta_instagram_id', label: 'Instagram Business ID', placeholder: 'ID da conta Instagram business' },
+      { key: 'meta_webhook_verify_token', label: 'Webhook Verify Token', placeholder: 'Token de validação dos webhooks Meta', sensitive: true },
     ],
     tutorial: [
       { title: 'Crie/abra um app no Meta Developers', description: 'Ative Marketing API e adicione permissões de anúncios.', link: 'https://developers.facebook.com/docs/marketing-apis/' },
@@ -339,6 +407,20 @@ const INTEGRATION_GUIDES: IntegrationGuide[] = [
       { title: 'Abra o Admin do GA4', description: 'Vá em Propriedade > Detalhes da propriedade e copie o Property ID.', link: 'https://support.google.com/analytics/answer/9304153' },
       { title: 'Crie/baixe service account no GCP', description: 'Ative Analytics Data API e gere JSON da conta de serviço.' },
       { title: 'Configure stream web', description: 'Copie também o Measurement ID no formato G-XXXX.' },
+    ],
+  },
+  {
+    id: 'gtm',
+    name: 'Google Tag Manager',
+    description: 'Disparo centralizado de tags de marketing',
+    requiredKeys: ['gtm_id'],
+    fields: [
+      { key: 'gtm_id', label: 'GTM Container ID', placeholder: 'Ex: GTM-ABCDE12' },
+    ],
+    tutorial: [
+      { title: 'Abra o GTM', description: 'No workspace do Google Tag Manager selecione o container do site.', link: 'https://tagmanager.google.com/' },
+      { title: 'Copie o Container ID', description: 'O valor aparece no topo como GTM-XXXXXXX.' },
+      { title: 'Salvar e validar', description: 'Depois de salvar, publique o container para ativar novas tags.' },
     ],
   },
   {
@@ -434,7 +516,343 @@ const INTEGRATION_GUIDES: IntegrationGuide[] = [
       { title: 'Segurança', description: 'Use rotação periódica e permissões mínimas por ambiente.' },
     ],
   },
+  {
+    id: 'vertex_ai',
+    name: 'Vertex AI (Gemini no GCP)',
+    description: 'OCR de boleto e personalização avançada de mensagens',
+    requiredKeys: ['google_service_account_json', 'google_application_credentials_json'],
+    requiredMode: 'any',
+    fields: [
+      { key: 'google_service_account_json', label: 'Service Account JSON', placeholder: '{"type":"service_account",...}', sensitive: true },
+      { key: 'google_application_credentials_json', label: 'Application Credentials JSON', placeholder: '{"type":"service_account",...}', sensitive: true },
+      { key: 'google_client_email', label: 'Client Email (alternativa)', placeholder: 'service-account@projeto.iam.gserviceaccount.com' },
+      { key: 'google_private_key', label: 'Private Key (alternativa)', placeholder: '-----BEGIN PRIVATE KEY-----', sensitive: true },
+      { key: 'google_project_id', label: 'Google Project ID', placeholder: 'gen-lang-client-0591725975' },
+    ],
+    tutorial: [
+      { title: 'Service Account no GCP', description: 'IAM & Admin > Service Accounts > Create service account.', link: 'https://cloud.google.com/iam/docs/service-accounts-create' },
+      { title: 'Permissões', description: 'Conceda Vertex AI User e acesso ao projeto usado pelo OCR.' },
+      { title: 'Chave JSON', description: 'Crie uma chave JSON e cole no campo de JSON completo (recomendado).' },
+    ],
+  },
+  {
+    id: 'resend',
+    name: 'Resend (Email API)',
+    description: 'Emails transacionais e automações de comunicação',
+    requiredKeys: ['resend_api_key'],
+    fields: [
+      { key: 'resend_api_key', label: 'Resend API Key', placeholder: 're_...', sensitive: true },
+      { key: 'resend_from_email', label: 'From Email', placeholder: 'Humano Saúde <noreply@seu-dominio.com>' },
+      { key: 'resend_webhook_secret', label: 'Webhook Secret', placeholder: 'Secret para validar webhooks', sensitive: true },
+    ],
+    tutorial: [
+      { title: 'Crie API Key', description: 'No dashboard da Resend gere uma API key com permissões de envio.', link: 'https://resend.com/api-keys' },
+      { title: 'Domínio remetente', description: 'Valide o domínio para usar o From Email oficial da sua marca.', link: 'https://resend.com/domains' },
+      { title: 'Webhook', description: 'Configure endpoint e copie o Signing Secret para validação de eventos.' },
+    ],
+  },
+  {
+    id: 'upstash',
+    name: 'Upstash Redis',
+    description: 'Rate limit, cache de respostas e proteção da API',
+    requiredKeys: ['upstash_redis_rest_url', 'upstash_redis_rest_token'],
+    fields: [
+      { key: 'upstash_redis_rest_url', label: 'REST URL', placeholder: 'https://xxx.upstash.io' },
+      { key: 'upstash_redis_rest_token', label: 'REST Token', placeholder: 'Token de autenticação Upstash', sensitive: true },
+    ],
+    tutorial: [
+      { title: 'Crie database Redis', description: 'No console da Upstash, crie um Redis database para produção.', link: 'https://console.upstash.com/' },
+      { title: 'Copie REST URL e Token', description: 'Esses dois valores ficam na aba REST API do banco.' },
+      { title: 'Salvar e testar', description: 'Após salvar, endpoints com limite passam a usar Redis distribuído.' },
+    ],
+  },
+  {
+    id: 'supabase',
+    name: 'Supabase',
+    description: 'Banco de dados, auth e storage da plataforma',
+    requiredKeys: ['supabase_url', 'supabase_anon_key', 'supabase_service_role_key'],
+    fields: [
+      { key: 'supabase_url', label: 'Project URL', placeholder: 'https://xxxx.supabase.co' },
+      { key: 'supabase_anon_key', label: 'Anon Key', placeholder: 'eyJhbGciOi...' },
+      { key: 'supabase_service_role_key', label: 'Service Role Key', placeholder: 'eyJhbGciOi...', sensitive: true },
+    ],
+    tutorial: [
+      { title: 'Abra Settings > API', description: 'No projeto Supabase, abra Project Settings > API.', link: 'https://supabase.com/dashboard/project/_/settings/api' },
+      { title: 'Copie URL e chaves', description: 'Use Project URL, anon public e service_role (segredo do servidor).' },
+      { title: 'Segurança', description: 'Nunca exponha service_role no frontend público.' },
+    ],
+  },
+  {
+    id: 'n8n',
+    name: 'n8n Webhooks',
+    description: 'Automação externa de fluxos (workflow engine)',
+    requiredKeys: ['n8n_webhook_url'],
+    fields: [
+      { key: 'n8n_webhook_url', label: 'Webhook URL', placeholder: 'https://n8n.seudominio.com/webhook/...' },
+      { key: 'n8n_webhook_secret', label: 'Webhook Secret', placeholder: 'Token para validar chamadas', sensitive: true },
+    ],
+    tutorial: [
+      { title: 'Crie workflow no n8n', description: 'No n8n, adicione trigger Webhook e publique o fluxo.', link: 'https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/' },
+      { title: 'Copie URL pública', description: 'Use a URL de produção do webhook no campo desta tela.' },
+      { title: 'Assinatura', description: 'Configure secret/token para validar chamadas recebidas e enviadas.' },
+    ],
+  },
 ];
+
+const FIELD_GUIDE_META: Partial<Record<IntegrationFieldKey, { providerField: string; providerPath: string; docsUrl: string }>> = {
+  whatsapp_api_token: {
+    providerField: 'Temporary access token / Permanent token',
+    providerPath: 'Meta Developers > WhatsApp > API Setup',
+    docsUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
+  },
+  whatsapp_phone_number_id: {
+    providerField: 'Phone number ID',
+    providerPath: 'Meta Developers > WhatsApp > API Setup',
+    docsUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-numbers',
+  },
+  whatsapp_business_account_id: {
+    providerField: 'WhatsApp Business Account ID (WABA ID)',
+    providerPath: 'Meta Business Suite > Configuracoes > WhatsApp Accounts',
+    docsUrl: 'https://developers.facebook.com/docs/whatsapp/business-management-api',
+  },
+  whatsapp_webhook_verify_token: {
+    providerField: 'Verify token',
+    providerPath: 'Meta Developers > WhatsApp > Configuration > Webhook',
+    docsUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/guides/set-up-webhooks',
+  },
+  meta_access_token: {
+    providerField: 'System User Access Token',
+    providerPath: 'Business Settings > Users > System Users > Generate Token',
+    docsUrl: 'https://developers.facebook.com/docs/marketing-apis/get-started',
+  },
+  meta_ad_account_id: {
+    providerField: 'Ad Account ID (act_XXXXXXXXXX)',
+    providerPath: 'Ads Manager URL / Business Settings > Ad Accounts',
+    docsUrl: 'https://www.facebook.com/business/help/1492627900875762',
+  },
+  meta_business_id: {
+    providerField: 'Business Manager ID',
+    providerPath: 'Business Settings > Business info',
+    docsUrl: 'https://business.facebook.com/settings/info',
+  },
+  meta_app_id: {
+    providerField: 'App ID',
+    providerPath: 'Meta Developers > App Settings > Basic',
+    docsUrl: 'https://developers.facebook.com/apps/',
+  },
+  meta_app_secret: {
+    providerField: 'App Secret',
+    providerPath: 'Meta Developers > App Settings > Basic',
+    docsUrl: 'https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings',
+  },
+  meta_page_id: {
+    providerField: 'Facebook Page ID',
+    providerPath: 'Page settings / Graph API Explorer',
+    docsUrl: 'https://developers.facebook.com/docs/pages-api',
+  },
+  meta_page_access_token: {
+    providerField: 'Page Access Token',
+    providerPath: 'Meta Graph API Explorer > Select Page token',
+    docsUrl: 'https://developers.facebook.com/docs/pages/access-tokens',
+  },
+  meta_instagram_id: {
+    providerField: 'Instagram Business Account ID',
+    providerPath: 'Meta Business Suite > Instagram accounts',
+    docsUrl: 'https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/user',
+  },
+  meta_pixel_id: {
+    providerField: 'Pixel ID',
+    providerPath: 'Events Manager > Data Sources > Pixel',
+    docsUrl: 'https://www.facebook.com/events_manager2/',
+  },
+  meta_test_event_code: {
+    providerField: 'Test Event Code',
+    providerPath: 'Events Manager > Test events',
+    docsUrl: 'https://developers.facebook.com/docs/marketing-api/conversions-api/using-the-api#test-events',
+  },
+  meta_webhook_verify_token: {
+    providerField: 'Webhook verify token',
+    providerPath: 'Meta Developers > Webhooks',
+    docsUrl: 'https://developers.facebook.com/docs/graph-api/webhooks/getting-started',
+  },
+  ga4_property_id: {
+    providerField: 'Property ID (numeric)',
+    providerPath: 'GA4 Admin > Property settings > Property details',
+    docsUrl: 'https://support.google.com/analytics/answer/9304153',
+  },
+  ga4_measurement_id: {
+    providerField: 'Measurement ID (G-XXXX)',
+    providerPath: 'GA4 Admin > Data streams > Web stream details',
+    docsUrl: 'https://support.google.com/analytics/answer/9539598',
+  },
+  gtm_id: {
+    providerField: 'Container ID (GTM-XXXXXXX)',
+    providerPath: 'Google Tag Manager workspace header',
+    docsUrl: 'https://support.google.com/tagmanager/answer/6103696',
+  },
+  google_service_account_json: {
+    providerField: 'Service account JSON key',
+    providerPath: 'GCP > IAM & Admin > Service Accounts > Keys',
+    docsUrl: 'https://cloud.google.com/iam/docs/keys-create-delete',
+  },
+  google_application_credentials_json: {
+    providerField: 'Application credentials JSON',
+    providerPath: 'GCP > IAM & Admin > Service Accounts > Keys',
+    docsUrl: 'https://cloud.google.com/docs/authentication/application-default-credentials',
+  },
+  google_client_email: {
+    providerField: 'client_email',
+    providerPath: 'Dentro do JSON da service account',
+    docsUrl: 'https://cloud.google.com/iam/docs/service-account-overview',
+  },
+  google_private_key: {
+    providerField: 'private_key',
+    providerPath: 'Dentro do JSON da service account',
+    docsUrl: 'https://cloud.google.com/iam/docs/keys-create-delete',
+  },
+  google_project_id: {
+    providerField: 'project_id',
+    providerPath: 'GCP project settings / service account JSON',
+    docsUrl: 'https://cloud.google.com/resource-manager/docs/creating-managing-projects',
+  },
+  tiktok_access_token: {
+    providerField: 'Access token',
+    providerPath: 'TikTok for Business > Marketing API',
+    docsUrl: 'https://ads.tiktok.com/marketing_api/docs?id=1738373164380162',
+  },
+  tiktok_advertiser_id: {
+    providerField: 'advertiser_id',
+    providerPath: 'TikTok Business Center > Advertiser account',
+    docsUrl: 'https://ads.tiktok.com/help/article/advertiser-account-id',
+  },
+  tiktok_pixel_id: {
+    providerField: 'Pixel ID',
+    providerPath: 'TikTok Events Manager > Web Events',
+    docsUrl: 'https://ads.tiktok.com/help/article/get-started-pixel',
+  },
+  x_ads_account_id: {
+    providerField: 'account_id',
+    providerPath: 'X Ads dashboard > Account settings',
+    docsUrl: 'https://developer.x.com/en/docs/twitter-ads-api/campaign-management/overview',
+  },
+  x_bearer_token: {
+    providerField: 'Bearer token',
+    providerPath: 'X Developer Portal > App > Keys and tokens',
+    docsUrl: 'https://developer.x.com/en/docs/authentication/oauth-2-0',
+  },
+  x_api_key: {
+    providerField: 'API Key',
+    providerPath: 'X Developer Portal > App > Keys and tokens',
+    docsUrl: 'https://developer.x.com/en/docs/authentication/oauth-1-0a',
+  },
+  x_api_secret: {
+    providerField: 'API Key Secret',
+    providerPath: 'X Developer Portal > App > Keys and tokens',
+    docsUrl: 'https://developer.x.com/en/docs/authentication/oauth-1-0a',
+  },
+  linkedin_access_token: {
+    providerField: 'OAuth access token',
+    providerPath: 'LinkedIn Developer > Auth',
+    docsUrl: 'https://learn.microsoft.com/linkedin/shared/authentication/authentication',
+  },
+  linkedin_ad_account_id: {
+    providerField: 'Sponsored Account URN',
+    providerPath: 'LinkedIn Campaign Manager',
+    docsUrl: 'https://learn.microsoft.com/linkedin/marketing/integrations/ads/account-structure/create-and-manage-accounts',
+  },
+  google_ads_customer_id: {
+    providerField: 'Customer ID',
+    providerPath: 'Google Ads top bar (formato 123-456-7890)',
+    docsUrl: 'https://developers.google.com/google-ads/api/docs/concepts/call-structure#cid',
+  },
+  google_ads_client_id: {
+    providerField: 'OAuth client_id',
+    providerPath: 'Google Cloud Console > APIs & Services > Credentials',
+    docsUrl: 'https://developers.google.com/google-ads/api/docs/oauth/overview',
+  },
+  google_ads_refresh_token: {
+    providerField: 'refresh_token',
+    providerPath: 'Fluxo OAuth da conta Google Ads',
+    docsUrl: 'https://developers.google.com/google-ads/api/docs/oauth/overview',
+  },
+  hotjar_site_id: {
+    providerField: 'Site ID',
+    providerPath: 'Hotjar project settings > Tracking code',
+    docsUrl: 'https://help.hotjar.com/hc/en-us/articles/115011640307',
+  },
+  openai_api_key: {
+    providerField: 'Secret key',
+    providerPath: 'OpenAI Platform > API keys',
+    docsUrl: 'https://platform.openai.com/api-keys',
+  },
+  google_ai_api_key: {
+    providerField: 'API key',
+    providerPath: 'Google AI Studio > Get API key',
+    docsUrl: 'https://aistudio.google.com/app/apikey',
+  },
+  resend_api_key: {
+    providerField: 'API key',
+    providerPath: 'Resend > API Keys',
+    docsUrl: 'https://resend.com/api-keys',
+  },
+  resend_from_email: {
+    providerField: 'From email/domain',
+    providerPath: 'Resend > Domains',
+    docsUrl: 'https://resend.com/domains',
+  },
+  resend_webhook_secret: {
+    providerField: 'Webhook signing secret',
+    providerPath: 'Resend > Webhooks',
+    docsUrl: 'https://resend.com/docs/dashboard/webhooks/introduction',
+  },
+  upstash_redis_rest_url: {
+    providerField: 'REST URL',
+    providerPath: 'Upstash Redis > REST API',
+    docsUrl: 'https://upstash.com/docs/redis/features/restapi',
+  },
+  upstash_redis_rest_token: {
+    providerField: 'REST TOKEN',
+    providerPath: 'Upstash Redis > REST API',
+    docsUrl: 'https://upstash.com/docs/redis/features/restapi',
+  },
+  supabase_url: {
+    providerField: 'Project URL',
+    providerPath: 'Supabase > Project Settings > API',
+    docsUrl: 'https://supabase.com/dashboard/project/_/settings/api',
+  },
+  supabase_anon_key: {
+    providerField: 'anon/public key',
+    providerPath: 'Supabase > Project Settings > API',
+    docsUrl: 'https://supabase.com/docs/guides/api/api-keys',
+  },
+  supabase_service_role_key: {
+    providerField: 'service_role key',
+    providerPath: 'Supabase > Project Settings > API',
+    docsUrl: 'https://supabase.com/docs/guides/api/api-keys',
+  },
+  n8n_webhook_url: {
+    providerField: 'Production Webhook URL',
+    providerPath: 'n8n workflow > Webhook node > Production URL',
+    docsUrl: 'https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/',
+  },
+  n8n_webhook_secret: {
+    providerField: 'Header/secret token',
+    providerPath: 'n8n workflow auth settings',
+    docsUrl: 'https://docs.n8n.io/hosting/securing/security-audit/',
+  },
+};
+
+const SETTINGS_TABS = [
+  { key: 'empresa', label: 'Empresa', icon: Building },
+  { key: 'equipe', label: 'Equipe', icon: Users },
+  { key: 'notificacoes', label: 'Notificações', icon: Bell },
+  { key: 'integracoes', label: 'APIs', icon: Globe },
+  { key: 'email', label: 'Email (SMTP)', icon: Mail },
+] as const;
+
+type SettingsTabKey = (typeof SETTINGS_TABS)[number]['key'];
+const DEFAULT_SETTINGS_TAB: SettingsTabKey = 'empresa';
+const SETTINGS_TAB_KEYS = new Set<SettingsTabKey>(SETTINGS_TABS.map((tab) => tab.key));
 
 function getGuideFilledFields(guide: IntegrationGuide, currentConfig: Config): number {
   return guide.fields.reduce((total, field) => {
@@ -444,6 +862,23 @@ function getGuideFilledFields(guide: IntegrationGuide, currentConfig: Config): n
 
 function isGuideConfigured(guide: IntegrationGuide, currentConfig: Config): boolean {
   const hasValue = (key: IntegrationFieldKey) => asString(currentConfig[key]).length > 0;
+  if (guide.id === 'ga4') {
+    const hasProperty = hasValue('ga4_property_id');
+    const hasGoogleCreds =
+      hasValue('google_service_account_json') ||
+      hasValue('google_application_credentials_json') ||
+      (hasValue('google_client_email') && hasValue('google_private_key'));
+    return hasProperty && hasGoogleCreds;
+  }
+
+  if (guide.id === 'vertex_ai') {
+    return (
+      hasValue('google_service_account_json') ||
+      hasValue('google_application_credentials_json') ||
+      (hasValue('google_client_email') && hasValue('google_private_key'))
+    );
+  }
+
   const mode = guide.requiredMode ?? 'all';
   return mode === 'any'
     ? guide.requiredKeys.some(hasValue)
@@ -451,8 +886,10 @@ function isGuideConfigured(guide: IntegrationGuide, currentConfig: Config): bool
 }
 
 export default function ConfiguracoesPage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
-  const [activeTab, setActiveTab] = useState('empresa');
   const [saving, setSaving] = useState(false);
   const [showSensitiveValues, setShowSensitiveValues] = useState(false);
   const [activeGuide, setActiveGuide] = useState<IntegrationGuide | null>(null);
@@ -460,6 +897,10 @@ export default function ConfiguracoesPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [inviteData, setInviteData] = useState<{ nome: string; email: string; role: 'corretor' | 'supervisor' | 'admin' }>({ nome: '', email: '', role: 'corretor' });
   const [inviting, setInviting] = useState(false);
+  const queryTab = searchParams.get('tab');
+  const activeTab: SettingsTabKey = queryTab && SETTINGS_TAB_KEYS.has(queryTab as SettingsTabKey)
+    ? (queryTab as SettingsTabKey)
+    : DEFAULT_SETTINGS_TAB;
 
   function updateStringField(key: StringFieldKey, value: string) {
     setConfig((prev) => ({ ...prev, [key]: value } as Config));
@@ -535,13 +976,17 @@ export default function ConfiguracoesPage() {
     }
   }
 
-  const tabs = [
-    { key: 'empresa', label: 'Empresa', icon: Building },
-    { key: 'equipe', label: 'Equipe', icon: Users },
-    { key: 'notificacoes', label: 'Notificações', icon: Bell },
-    { key: 'integracoes', label: 'APIs', icon: Globe },
-    { key: 'email', label: 'Email (SMTP)', icon: Mail },
-  ];
+  function handleTabChange(nextTab: SettingsTabKey) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === DEFAULT_SETTINGS_TAB) {
+      params.delete('tab');
+    } else {
+      params.set('tab', nextTab);
+    }
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
   return (
     <div className="space-y-6">
@@ -564,10 +1009,10 @@ export default function ConfiguracoesPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {tabs.map((t) => (
+        {SETTINGS_TABS.map((t) => (
           <button
             key={t.key}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => handleTabChange(t.key)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === t.key
                 ? 'bg-[#D4AF37] text-white'
@@ -652,7 +1097,14 @@ export default function ConfiguracoesPage() {
             {INTEGRATION_GUIDES.map((guide) => {
               const configured = isGuideConfigured(guide, config);
               const filledFields = getGuideFilledFields(guide, config);
-              const requiredLabel = guide.requiredMode === 'any' ? 'Ao menos 1 chave' : 'Todas as chaves obrigatórias';
+              const requiredLabel =
+                guide.id === 'ga4'
+                  ? 'Property ID + credencial Google'
+                  : guide.id === 'vertex_ai'
+                    ? 'JSON da service account ou client_email + private_key'
+                    : guide.requiredMode === 'any'
+                      ? 'Ao menos 1 chave'
+                      : 'Todas as chaves obrigatórias';
 
               return (
                 <div
@@ -688,6 +1140,10 @@ export default function ConfiguracoesPage() {
                     {guide.fields.map((field) => {
                       const isMeasurement = field.key === 'ga4_measurement_id';
                       const inputType = field.sensitive && !showSensitiveValues ? 'password' : 'text';
+                      const fieldMeta = FIELD_GUIDE_META[field.key];
+                      const providerField = field.providerField ?? fieldMeta?.providerField;
+                      const providerPath = field.providerPath ?? fieldMeta?.providerPath;
+                      const docsUrl = field.docsUrl ?? fieldMeta?.docsUrl;
                       return (
                         <div key={field.key}>
                           <label className="mb-1 block text-xs text-gray-400">{field.label}</label>
@@ -703,9 +1159,32 @@ export default function ConfiguracoesPage() {
                             inputMode={field.inputMode ?? 'text'}
                             className="w-full rounded-lg border border-white/10 bg-[#111] px-3 py-2 text-base md:text-sm text-white placeholder-gray-600 focus:border-[#D4AF37]/50 focus:outline-none"
                           />
-                          {field.helperText ? (
-                            <p className="mt-1 text-[11px] text-gray-500">{field.helperText}</p>
-                          ) : null}
+                          <div className="mt-1 space-y-1">
+                            {field.helperText ? (
+                              <p className="text-[11px] text-gray-500">{field.helperText}</p>
+                            ) : null}
+                            {providerField ? (
+                              <p className="text-[11px] text-gray-500">
+                                Nome na plataforma: <span className="text-gray-300">{providerField}</span>
+                              </p>
+                            ) : null}
+                            {providerPath ? (
+                              <p className="text-[11px] text-gray-500">
+                                Onde pegar: <span className="text-gray-300">{providerPath}</span>
+                              </p>
+                            ) : null}
+                            {docsUrl ? (
+                              <a
+                                href={docsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-[#D4AF37] hover:text-[#F6E05E]"
+                              >
+                                Ver doc oficial
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
                       );
                     })}

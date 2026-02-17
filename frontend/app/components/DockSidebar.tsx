@@ -1,6 +1,4 @@
 "use client"
-
-import { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ChevronDown,
@@ -33,32 +31,82 @@ const SIDEBAR_EXPANDED_WIDTH = 332
 export default function DockSidebar() {
   const nav = useSidebarNav()
   const convite = useSidebarConvite()
-  const collator = useMemo(
-    () => new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true }),
-    []
-  )
-
-  const sortedSidebarItems = useMemo(
-    () =>
-      [...sidebarItems]
-        .sort((a, b) => collator.compare(a.label, b.label))
-        .map((item) =>
-          item.children?.length
-            ? {
-                ...item,
-                children: [...item.children].sort((a, b) =>
-                  collator.compare(a.label, b.label)
-                ),
-              }
-            : item
-        ),
-    [collator]
-  )
 
   // ─── Render menu items ──────────────────
+  const renderSubItems = (
+    children: typeof sidebarItems[number]["children"],
+    depth: number,
+    activeClass: string,
+    onNav?: () => void,
+  ) => {
+    if (!children?.length) return null
+    return (
+      <div className={cn("mt-1 space-y-0.5 border-l border-white/10", depth === 0 ? "ml-4 pl-3" : "ml-3 pl-3")}>
+        {children.map((child) => {
+          const ChildIcon = child.icon
+          const hasNested = !!child.children?.length
+          const isActive = nav.isSubItemActive(child)
+          const isOpen = hasNested ? nav.isMenuOpen(child) : false
+          const highlighted = isActive || isOpen
+
+          if (!hasNested && child.href) {
+            return (
+              <Link key={child.id} href={child.href} onClick={onNav}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                    isActive ? activeClass : "text-white/60 hover:text-white/80 hover:bg-white/5",
+                  )}
+                >
+                  <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
+                  {child.badge && (
+                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold ml-auto", badgeStyles[child.badge.variant])}>
+                      {child.badge.text}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            )
+          }
+
+          return (
+            <div key={child.id}>
+              <button
+                onClick={() => nav.toggleMenu(child.id, isOpen)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                  highlighted ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "text-white/60 hover:text-white/80 hover:bg-white/5",
+                )}
+              >
+                <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm flex-1 min-w-0 text-left whitespace-normal leading-snug">{child.label}</span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+              </button>
+
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    {renderSubItems(child.children, depth + 1, activeClass, onNav)}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   const renderMenu = (expanded: boolean, onNav?: () => void) => (
     <nav className="space-y-0.5 px-2">
-      {sortedSidebarItems.map((item) => {
+      {sidebarItems.map((item) => {
         const Icon = item.icon
         const hasChildren = !!item.children?.length
         const isOpen = hasChildren ? nav.isMenuOpen(item) : false
@@ -67,7 +115,6 @@ export default function DockSidebar() {
         const highlighted = active || childActive || isOpen
         const colors = resolveColors(item, highlighted)
 
-        // Link direto (sem filhos)
         if (!hasChildren && item.href) {
           return (
             <Link key={item.id} href={item.href} onClick={onNav}>
@@ -87,11 +134,10 @@ export default function DockSidebar() {
           )
         }
 
-        // Accordion (com filhos)
         return (
           <div key={item.id}>
             <button
-              onClick={() => expanded ? nav.toggleMenu(item.id) : nav.setIsExpanded(true)}
+              onClick={() => expanded ? nav.toggleMenu(item.id, isOpen) : nav.setIsExpanded(true)}
               className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative", colors.parentBg)}
             >
               <Icon className={cn("h-5 w-5 flex-shrink-0", colors.icon)} />
@@ -121,26 +167,7 @@ export default function DockSidebar() {
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="ml-4 pl-3 border-l border-white/10 mt-1 space-y-0.5">
-                    {item.children?.map((child) => {
-                      const ChildIcon = child.icon
-                      const childIsActive = nav.isChildActiveHref(child.href, item.children || [])
-                      return (
-                        <Link key={child.id} href={child.href} onClick={onNav}>
-                          <div className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
-                            childIsActive ? colors.childActive : "text-white/60 hover:text-white/80 hover:bg-white/5"
-                          )}>
-                            <ChildIcon className={cn("h-4 w-4 flex-shrink-0", childIsActive && "opacity-100")} />
-                            <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
-                            {child.badge && (
-                              <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold ml-auto", badgeStyles[child.badge.variant])}>{child.badge.text}</span>
-                            )}
-                          </div>
-                        </Link>
-                      )
-                    })}
-                  </div>
+                  {renderSubItems(item.children, 0, colors.childActive, onNav)}
                 </motion.div>
               )}
             </AnimatePresence>

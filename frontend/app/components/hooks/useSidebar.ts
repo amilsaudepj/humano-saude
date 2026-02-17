@@ -1,9 +1,26 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { SidebarItem, SubItem } from '@/lib/sidebar-config';
-import { sidebarItems } from '@/lib/sidebar-config';
+
+type SidebarNode = {
+  id: string;
+  href?: string;
+  children?: SubItem[];
+};
+
+type ParsedSidebarHref = {
+  path: string;
+  query: URLSearchParams;
+};
+
+function parseSidebarHref(href: string): ParsedSidebarHref {
+  const [pathPart = '', queryPart = ''] = href.split('?');
+  const path = pathPart.split('#')[0] || '/';
+  const query = new URLSearchParams(queryPart.split('#')[0] ?? '');
+  return { path, query };
+}
 
 // ═══════════════════════════════════════════
 // Hook: Sidebar navigation state
@@ -12,65 +29,91 @@ import { sidebarItems } from '@/lib/sidebar-config';
 export function useSidebarNav() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [userToggles, setUserToggles] = useState<Record<string, boolean>>({});
+  const [userTogglesByLocation, setUserTogglesByLocation] = useState<Record<string, Record<string, boolean>>>({});
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const prevPathname = useRef(pathname);
+  const locationKey = `${pathname}?${searchParams.toString()}`;
+  const userToggles = useMemo(
+    () => userTogglesByLocation[locationKey] ?? {},
+    [locationKey, userTogglesByLocation],
+  );
 
-  // Limpar toggles manuais ao navegar
-  useEffect(() => {
-    if (prevPathname.current !== pathname) {
-      prevPathname.current = pathname;
-      setUserToggles({});
-    }
-  }, [pathname]);
+  const hasRequiredQuery = useCallback(
+    (requiredQuery: URLSearchParams) => {
+      for (const [key, value] of requiredQuery.entries()) {
+        if (searchParams.get(key) !== value) return false;
+      }
+      return true;
+    },
+    [searchParams],
+  );
 
   const isActive = useCallback(
-    (href: string) => pathname === href,
-    [pathname],
+    (href: string) => {
+      const target = parseSidebarHref(href);
+      if (pathname !== target.path) return false;
+      return target.query.size === 0 || hasRequiredQuery(target.query);
+    },
+    [hasRequiredQuery, pathname],
   );
 
   const isHrefMatch = useCallback(
-    (href: string) => pathname === href || pathname.startsWith(href + '/'),
-    [pathname],
-  );
-
-  const isChildActiveHref = useCallback(
-    (href: string, siblings: SubItem[]) => {
-      if (pathname === href) return true;
-      if (!pathname.startsWith(href + '/')) return false;
-      const longerMatch = siblings.some(
-        (s) =>
-          s.href !== href &&
-          s.href.length > href.length &&
-          (pathname === s.href || pathname.startsWith(s.href + '/')),
-      );
-      return !longerMatch;
+    (href: string) => {
+      const target = parseSidebarHref(href);
+      if (target.query.size > 0) {
+        return pathname === target.path && hasRequiredQuery(target.query);
+      }
+      return pathname === target.path || pathname.startsWith(target.path + '/');
     },
-    [pathname],
+    [hasRequiredQuery, pathname],
   );
 
-  const isChildActive = useCallback(
-    (item: SidebarItem) => item.children?.some((c) => isHrefMatch(c.href)) ?? false,
+  const isNodeActive = useCallback(
+    (node: SidebarNode): boolean => {
+      const walk = (current: SidebarNode): boolean => {
+        if (current.href && isHrefMatch(current.href)) return true;
+        return current.children?.some((child) => walk(child)) ?? false;
+      };
+      return walk(node);
+    },
     [isHrefMatch],
   );
 
+  const isSubItemActive = useCallback(
+    (item: SubItem) => isNodeActive(item),
+    [isNodeActive],
+  );
+
+  const isChildActive = useCallback(
+    (item: SidebarItem) => item.children?.some((c) => isNodeActive(c)) ?? false,
+    [isNodeActive],
+  );
+
   const isMenuOpen = useCallback(
-    (item: SidebarItem) => {
+    (item: SidebarItem | SubItem) => {
       if (userToggles[item.id] !== undefined) return userToggles[item.id];
-      return isChildActive(item);
+      return isNodeActive(item);
     },
-    [userToggles, isChildActive],
+    [userToggles, isNodeActive],
   );
 
   const toggleMenu = useCallback(
-    (id: string) => {
-      setUserToggles((prev) => ({
-        ...prev,
-        [id]: !isMenuOpen(sidebarItems.find((i) => i.id === id)!),
-      }));
+    (id: string, fallbackOpen = false) => {
+      setUserTogglesByLocation((prev) => {
+        const currentToggles = prev[locationKey] ?? {};
+        const isCurrentlyOpen = currentToggles[id] ?? fallbackOpen;
+
+        return {
+          ...prev,
+          [locationKey]: {
+            ...currentToggles,
+            [id]: !isCurrentlyOpen,
+          },
+        };
+      });
     },
-    [isMenuOpen],
+    [locationKey],
   );
 
   const handleLogout = useCallback(async () => {
@@ -88,7 +131,7 @@ export function useSidebarNav() {
     isMobileOpen,
     setIsMobileOpen,
     isActive,
-    isChildActiveHref,
+    isSubItemActive,
     isChildActive,
     isMenuOpen,
     toggleMenu,

@@ -10,7 +10,7 @@ import {
   updateAdSetBudget,
   getAdSetDetails,
 } from './meta-client';
-import type { AdMetrics, OptimizationLog, OptimizationRules } from './types';
+import type { AdMetrics, MetaAdsConfig, OptimizationLog, OptimizationRules } from './types';
 import { logger } from '@/lib/logger';
 
 // Regras padrão (em centavos para budget, reais para spend)
@@ -66,7 +66,8 @@ interface OptimizationResult {
 }
 
 export async function optimizeCampaigns(
-  customRules?: Partial<OptimizationRules>
+  customRules?: Partial<OptimizationRules>,
+  metaConfigOverrides?: Partial<MetaAdsConfig>
 ): Promise<OptimizationResult> {
   const dbRules = await loadRulesFromDatabase();
   const rules: OptimizationRules = { ...dbRules, ...customRules };
@@ -82,7 +83,7 @@ export async function optimizeCampaigns(
 
   try {
     // Buscar métricas de todos os ads
-    const metrics = await getAdInsights(undefined, rules.datePreset);
+    const metrics = await getAdInsights(undefined, rules.datePreset, metaConfigOverrides);
     result.totalAds = metrics.length;
 
     if (metrics.length === 0) {
@@ -96,7 +97,7 @@ export async function optimizeCampaigns(
       let dailyBudget = adSetBudgets.get(ad.adSetId);
       if (dailyBudget === undefined) {
         try {
-          const details = await getAdSetDetails(ad.adSetId);
+          const details = await getAdSetDetails(ad.adSetId, metaConfigOverrides);
           dailyBudget = parseInt(details.daily_budget, 10) || 0;
           adSetBudgets.set(ad.adSetId, dailyBudget);
         } catch {
@@ -108,7 +109,7 @@ export async function optimizeCampaigns(
 
     // Avaliar cada ad
     for (const ad of metrics) {
-      const log = await evaluateAd(ad, rules);
+      const log = await evaluateAd(ad, rules, metaConfigOverrides);
       result.logs.push(log);
 
       switch (log.actionType) {
@@ -140,7 +141,8 @@ export async function optimizeCampaigns(
 
 async function evaluateAd(
   ad: AdMetrics,
-  rules: OptimizationRules
+  rules: OptimizationRules,
+  metaConfigOverrides?: Partial<MetaAdsConfig>
 ): Promise<OptimizationLog> {
   const metricsBefore = {
     spend: ad.spend,
@@ -152,7 +154,7 @@ async function evaluateAd(
   // REGRA 1: PAUSE — Gastou muito sem converter
   if (ad.spend >= rules.pauseSpendThreshold && ad.purchases === 0) {
     try {
-      await updateAdStatus(ad.adId, 'PAUSED');
+      await updateAdStatus(ad.adId, 'PAUSED', metaConfigOverrides);
       return {
         adId: ad.adId,
         adName: ad.adName,
@@ -184,7 +186,7 @@ async function evaluateAd(
       const maxBudgetCents = rules.maxDailyBudget * 100;
 
       if (newBudget <= maxBudgetCents && currentBudget > 0) {
-        await updateAdSetBudget(ad.adSetId, newBudget);
+        await updateAdSetBudget(ad.adSetId, newBudget, metaConfigOverrides);
         return {
           adId: ad.adId,
           adName: ad.adName,

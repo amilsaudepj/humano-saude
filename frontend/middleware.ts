@@ -31,6 +31,24 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ============================================
+  // BYPASS: Cron Jobs assinados por CRON_SECRET
+  // ============================================
+  if (pathname.startsWith('/api/cron/') || pathname.startsWith('/api/social-flow/cron')) {
+    const cronSecret = process.env.CRON_SECRET || '';
+    const authHeader = request.headers.get('authorization') || '';
+    const provided = authHeader.replace('Bearer ', '');
+
+    if (!cronSecret || provided !== cronSecret) {
+      return NextResponse.json(
+        { error: 'Unauthorized cron request' },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.next();
+  }
+
+  // ============================================
   // PROTEÇÃO: Portal interno (UI)
   // ============================================
   if (pathname.startsWith('/portal-interno-hks-2026')) {

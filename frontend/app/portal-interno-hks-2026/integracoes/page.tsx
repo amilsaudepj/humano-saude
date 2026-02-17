@@ -1,13 +1,33 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Plug, CheckCircle, Globe, Zap, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIntegrations, getSystemConfig, getWebhookLogs, saveSystemConfig } from '@/app/actions/integrations';
 import type { IntegrationSetting, WebhookLog } from '@/lib/types/database';
 
-type IntegrationCardId = 'whatsapp' | 'meta_ads' | 'google_analytics' | 'meta_pixel' | 'smtp' | 'voip';
+type IntegrationCardId =
+  | 'whatsapp'
+  | 'meta_ads'
+  | 'google_analytics'
+  | 'google_ads'
+  | 'gtm'
+  | 'meta_pixel'
+  | 'tiktok_ads'
+  | 'x_ads'
+  | 'linkedin_ads'
+  | 'hotjar'
+  | 'openai'
+  | 'gemini'
+  | 'vertex_ai'
+  | 'resend'
+  | 'upstash'
+  | 'supabase'
+  | 'n8n'
+  | 'smtp'
+  | 'voip';
 
 type IntegrationCard = {
   id: IntegrationCardId;
@@ -43,6 +63,8 @@ const INTEGRATION_CARDS: IntegrationCard[] = [
     logoSrc: '/images/logos/Google-Analytics-Logo.png',
     logoSize: 56,
   },
+  { id: 'google_ads', name: 'Google Ads API', icon: '🔎', desc: 'Métricas e campanhas do Google Ads' },
+  { id: 'gtm', name: 'Google Tag Manager', icon: '🏷️', desc: 'Container de tags e scripts de marketing' },
   {
     id: 'meta_pixel',
     name: 'Meta Pixel',
@@ -51,6 +73,17 @@ const INTEGRATION_CARDS: IntegrationCard[] = [
     logoSrc: '/images/logos/meta-logo1.png',
     logoSize: 48,
   },
+  { id: 'tiktok_ads', name: 'TikTok Ads', icon: '🎵', desc: 'Campanhas e métricas TikTok for Business' },
+  { id: 'x_ads', name: 'X Ads', icon: '𝕏', desc: 'Mídia paga no X/Twitter' },
+  { id: 'linkedin_ads', name: 'LinkedIn Ads', icon: '💼', desc: 'Campanhas B2B no LinkedIn' },
+  { id: 'hotjar', name: 'Hotjar', icon: '🔥', desc: 'Heatmaps e gravações de sessão' },
+  { id: 'openai', name: 'OpenAI', icon: '🤖', desc: 'Motor IA para análises e automações' },
+  { id: 'gemini', name: 'Gemini (Google AI)', icon: '✨', desc: 'Geração de textos e criativos' },
+  { id: 'vertex_ai', name: 'Vertex AI', icon: '🧠', desc: 'OCR e IA avançada no Google Cloud' },
+  { id: 'resend', name: 'Resend', icon: '📨', desc: 'Envio de emails transacionais' },
+  { id: 'upstash', name: 'Upstash Redis', icon: '⚡', desc: 'Rate limiting e cache distribuído' },
+  { id: 'supabase', name: 'Supabase', icon: '🗄️', desc: 'Banco, auth e storage' },
+  { id: 'n8n', name: 'n8n Webhooks', icon: '🔁', desc: 'Automações externas por webhook' },
   { id: 'smtp', name: 'SMTP (Email)', icon: '✉️', desc: 'Configure envio de emails transacionais' },
   { id: 'voip', name: 'VoIP', icon: '📞', desc: 'Central de telefonia IP' },
 ];
@@ -97,7 +130,20 @@ function findIntegrationRow(cardId: IntegrationCardId, rows: IntegrationSetting[
     whatsapp: ['whatsapp', 'whatsapp_business'],
     meta_ads: ['meta_ads'],
     google_analytics: ['google_analytics', 'ga4'],
+    google_ads: ['google_ads'],
+    gtm: ['gtm'],
     meta_pixel: ['meta_pixel'],
+    tiktok_ads: ['tiktok_ads', 'tiktok'],
+    x_ads: ['x_ads', 'twitter_ads'],
+    linkedin_ads: ['linkedin_ads', 'linkedin'],
+    hotjar: ['hotjar'],
+    openai: ['openai'],
+    gemini: ['gemini', 'google_ai'],
+    vertex_ai: ['vertex_ai'],
+    resend: ['resend'],
+    upstash: ['upstash'],
+    supabase: ['supabase'],
+    n8n: ['n8n'],
     smtp: ['smtp', 'email_smtp'],
     voip: ['voip'],
   };
@@ -108,6 +154,7 @@ function findIntegrationRow(cardId: IntegrationCardId, rows: IntegrationSetting[
 }
 
 export default function IntegracoesPage() {
+  const router = useRouter();
   const [integrations, setIntegrations] = useState<IntegrationSetting[]>([]);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [systemConfig, setSystemConfig] = useState<Record<string, unknown>>({});
@@ -156,26 +203,64 @@ export default function IntegracoesPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  const isCardConfigured = useCallback((cardId: IntegrationCardId, config: Record<string, unknown>, row: IntegrationSetting | null) => {
+    if (cardId === 'google_analytics') {
+      const hasProperty = !!getSystemGA4PropertyId(config);
+      const hasCredentials =
+        asString(config.google_service_account_json).length > 0 ||
+        asString(config.google_application_credentials_json).length > 0 ||
+        (asString(config.google_client_email).length > 0 && asString(config.google_private_key).length > 0);
+      return hasProperty && hasCredentials;
+    }
+    if (cardId === 'meta_pixel') return asString(config.meta_pixel_id).length > 0;
+    if (cardId === 'whatsapp') return asString(config.whatsapp_api_token).length > 0 && asString(config.whatsapp_phone_number_id).length > 0;
+    if (cardId === 'smtp') return asString(config.smtp_host).length > 0 && asString(config.smtp_user).length > 0;
+    if (cardId === 'meta_ads') return asString(config.meta_ad_account_id).length > 0 && asString(config.meta_access_token).length > 0;
+    if (cardId === 'google_ads') return asString(config.google_ads_customer_id).length > 0 && asString(config.google_ads_client_id).length > 0 && asString(config.google_ads_refresh_token).length > 0;
+    if (cardId === 'gtm') return asString(config.gtm_id).length > 0;
+    if (cardId === 'tiktok_ads') return asString(config.tiktok_access_token).length > 0 && asString(config.tiktok_advertiser_id).length > 0;
+    if (cardId === 'x_ads') return asString(config.x_ads_account_id).length > 0 && asString(config.x_bearer_token).length > 0;
+    if (cardId === 'linkedin_ads') return asString(config.linkedin_access_token).length > 0 && asString(config.linkedin_ad_account_id).length > 0;
+    if (cardId === 'hotjar') return asString(config.hotjar_site_id).length > 0;
+    if (cardId === 'openai') return asString(config.openai_api_key).length > 0;
+    if (cardId === 'gemini') return asString(config.google_ai_api_key).length > 0;
+    if (cardId === 'vertex_ai') {
+      return (
+        asString(config.google_service_account_json).length > 0 ||
+        asString(config.google_application_credentials_json).length > 0 ||
+        (asString(config.google_client_email).length > 0 && asString(config.google_private_key).length > 0)
+      );
+    }
+    if (cardId === 'resend') return asString(config.resend_api_key).length > 0;
+    if (cardId === 'upstash') return asString(config.upstash_redis_rest_url).length > 0 && asString(config.upstash_redis_rest_token).length > 0;
+    if (cardId === 'supabase') {
+      return (
+        asString(config.supabase_url).length > 0 &&
+        asString(config.supabase_anon_key).length > 0 &&
+        asString(config.supabase_service_role_key).length > 0
+      );
+    }
+    if (cardId === 'n8n') return asString(config.n8n_webhook_url).length > 0;
+    if (cardId === 'voip') return !!row;
+    return !!row?.is_active;
+  }, []);
+
   const configuredCount = useMemo(() => {
     return INTEGRATION_CARDS.filter((card) => {
       const row = findIntegrationRow(card.id, integrations);
       const config = asRecord(systemConfig);
-
-      if (card.id === 'google_analytics') return !!getSystemGA4PropertyId(config);
-      if (card.id === 'meta_pixel') return asString(config.meta_pixel_id).length > 0;
-      if (card.id === 'whatsapp') return asString(config.whatsapp_api_token).length > 0;
-      if (card.id === 'smtp') return asString(config.smtp_host).length > 0 && asString(config.smtp_user).length > 0;
-      if (card.id === 'meta_ads') return asString(config.meta_ad_account_id).length > 0 || !!row;
-      if (card.id === 'voip') return !!row;
-      return false;
+      return isCardConfigured(card.id, config, row);
     }).length;
-  }, [integrations, systemConfig]);
+  }, [integrations, isCardConfigured, systemConfig]);
 
-  const activeCount = useMemo(() => integrations.filter((item) => item.is_active).length, [integrations]);
+  const activeCount = useMemo(() => {
+    const config = asRecord(systemConfig);
+    return INTEGRATION_CARDS.filter((card) => isCardConfigured(card.id, config, findIntegrationRow(card.id, integrations))).length;
+  }, [integrations, isCardConfigured, systemConfig]);
 
   function openConfigure(cardId: IntegrationCardId) {
     if (cardId !== 'google_analytics') {
-      toast.info('Configuração desta integração em desenvolvimento nesta tela');
+      router.push('/portal-interno-hks-2026/configuracoes?tab=integracoes');
       return;
     }
 
@@ -266,11 +351,9 @@ export default function IntegracoesPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {INTEGRATION_CARDS.map((card) => {
               const row = findIntegrationRow(card.id, integrations);
-              const ga4Configured = !!getSystemGA4PropertyId(asRecord(systemConfig));
-              const configured =
-                card.id === 'google_analytics'
-                  ? ga4Configured
-                  : row?.is_active || false;
+              const config = asRecord(systemConfig);
+              const ga4Configured = !!getSystemGA4PropertyId(config);
+              const configured = isCardConfigured(card.id, config, row);
 
               return (
                 <div
@@ -299,7 +382,7 @@ export default function IntegracoesPage() {
 
                   {card.id === 'google_analytics' && ga4Configured && (
                     <p className="mt-3 text-xs text-green-400">
-                      Property ID configurado: {getSystemGA4PropertyId(asRecord(systemConfig))}
+                      Property ID configurado: {getSystemGA4PropertyId(config)}
                     </p>
                   )}
 

@@ -32,21 +32,36 @@ function hasEnv(name: string): boolean {
   return Boolean(process.env[name] && process.env[name]!.trim());
 }
 
-function hasPair(left: string, right: string): boolean {
-  return hasEnv(left) && hasEnv(right);
-}
-
 export async function GET() {
   try {
     const sb = createServiceClient();
     const { data } = await sb
       .from('integration_settings')
       .select('integration_name, is_active, config, encrypted_credentials, updated_at')
-      .in('integration_name', ['system_config', 'meta_ads', 'google_analytics', 'ga4', 'hotjar'])
+      .in('integration_name', [
+        'system_config',
+        'meta_ads',
+        'google_analytics',
+        'ga4',
+        'hotjar',
+        'whatsapp',
+        'meta_pixel',
+        'resend',
+        'upstash',
+        'supabase',
+        'n8n',
+      ])
       .order('updated_at', { ascending: false })
-      .limit(20);
+      .limit(100);
 
     const rows = Array.isArray(data) ? data : [];
+
+    const mergedConfig: Record<string, unknown> = {};
+    const mergedCredentials: Record<string, unknown> = {};
+    for (const row of [...rows].reverse()) {
+      Object.assign(mergedConfig, asObject(row.config));
+      Object.assign(mergedCredentials, asObject(row.encrypted_credentials));
+    }
 
     const findRow = (names: string[]) => rows.find((row) => names.includes(asString(row.integration_name)));
     const systemRow = findRow(['system_config']);
@@ -54,8 +69,8 @@ export async function GET() {
     const gaRow = findRow(['google_analytics', 'ga4']);
     const hotjarRow = findRow(['hotjar']);
 
-    const config = asObject(systemRow?.config);
-    const credentials = asObject(systemRow?.encrypted_credentials);
+    const config = { ...mergedConfig, ...asObject(systemRow?.config) };
+    const credentials = { ...mergedCredentials, ...asObject(systemRow?.encrypted_credentials) };
     const metaConfig = asObject(metaRow?.config);
     const metaCredentials = asObject(metaRow?.encrypted_credentials);
     const gaConfig = asObject(gaRow?.config);
@@ -72,10 +87,33 @@ export async function GET() {
       gaCredentials.google_analytics_property_id,
     );
     const ga4PropertyReady = /^\d+$/.test(ga4PropertyId);
+    const googleServiceAccountJson = firstNonEmpty(
+      process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      credentials.google_service_account_json,
+      config.google_service_account_json,
+    );
+    const googleApplicationCredentialsJson = firstNonEmpty(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+      process.env.GOOGLE_CREDENTIALS_JSON,
+      credentials.google_application_credentials_json,
+      config.google_application_credentials_json,
+    );
+    const googleClientEmail = firstNonEmpty(
+      process.env.GOOGLE_CLIENT_EMAIL,
+      process.env.GCP_CLIENT_EMAIL,
+      credentials.google_client_email,
+      config.google_client_email,
+    );
+    const googlePrivateKey = firstNonEmpty(
+      process.env.GOOGLE_PRIVATE_KEY,
+      process.env.GCP_PRIVATE_KEY,
+      credentials.google_private_key,
+      config.google_private_key,
+    );
     const ga4CredentialReady =
-      hasEnv('GOOGLE_SERVICE_ACCOUNT_JSON') ||
-      hasEnv('GOOGLE_APPLICATION_CREDENTIALS_JSON') ||
-      hasPair('GOOGLE_CLIENT_EMAIL', 'GOOGLE_PRIVATE_KEY');
+      Boolean(googleServiceAccountJson) ||
+      Boolean(googleApplicationCredentialsJson) ||
+      Boolean(googleClientEmail && googlePrivateKey);
 
     const metaAccessToken = firstNonEmpty(
       process.env.META_ACCESS_TOKEN,
@@ -102,6 +140,11 @@ export async function GET() {
       hotjarConfig.site_id,
       hotjarConfig.hotjar_site_id,
     );
+    const gtmId = firstNonEmpty(
+      process.env.NEXT_PUBLIC_GTM_ID,
+      config.gtm_id,
+      config.google_tag_manager_id,
+    );
 
     const openAiKey = firstNonEmpty(
       process.env.OPENAI_API_KEY,
@@ -114,38 +157,49 @@ export async function GET() {
       config.google_ai_api_key,
     );
     const whatsappToken = firstNonEmpty(
+      process.env.WHATSAPP_API_TOKEN,
       credentials.whatsapp_api_token,
       config.whatsapp_api_token,
     );
     const whatsappPhoneId = firstNonEmpty(
+      process.env.WHATSAPP_PHONE_NUMBER_ID,
       config.whatsapp_phone_number_id,
       credentials.whatsapp_phone_number_id,
     );
     const metaPixelId = firstNonEmpty(
+      process.env.META_PIXEL_ID,
+      process.env.FACEBOOK_PIXEL_ID,
+      process.env.NEXT_PUBLIC_META_PIXEL_ID,
       config.meta_pixel_id,
       metaConfig.meta_pixel_id,
     );
     const tiktokAccessToken = firstNonEmpty(
+      process.env.TIKTOK_ACCESS_TOKEN,
       credentials.tiktok_access_token,
       config.tiktok_access_token,
     );
     const tiktokAdvertiserId = firstNonEmpty(
+      process.env.TIKTOK_ADVERTISER_ID,
       config.tiktok_advertiser_id,
       credentials.tiktok_advertiser_id,
     );
     const xAccountId = firstNonEmpty(
+      process.env.X_ADS_ACCOUNT_ID,
       config.x_ads_account_id,
       credentials.x_ads_account_id,
     );
     const xBearerToken = firstNonEmpty(
+      process.env.X_BEARER_TOKEN,
       credentials.x_bearer_token,
       config.x_bearer_token,
     );
     const linkedinToken = firstNonEmpty(
+      process.env.LINKEDIN_ACCESS_TOKEN,
       credentials.linkedin_access_token,
       config.linkedin_access_token,
     );
     const linkedinAccountId = firstNonEmpty(
+      process.env.LINKEDIN_AD_ACCOUNT_ID,
       config.linkedin_ad_account_id,
       credentials.linkedin_ad_account_id,
     );
@@ -161,6 +215,45 @@ export async function GET() {
       process.env.GOOGLE_ADS_REFRESH_TOKEN,
       credentials.google_ads_refresh_token,
       config.google_ads_refresh_token,
+    );
+    const resendApiKey = firstNonEmpty(
+      process.env.RESEND_API_KEY,
+      credentials.resend_api_key,
+      config.resend_api_key,
+    );
+    const upstashRestUrl = firstNonEmpty(
+      process.env.UPSTASH_REDIS_REST_URL,
+      config.upstash_redis_rest_url,
+      credentials.upstash_redis_rest_url,
+    );
+    const upstashRestToken = firstNonEmpty(
+      process.env.UPSTASH_REDIS_REST_TOKEN,
+      credentials.upstash_redis_rest_token,
+      config.upstash_redis_rest_token,
+    );
+    const supabaseUrl = firstNonEmpty(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      config.supabase_url,
+    );
+    const supabaseAnonKey = firstNonEmpty(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      config.supabase_anon_key,
+    );
+    const supabaseServiceRoleKey = firstNonEmpty(
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      credentials.supabase_service_role_key,
+      config.supabase_service_role_key,
+    );
+    const n8nWebhookUrl = firstNonEmpty(
+      process.env.N8N_WEBHOOK_URL,
+      process.env.NANO_BANANA_WEBHOOK_URL,
+      config.n8n_webhook_url,
+      config.nano_banana_webhook_url,
+    );
+    const n8nWebhookSecret = firstNonEmpty(
+      process.env.N8N_WEBHOOK_SECRET,
+      credentials.n8n_webhook_secret,
+      config.n8n_webhook_secret,
     );
 
     const statuses: IntegrationStatus[] = [
@@ -183,10 +276,10 @@ export async function GET() {
       {
         name: 'Vertex AI (Gemini GCP)',
         key: 'vertex_ai',
-        connected: hasEnv('GOOGLE_SERVICE_ACCOUNT_JSON') || hasEnv('GOOGLE_APPLICATION_CREDENTIALS_JSON'),
+        connected: Boolean(googleServiceAccountJson || googleApplicationCredentialsJson || (googleClientEmail && googlePrivateKey)),
         envVar: 'GOOGLE_SERVICE_ACCOUNT_JSON ou GOOGLE_APPLICATION_CREDENTIALS_JSON',
         description: 'OCR e personalização IA com Gemini no GCP',
-        hint: (hasEnv('GOOGLE_SERVICE_ACCOUNT_JSON') || hasEnv('GOOGLE_APPLICATION_CREDENTIALS_JSON'))
+        hint: (googleServiceAccountJson || googleApplicationCredentialsJson || (googleClientEmail && googlePrivateKey))
           ? undefined
           : 'Configure credenciais de service account para OCR e rotas Vertex.',
       },
@@ -209,6 +302,14 @@ export async function GET() {
         hint: ga4PropertyReady && ga4CredentialReady
           ? undefined
           : 'Requer Property ID numérico e credenciais Google válidas.',
+      },
+      {
+        name: 'Google Tag Manager',
+        key: 'gtm',
+        connected: Boolean(gtmId),
+        envVar: 'NEXT_PUBLIC_GTM_ID',
+        description: 'Container de tags para pixels e scripts',
+        hint: gtmId ? undefined : 'Configure GTM ID (GTM-XXXXXXX) em Configurações > APIs.',
       },
       {
         name: 'Hotjar',
@@ -281,27 +382,37 @@ export async function GET() {
       {
         name: 'Resend',
         key: 'resend',
-        connected: hasEnv('RESEND_API_KEY'),
+        connected: Boolean(resendApiKey),
         envVar: 'RESEND_API_KEY',
         description: 'Envio de emails transacionais',
-        hint: hasEnv('RESEND_API_KEY') ? undefined : 'Defina RESEND_API_KEY para disparos por email.',
+        hint: resendApiKey ? undefined : 'Defina RESEND_API_KEY para disparos por email.',
       },
       {
         name: 'Upstash Redis',
         key: 'upstash',
-        connected: hasPair('UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'),
+        connected: Boolean(upstashRestUrl && upstashRestToken),
         envVar: 'UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN',
         description: 'Rate limit e cache distribuído',
-        hint: hasPair('UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN')
+        hint: upstashRestUrl && upstashRestToken
           ? undefined
           : 'Configure URL e token do Upstash para rate limiting.',
       },
       {
         name: 'Supabase',
         key: 'supabase',
-        connected: hasPair('NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY') && hasEnv('SUPABASE_SERVICE_ROLE_KEY'),
+        connected: Boolean(supabaseUrl && supabaseAnonKey && supabaseServiceRoleKey),
         envVar: 'NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY',
         description: 'Banco de dados, auth e storage',
+      },
+      {
+        name: 'n8n Webhooks',
+        key: 'n8n',
+        connected: Boolean(n8nWebhookUrl),
+        envVar: 'N8N_WEBHOOK_URL (+ N8N_WEBHOOK_SECRET opcional)',
+        description: 'Automacao de fluxos externos',
+        hint: n8nWebhookUrl
+          ? n8nWebhookSecret ? undefined : 'Webhook URL detectada sem secret de assinatura.'
+          : 'Configure URL do webhook n8n em Configurações > APIs.',
       },
     ];
 
