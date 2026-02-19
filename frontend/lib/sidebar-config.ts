@@ -50,6 +50,10 @@ import {
   GraduationCap,
   BookOpen,
   Compass,
+  FolderOpen,
+  Wand2,
+  Upload,
+  CalendarClock,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -120,14 +124,28 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'com-crm-contatos', label: 'Contatos', icon: UserPlus, href: `${P}/crm/contacts` },
       { id: 'com-crm-empresas', label: 'Empresas', icon: Building2, href: `${P}/crm/companies` },
       { id: 'com-cotacoes', label: 'Cotações', icon: Receipt, href: `${P}/cotacoes` },
-      { id: 'com-propostas', label: 'Propostas', icon: FileText, href: `${P}/propostas` },
       { id: 'com-propostas-fila', label: 'Fila de Propostas', icon: FileArchive, href: `${P}/propostas/fila` },
       { id: 'com-propostas-ia', label: 'Scanner Inteligente', icon: ScanLine, href: `${P}/propostas/ia`, badge: { text: 'IA', variant: 'gold' } },
-      { id: 'com-propostas-manual', label: 'Proposta Manual', icon: CheckSquare, href: `${P}/propostas/manual` },
       { id: 'com-contratos', label: 'Contratos', icon: FileText, href: `${P}/contratos` },
       { id: 'com-vendas', label: 'Vendas', icon: DollarSign, href: `${P}/vendas` },
       { id: 'com-planos', label: 'Tabela de Preços', icon: Receipt, href: `${P}/planos` },
       { id: 'com-crm-analytics', label: 'Analytics CRM', icon: BarChart3, href: `${P}/crm/analytics` },
+      { id: 'com-deals', label: 'Oportunidades', icon: Briefcase, href: `${P}/crm/deals`, badge: { text: 'NOVO', variant: 'gold' as BadgeVariant } },
+    ],
+  },
+
+  // ── MATERIAIS ──
+  {
+    id: 'materiais',
+    label: 'Materiais',
+    icon: FolderOpen,
+    color: 'blue' as const,
+    children: [
+      { id: 'mat-vendas', label: 'Material de Vendas', icon: FolderOpen, href: `${P}/materiais` },
+      { id: 'mat-banners', label: 'CriativoPRO', icon: Palette, href: `${P}/materiais/banners`, badge: { text: 'PRO', variant: 'gold' as BadgeVariant } },
+      { id: 'mat-iaclone', label: 'IA Clone', icon: Wand2, href: `${P}/materiais/ia-clone`, badge: { text: 'NOVO', variant: 'gold' as BadgeVariant } },
+      { id: 'mat-galeria', label: 'Galeria Salvas', icon: Image, href: `${P}/materiais/galeria` },
+      { id: 'mat-upload', label: 'Meus Uploads', icon: Upload, href: `${P}/materiais/uploads` },
     ],
   },
 
@@ -248,10 +266,18 @@ export const sidebarItems: SidebarItem[] = [
         ],
       },
       { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${P}/indicacoes` },
-      { id: 'ops-treinamento', label: 'Treinamento', icon: GraduationCap, href: `${P}/treinamento` },
-      { id: 'ops-treinamento-tour', label: 'Tour da Plataforma', icon: Compass, href: `${P}/treinamento/tour` },
-      { id: 'ops-treinamento-produto', label: 'Treinamento de Produto', icon: BookOpen, href: `${P}/treinamento/produto` },
-      { id: 'ops-treinamento-mercado', label: 'Mercado de Seguros', icon: Briefcase, href: `${P}/treinamento/mercado-seguros` },
+      { id: 'ops-renovacoes', label: 'Renovações', icon: CalendarClock, href: `${P}/renovacoes` },
+      {
+        id: 'ops-treinamento',
+        label: 'Treinamento',
+        icon: GraduationCap,
+        children: [
+          { id: 'ops-treinamento-central', label: 'Central de Treinamento', icon: GraduationCap, href: `${P}/treinamento` },
+          { id: 'ops-treinamento-tour', label: 'Tour da Plataforma', icon: Compass, href: `${P}/treinamento/tour` },
+          { id: 'ops-treinamento-produto', label: 'Treinamento de Produto', icon: BookOpen, href: `${P}/treinamento/produto` },
+          { id: 'ops-treinamento-mercado', label: 'Mercado de Seguros', icon: Briefcase, href: `${P}/treinamento/mercado-seguros` },
+        ],
+      },
     ],
   },
 
@@ -278,6 +304,7 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'fin-visao', label: 'Visão Geral', icon: DollarSign, href: `${P}/financeiro` },
       { id: 'fin-producao', label: 'Produção', icon: Award, href: `${P}/producao`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'fin-comissoes', label: 'Comissões', icon: Receipt, href: `${P}/financeiro/comissoes` },
+      { id: 'fin-extrato', label: 'Extrato', icon: FileText, href: `${P}/financeiro/extrato` },
       { id: 'fin-faturamento', label: 'Faturamento', icon: CreditCard, href: `${P}/faturamento` },
     ],
   },

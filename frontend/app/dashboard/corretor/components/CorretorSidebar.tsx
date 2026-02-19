@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
-  Users,
   DollarSign,
   FolderOpen,
   CalendarClock,
@@ -13,14 +12,11 @@ import {
   X,
   LogOut,
   HelpCircle,
-  Kanban,
-  TrendingUp,
   FileText,
   Upload,
   Receipt,
   Palette,
   Wand2,
-  Sparkles,
   Award,
   User,
   UserPlus,
@@ -28,19 +24,46 @@ import {
   Loader2,
   CheckCircle,
   Send,
-  ClipboardList,
-  Link2,
-  Building2,
-  Briefcase,
+  FileArchive,
+  Wallet,
   GraduationCap,
-  BookOpen,
+  Link2,
   Compass,
+  BookOpen,
+  Briefcase,
+  // Novos ícones para menu completo
+  Filter,
+  Users,
+  Columns3,
+  Building2,
+  ScanLine,
+  BarChart3,
+  Target,
+  TrendingUp,
+  Megaphone,
+  Sparkles,
+  BrainCircuit,
+  Gauge,
+  ShieldAlert,
+  UsersRound,
+  Settings,
+  Route,
+  Calendar,
+  LineChart,
+  MessagesSquare,
+  MessageSquare,
+  Bell,
+  CreditCard,
+  Cog,
+  Shield,
   CheckSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/use-permissions';
+import { SIDEBAR_PERMISSION_MAP } from '@/lib/permissions';
 
 const SIDEBAR_COLLAPSED_WIDTH = 72;
 const SIDEBAR_EXPANDED_WIDTH = 332;
@@ -49,7 +72,7 @@ const SIDEBAR_EXPANDED_WIDTH = 332;
 // TIPOS
 // ============================================
 
-type BadgeVariant = 'default' | 'gold' | 'success' | 'danger' | 'warning';
+type BadgeVariant = 'default' | 'gold' | 'success' | 'danger' | 'warning' | 'blue' | 'green';
 
 interface SubItem {
   id: string;
@@ -75,54 +98,46 @@ interface SidebarItem {
 
 const B = '/dashboard/corretor';
 
-// ============================================
-// MENU DO CORRETOR
-// ============================================
+// ═══════════════════════════════════════════════════════════
+// MENU DO CORRETOR — ESPELHA O ADMIN
+// Todas as seções do admin estão aqui. O RBAC controla
+// o que cada corretor pode ver via permissões.
+// ═══════════════════════════════════════════════════════════
 
 const menuItems: SidebarItem[] = [
+  // ── VISÃO GERAL ──
   {
-    id: 'overview',
-    label: 'Dashboard',
+    id: 'visao-geral',
+    label: 'Visão Geral',
     icon: LayoutDashboard,
     href: B,
-    color: 'gold',
-  },
-  {
-    id: 'crm',
-    label: 'CRM',
-    icon: Kanban,
-    color: 'gold',
-    children: [
-      { id: 'crm-kanban', label: 'CRM', icon: Kanban, href: `${B}/crm`, badge: { text: '🔥', variant: 'gold' } },
-      { id: 'crm-deals', label: 'Oportunidades', icon: Briefcase, href: `${B}/crm/deals`, badge: { text: 'NOVO', variant: 'gold' } },
-      { id: 'crm-leads', label: 'Leads', icon: Users, href: `${B}/crm/leads` },
-      { id: 'crm-contacts', label: 'Contatos', icon: UserPlus, href: `${B}/crm/contacts` },
-      { id: 'crm-companies', label: 'Empresas', icon: Building2, href: `${B}/crm/companies` },
-      { id: 'crm-metricas', label: 'Analytics CRM', icon: TrendingUp, href: `${B}/crm/metricas` },
-    ],
-  },
-  {
-    id: 'propostas',
-    label: 'Propostas',
-    icon: FileText,
-    color: 'gold',
-    children: [
-      { id: 'propostas-scanner', label: 'Scanner Inteligente', icon: Sparkles, href: `${B}/propostas`, badge: { text: 'IA', variant: 'gold' } },
-      { id: 'propostas-fila', label: 'Fila de Propostas', icon: ClipboardList, href: `${B}/propostas/fila` },
-      { id: 'propostas-manual', label: 'Proposta Manual', icon: CheckSquare, href: `${B}/propostas/manual` },
-    ],
-  },
-  {
-    id: 'financeiro',
-    label: 'Financeiro',
-    icon: DollarSign,
     color: 'green',
+  },
+
+  // ── COMERCIAL ──
+  {
+    id: 'comercial',
+    label: 'Comercial',
+    icon: Filter,
+    color: 'gold',
     children: [
-      { id: 'fin-producao', label: 'Produção', icon: Award, href: `${B}/financeiro` },
-      { id: 'fin-comissoes', label: 'Comissões', icon: Receipt, href: `${B}/financeiro/comissoes` },
-      { id: 'fin-extrato', label: 'Extrato', icon: FileText, href: `${B}/financeiro/extrato` },
+      { id: 'com-pipeline', label: 'Pipeline Visual', icon: Filter, href: `${B}/funil`, badge: { text: '🔥', variant: 'gold' } },
+      { id: 'com-leads', label: 'Leads', icon: Users, href: `${B}/crm/leads` },
+      { id: 'com-crm', label: 'CRM', icon: Columns3, href: `${B}/crm` },
+      { id: 'com-crm-contatos', label: 'Contatos', icon: UserPlus, href: `${B}/crm/contacts` },
+      { id: 'com-crm-empresas', label: 'Empresas', icon: Building2, href: `${B}/crm/companies` },
+      { id: 'com-cotacoes', label: 'Cotações', icon: Receipt, href: `${B}/cotacoes` },
+      { id: 'com-propostas-fila', label: 'Fila de Propostas', icon: FileArchive, href: `${B}/propostas/fila` },
+      { id: 'com-propostas-ia', label: 'Scanner Inteligente', icon: ScanLine, href: `${B}/scanner`, badge: { text: 'IA', variant: 'gold' } },
+      { id: 'com-contratos', label: 'Contratos', icon: FileText, href: `${B}/contratos` },
+      { id: 'com-vendas', label: 'Vendas', icon: DollarSign, href: `${B}/vendas` },
+      { id: 'com-planos', label: 'Tabela de Preços', icon: Receipt, href: `${B}/planos` },
+      { id: 'com-crm-analytics', label: 'Analytics CRM', icon: BarChart3, href: `${B}/crm/metricas` },
+      { id: 'com-deals', label: 'Oportunidades', icon: Briefcase, href: `${B}/crm/deals`, badge: { text: 'NOVO', variant: 'gold' } },
     ],
   },
+
+  // ── MATERIAIS ──
   {
     id: 'materiais',
     label: 'Materiais',
@@ -136,37 +151,123 @@ const menuItems: SidebarItem[] = [
       { id: 'mat-upload', label: 'Meus Uploads', icon: Upload, href: `${B}/materiais/uploads` },
     ],
   },
+
+  // ── MARKETING & ADS ──
+  {
+    id: 'marketing-ads',
+    label: 'Marketing & Ads',
+    icon: Megaphone,
+    color: 'blue',
+    children: [
+      { id: 'mkt-metricas', label: 'Métricas & KPIs', icon: LineChart, href: `${B}/metricas` },
+      { id: 'mkt-performance', label: 'Performance', icon: Award, href: `${B}/performance` },
+      { id: 'mkt-relatorios', label: 'Relatórios', icon: BarChart3, href: `${B}/relatorios` },
+      { id: 'mkt-cockpit', label: 'Cockpit', icon: Gauge, href: `${B}/cockpit` },
+      { id: 'mkt-google-ga4', label: 'Google Analytics (GA4)', icon: TrendingUp, href: `${B}/analytics`, badge: { text: 'GA4', variant: 'danger' } },
+      { id: 'mkt-meta-visao', label: 'Meta Ads', icon: Target, href: `${B}/meta-ads` },
+    ],
+  },
+
+  // ── SOCIAL FLOW ──
+  {
+    id: 'social-flow',
+    label: 'Social Flow',
+    icon: Send,
+    color: 'blue',
+    children: [
+      { id: 'sf-dashboard', label: 'Dashboard', icon: LayoutDashboard, href: `${B}/social-flow` },
+      { id: 'sf-composer', label: 'Composer', icon: Sparkles, href: `${B}/social-flow/composer` },
+      { id: 'sf-calendario', label: 'Calendário', icon: Calendar, href: `${B}/social-flow/calendar` },
+      { id: 'sf-biblioteca', label: 'Biblioteca', icon: Image, href: `${B}/social-flow/library` },
+      { id: 'sf-aprovacao', label: 'Aprovação', icon: CheckSquare, href: `${B}/social-flow/approval` },
+      { id: 'sf-connect', label: 'Conectar Contas', icon: Link2, href: `${B}/social-flow/connect` },
+      { id: 'sf-analytics', label: 'Analytics', icon: LineChart, href: `${B}/social-flow/analytics` },
+    ],
+  },
+
+  // ── IA & AUTOMAÇÃO ──
+  {
+    id: 'ia-automacao',
+    label: 'IA & Automação',
+    icon: BrainCircuit,
+    color: 'gold',
+    children: [
+      { id: 'ia-perf', label: 'AI Performance', icon: Gauge, href: `${B}/ai-performance`, badge: { text: '5 Camadas', variant: 'gold' } },
+      { id: 'ia-perf-rules', label: 'Regras & Alertas', icon: ShieldAlert, href: `${B}/ai-performance` },
+      { id: 'ia-insights', label: 'Insights IA', icon: TrendingUp, href: `${B}/insights` },
+      { id: 'ia-scanner', label: 'Scanner Inteligente', icon: ScanLine, href: `${B}/scanner`, badge: { text: 'IA', variant: 'gold' } },
+      { id: 'ia-auto', label: 'Automações IA', icon: Sparkles, href: `${B}/automacao` },
+      { id: 'ia-workflows', label: 'Workflows CRM', icon: Route, href: `${B}/workflows` },
+    ],
+  },
+
+  // ── OPERAÇÕES ──
+  {
+    id: 'operacoes',
+    label: 'Operações',
+    icon: UsersRound,
+    children: [
+      { id: 'ops-clientes', label: 'Clientes', icon: Users, href: `${B}/clientes` },
+      { id: 'ops-documentos', label: 'Documentos', icon: FileArchive, href: `${B}/documentos` },
+      { id: 'ops-tarefas', label: 'Tarefas', icon: CheckSquare, href: `${B}/tarefas` },
+      { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${B}/indicacoes` },
+      { id: 'ops-renovacoes', label: 'Renovações', icon: CalendarClock, href: `${B}/renovacoes` },
+    ],
+  },
+
+  // ── TREINAMENTO ──
   {
     id: 'treinamento',
     label: 'Treinamento',
     icon: GraduationCap,
-    color: 'blue',
+    color: 'green',
     children: [
-      { id: 'training-hub', label: 'Central de Treinamento', icon: GraduationCap, href: `${B}/treinamento`, badge: { text: 'NOVO', variant: 'gold' } },
-      { id: 'training-tour', label: 'Tour da Plataforma', icon: Compass, href: `${B}/treinamento/tour` },
-      { id: 'training-product', label: 'Treinamento de Produto', icon: BookOpen, href: `${B}/treinamento/produto` },
-      { id: 'training-market', label: 'Mercado de Seguros', icon: Briefcase, href: `${B}/treinamento/mercado-seguros` },
+      { id: 'ops-treinamento-central', label: 'Central', icon: GraduationCap, href: `${B}/treinamento` },
+      { id: 'ops-treinamento-tour', label: 'Tour da Plataforma', icon: Compass, href: `${B}/treinamento/tour` },
+      { id: 'ops-treinamento-produto', label: 'Treinamento de Produto', icon: BookOpen, href: `${B}/treinamento/produto` },
+      { id: 'ops-treinamento-mercado', label: 'Mercado de Seguros', icon: Briefcase, href: `${B}/treinamento/mercado-seguros` },
     ],
   },
+
+  // ── COMUNICAÇÃO ──
   {
-    id: 'renovacoes',
-    label: 'Renovações',
-    icon: CalendarClock,
-    href: `${B}/renovacoes`,
-    badge: { text: '3', variant: 'warning' },
+    id: 'comunicacao',
+    label: 'Comunicação',
+    icon: MessagesSquare,
+    color: 'green',
+    children: [
+      { id: 'com-whatsapp', label: 'WhatsApp', icon: MessagesSquare, href: `${B}/whatsapp` },
+      { id: 'com-chat', label: 'Chat Equipe', icon: MessageSquare, href: `${B}/chat` },
+      { id: 'com-email', label: 'E-mail', icon: Mail, href: `${B}/email` },
+      { id: 'com-notificacoes', label: 'Notificações', icon: Bell, href: `${B}/notificacoes` },
+    ],
   },
+
+  // ── FINANCEIRO ──
   {
-    id: 'indicacoes',
-    label: 'Indicações',
-    icon: Link2,
-    href: `${B}/indicacoes`,
-    badge: { text: 'NOVO', variant: 'gold' },
+    id: 'financeiro',
+    label: 'Financeiro',
+    icon: Wallet,
+    color: 'gold',
+    children: [
+      { id: 'fin-visao', label: 'Visão Geral', icon: DollarSign, href: `${B}/financeiro` },
+      { id: 'fin-producao', label: 'Produção', icon: Award, href: `${B}/financeiro/producao`, badge: { text: 'NOVO', variant: 'gold' } },
+      { id: 'fin-comissoes', label: 'Comissões', icon: Receipt, href: `${B}/financeiro/comissoes` },
+      { id: 'fin-extrato', label: 'Extrato', icon: FileText, href: `${B}/financeiro/extrato` },
+      { id: 'fin-faturamento', label: 'Faturamento', icon: CreditCard, href: `${B}/financeiro/faturamento` },
+    ],
   },
+
+  // ── CONFIGURAÇÕES ──
   {
-    id: 'perfil',
-    label: 'Meu Perfil',
-    icon: User,
-    href: `${B}/perfil`,
+    id: 'configuracoes',
+    label: 'Configurações',
+    icon: Cog,
+    children: [
+      { id: 'config-geral', label: 'Geral', icon: Settings, href: `${B}/configuracoes` },
+      { id: 'config-perfil', label: 'Perfil', icon: User, href: `${B}/perfil` },
+      { id: 'config-seguranca', label: 'Segurança', icon: Shield, href: `${B}/seguranca` },
+    ],
   },
 ];
 
@@ -180,6 +281,8 @@ const badgeStyles: Record<BadgeVariant, string> = {
   success: 'bg-green-500/20 text-green-400',
   danger: 'bg-red-500 text-white',
   warning: 'bg-yellow-500/20 text-yellow-400',
+  blue: 'bg-blue-500/20 text-blue-400',
+  green: 'bg-green-500/20 text-green-400',
 };
 
 function resolveColors(item: SidebarItem, isHighlighted: boolean) {
@@ -220,6 +323,7 @@ export default function CorretorSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
+  const [closedMenus, setClosedMenus] = useState<Set<string>>(new Set());
   const [showConvite, setShowConvite] = useState(false);
   const [conviteEmail, setConviteEmail] = useState('');
   const [conviteLoading, setConviteLoading] = useState(false);
@@ -227,6 +331,29 @@ export default function CorretorSidebar() {
   const [conviteMsg, setConviteMsg] = useState('');
   const pathname = usePathname();
   const router = useRouter();
+  const { canSeeSidebarItem, loading: permLoading, permissions } = usePermissions();
+
+  // ─── Filtra menu por permissões RBAC ────
+  const filteredMenuItems = useMemo(() => {
+    // Enquanto carrega, mostrar apenas Visão Geral e Meu Perfil
+    if (permLoading || !permissions) {
+      return menuItems.filter((item) => item.id === 'visao-geral' || item.id === 'configuracoes');
+    }
+    return menuItems
+      .filter((item) => {
+        if (item.id === 'configuracoes') return true;
+        return canSeeSidebarItem(item.id);
+      })
+      .map((item) => {
+        if (!item.children?.length) return item;
+        const filteredChildren = item.children.filter((child) => {
+          const childKey = SIDEBAR_PERMISSION_MAP[child.id];
+          return !childKey || canSeeSidebarItem(child.id);
+        });
+        return { ...item, children: filteredChildren };
+      })
+      .filter((item) => !item.children || item.children.length > 0);
+  }, [canSeeSidebarItem, permLoading, permissions]);
 
   const isActive = (href: string) => pathname === href;
   const isChildActive = (item: SidebarItem) =>
@@ -235,15 +362,25 @@ export default function CorretorSidebar() {
   const toggleMenu = (id: string) => {
     setOpenMenus((prev) => {
       const next = new Set<string>();
-      // Close all other menus, toggle only the clicked one
       if (!prev.has(id)) next.add(id);
+      return next;
+    });
+    // Track explicitly closed menus (to override auto-open from active child)
+    setClosedMenus((prev) => {
+      const next = new Set(prev);
+      if (prev.has(id)) {
+        next.delete(id); // re-opening, remove from closed
+      } else {
+        next.add(id); // closing, track it
+      }
       return next;
     });
   };
 
-  // Reset manually opened menus when route changes — only keep the active parent open
+  // Reset manually opened/closed menus when route changes
   useEffect(() => {
     setOpenMenus(new Set());
+    setClosedMenus(new Set());
     setIsMobileOpen(false);
   }, [pathname]);
 
@@ -289,11 +426,14 @@ export default function CorretorSidebar() {
   };
 
   const effectiveOpen = new Set<string>();
-  // Only auto-open the parent whose child matches the current path
-  menuItems.forEach((item) => {
-    if (item.children && isChildActive(item)) effectiveOpen.add(item.id);
+  // Auto-open the parent whose child matches the current path,
+  // UNLESS the user explicitly closed it
+  filteredMenuItems.forEach((item) => {
+    if (item.children && isChildActive(item) && !closedMenus.has(item.id)) {
+      effectiveOpen.add(item.id);
+    }
   });
-  // Add manually toggled menus (but NOT ones that are no longer active)
+  // Add manually toggled open menus
   openMenus.forEach((id) => {
     effectiveOpen.add(id);
   });
@@ -304,7 +444,7 @@ export default function CorretorSidebar() {
 
   const renderMenu = (expanded: boolean, onNav?: () => void) => (
     <nav className="space-y-0.5 px-2">
-      {menuItems.map((item) => {
+      {filteredMenuItems.map((item) => {
         const Icon = item.icon;
         const hasChildren = !!item.children?.length;
         const isOpen = effectiveOpen.has(item.id);
@@ -412,10 +552,10 @@ export default function CorretorSidebar() {
         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group relative"
       >
         <UserPlus className="h-5 w-5 text-[#D4AF37] flex-shrink-0" />
-        {expanded && <span className="text-sm text-[#D4AF37] font-semibold">Convidar Amigo</span>}
+        {expanded && <span className="text-sm text-[#D4AF37] font-semibold">Convidar Corretor</span>}
         {!expanded && (
           <div className="absolute left-full ml-2 px-3 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60]">
-            <p className="text-sm font-medium text-[#D4AF37]">Convidar Amigo</p>
+            <p className="text-sm font-medium text-[#D4AF37]">Convidar Corretor</p>
           </div>
         )}
       </button>
@@ -493,7 +633,7 @@ export default function CorretorSidebar() {
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="lg:hidden fixed bottom-4 left-4 h-14 w-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#F6E05E] flex items-center justify-center shadow-lg shadow-[#D4AF37]/30 z-50"
       >
-        {isMobileOpen ? <X className="h-6 w-6 text-black" /> : <Kanban className="h-6 w-6 text-black" />}
+        {isMobileOpen ? <X className="h-6 w-6 text-black" /> : <LayoutDashboard className="h-6 w-6 text-black" />}
       </button>
 
       {/* MOBILE SIDEBAR */}
@@ -538,7 +678,7 @@ export default function CorretorSidebar() {
         )}
       </AnimatePresence>
 
-      {/* ── MODAL CONVIDAR AMIGO ── */}
+      {/* ── MODAL CONVIDAR CORRETOR ── */}
       <AnimatePresence>
         {showConvite && (
           <>
@@ -561,7 +701,7 @@ export default function CorretorSidebar() {
                     <UserPlus className="h-5 w-5 text-[#D4AF37]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-white">Convidar Amigo</h3>
+                    <h3 className="text-base font-bold text-white">Convidar Corretor</h3>
                     <p className="text-xs text-white/40">Envie um convite para ser corretor</p>
                   </div>
                 </div>

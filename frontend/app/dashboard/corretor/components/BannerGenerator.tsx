@@ -422,7 +422,7 @@ const AngIco = ({ t, className }: { t: string; className?: string }) => {
 };
 
 /* ═══════════ COMPONENT ═══════════ */
-export default function BannerGenerator({ corretorId }: { corretorId: string }) {
+export default function BannerGenerator({ corretorId }: { corretorId: string | null }) {
   const bannerRef = useRef<HTMLDivElement>(null);
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -603,7 +603,7 @@ export default function BannerGenerator({ corretorId }: { corretorId: string }) 
         if (!blob) { setStatus('error'); return; }
         const fd = new FormData();
         fd.append('file', blob, 'banner.png');
-        fd.append('corretorId', corretorId);
+        fd.append('corretorId', corretorId || 'admin');
         fd.append('nomeCorretor', nome || 'Corretor');
         fd.append('operadora', op.id);
         fd.append('templateId', template);

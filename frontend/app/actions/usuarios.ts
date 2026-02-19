@@ -30,6 +30,7 @@ export interface Usuario {
         cpf: string | null;
         telefone: string | null;
         whatsapp: string | null;
+        grade_comissionamento?: string | null;
     };
 }
 
@@ -101,6 +102,7 @@ export async function getUsuarios() {
                     cpf: corretor.cpf,
                     telefone: corretor.telefone,
                     whatsapp: corretor.whatsapp,
+                    grade_comissionamento: corretor.grade_comissionamento,
                 },
             }));
 
@@ -111,7 +113,7 @@ export async function getUsuarios() {
         // Busca todos os corretores para fazer o join
         const { data: corretores, error: corretoresError } = await supabase
             .from('corretores')
-            .select('id, nome, role, ativo, cpf, telefone, whatsapp, email, created_at, updated_at');
+            .select('id, nome, role, ativo, cpf, telefone, whatsapp, email, created_at, updated_at, grade_comissionamento');
 
         if (corretoresError) {
             logger.warn('[getUsuarios] Erro ao buscar corretores', { error: corretoresError.message });
@@ -150,6 +152,7 @@ export async function getUsuarios() {
                         cpf: corretor.cpf,
                         telefone: corretor.telefone,
                         whatsapp: corretor.whatsapp,
+                        grade_comissionamento: corretor.grade_comissionamento,
                     },
                 });
             });
@@ -225,6 +228,7 @@ export async function getUsuarios() {
                     cpf: corretor.cpf,
                     telefone: corretor.telefone,
                     whatsapp: corretor.whatsapp,
+                    grade_comissionamento: corretor.grade_comissionamento,
                 } : undefined,
             };
         });

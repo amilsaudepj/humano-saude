@@ -18,5 +18,14 @@ export async function POST() {
     path: '/',
   });
 
+  // Limpar cookie marcador de sessão admin
+  response.cookies.set('admin_session', '', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
+
   return response;
 }

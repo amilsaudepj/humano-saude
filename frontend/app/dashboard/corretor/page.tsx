@@ -5,7 +5,7 @@ import { getCorretorById } from '@/app/actions/corretor-ops';
 import { verifyToken } from '@/lib/auth-jwt';
 
 export const metadata = {
-  title: 'Dashboard | Corretor Humano Saúde',
+  title: 'Visão Geral · Corretor | Humano Saúde',
 };
 
 export default async function CorretorDashboardPage() {

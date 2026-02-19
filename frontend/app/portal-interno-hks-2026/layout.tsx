@@ -1,16 +1,71 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import DockSidebar from '../components/DockSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import GuidedTour from '@/app/components/tour/GuidedTour';
+
+// Mapa de títulos por rota — Admin
+const ADMIN_TITLE_MAP: Record<string, string> = {
+  '/portal-interno-hks-2026': 'Dashboard',
+  '/portal-interno-hks-2026/leads': 'Leads',
+  '/portal-interno-hks-2026/pipeline': 'Pipeline',
+  '/portal-interno-hks-2026/crm': 'CRM',
+  '/portal-interno-hks-2026/crm/contacts': 'CRM · Contatos',
+  '/portal-interno-hks-2026/crm/companies': 'CRM · Empresas',
+  '/portal-interno-hks-2026/crm/deals': 'CRM · Deals',
+  '/portal-interno-hks-2026/crm/analytics': 'CRM · Analytics',
+  '/portal-interno-hks-2026/cotacoes': 'Cotações',
+  '/portal-interno-hks-2026/propostas/fila': 'Fila de Propostas',
+  '/portal-interno-hks-2026/propostas/ia': 'Scanner Inteligente',
+  '/portal-interno-hks-2026/contratos': 'Contratos',
+  '/portal-interno-hks-2026/vendas': 'Vendas',
+  '/portal-interno-hks-2026/planos': 'Tabela de Preços',
+  '/portal-interno-hks-2026/materiais': 'Materiais de Vendas',
+  '/portal-interno-hks-2026/materiais/banners': 'Banners',
+  '/portal-interno-hks-2026/materiais/galeria': 'Galeria',
+  '/portal-interno-hks-2026/materiais/ia-clone': 'IA Clone',
+  '/portal-interno-hks-2026/materiais/uploads': 'Uploads',
+  '/portal-interno-hks-2026/meta-ads': 'Meta Ads',
+  '/portal-interno-hks-2026/cockpit': 'Social Flow',
+  '/portal-interno-hks-2026/performance': 'Performance IA',
+  '/portal-interno-hks-2026/regras-ia': 'Regras IA',
+  '/portal-interno-hks-2026/insights': 'Insights',
+  '/portal-interno-hks-2026/scanner': 'Scanner',
+  '/portal-interno-hks-2026/automacao': 'Automações',
+  '/portal-interno-hks-2026/workflows': 'Workflows',
+  '/portal-interno-hks-2026/clientes': 'Clientes',
+  '/portal-interno-hks-2026/documentos': 'Documentos',
+  '/portal-interno-hks-2026/tarefas': 'Tarefas',
+  '/portal-interno-hks-2026/corretores/painel': 'Corretores',
+  '/portal-interno-hks-2026/renovacoes': 'Renovações',
+  '/portal-interno-hks-2026/whatsapp': 'WhatsApp',
+  '/portal-interno-hks-2026/chat': 'Chat',
+  '/portal-interno-hks-2026/email': 'E-mail',
+  '/portal-interno-hks-2026/notificacoes': 'Notificações',
+  '/portal-interno-hks-2026/producao': 'Produção',
+  '/portal-interno-hks-2026/financeiro': 'Financeiro',
+  '/portal-interno-hks-2026/faturamento': 'Faturamento',
+  '/portal-interno-hks-2026/analytics': 'Analytics',
+  '/portal-interno-hks-2026/configuracoes': 'Configurações',
+  '/portal-interno-hks-2026/usuarios': 'Usuários',
+  '/portal-interno-hks-2026/integracoes': 'Integrações',
+  '/portal-interno-hks-2026/seguranca': 'Segurança',
+};
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const title = ADMIN_TITLE_MAP[pathname] || 'Painel Admin';
+    document.title = `${title} · Admin | Humano Saúde`;
+  }, [pathname]);
   return (
     <div className="admin-panel relative min-h-screen bg-[#050505] text-gray-100">
       {/* Background Effects - Black Piano Premium com Gold Premium */}

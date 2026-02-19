@@ -26,11 +26,59 @@ type GuidedTourProps = {
 
 const TOUR_VERSION = 'v3';
 
+// Fallback to localStorage keys for instant read, but DB is source of truth
 function getStorageKeys(role: TourRole) {
   return {
     hide: `guided-tour:${role}:${TOUR_VERSION}:hide`,
     completed: `guided-tour:${role}:${TOUR_VERSION}:completed`,
   };
+}
+
+// Load tour preferences from DB (with localStorage fallback for speed)
+async function loadTourPrefs(role: TourRole): Promise<{ hide: boolean; completed: boolean }> {
+  try {
+    const res = await fetch(`/api/tour-preferences?role=${role}&version=${TOUR_VERSION}`);
+    if (res.ok) {
+      const data = await res.json();
+      // Sync to localStorage for fast startup
+      const keys = getStorageKeys(role);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(keys.hide, data.hide ? '1' : '0');
+        window.localStorage.setItem(keys.completed, data.completed ? '1' : '0');
+      }
+      return { hide: !!data.hide, completed: !!data.completed };
+    }
+  } catch {
+    // Fallback to localStorage
+  }
+  const keys = getStorageKeys(role);
+  if (typeof window !== 'undefined') {
+    return {
+      hide: window.localStorage.getItem(keys.hide) === '1',
+      completed: window.localStorage.getItem(keys.completed) === '1',
+    };
+  }
+  return { hide: false, completed: false };
+}
+
+// Save tour preferences to DB + localStorage
+async function saveTourPrefs(role: TourRole, prefs: { hide?: boolean; completed?: boolean }) {
+  // Save to localStorage immediately for instant local reads
+  const keys = getStorageKeys(role);
+  if (typeof window !== 'undefined') {
+    if (prefs.hide !== undefined) window.localStorage.setItem(keys.hide, prefs.hide ? '1' : '0');
+    if (prefs.completed !== undefined) window.localStorage.setItem(keys.completed, prefs.completed ? '1' : '0');
+  }
+  // Persist to DB
+  try {
+    await fetch('/api/tour-preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, version: TOUR_VERSION, ...prefs }),
+    });
+  } catch {
+    // DB save failed, localStorage still works
+  }
 }
 
 function getStepsForRoute(role: TourRole, pathname: string): TourStep[] {
@@ -170,23 +218,30 @@ export default function GuidedTour({
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [isBrowser, pathname, router, steps.length]);
 
+  // Load tour preferences from DB on mount / route change
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      if (steps.length === 0) {
-        setOpen(false);
-        setStepIndex(0);
-        return;
-      }
+    if (steps.length === 0) {
+      setOpen(false);
+      setStepIndex(0);
+      return;
+    }
 
-      const keys = getStorageKeys(role);
-      const hide = window.localStorage.getItem(keys.hide) === '1';
-      const completed = window.localStorage.getItem(keys.completed) === '1';
-      if (!hide && !completed) {
+    let cancelled = false;
+
+    const checkPrefs = async () => {
+      const prefs = await loadTourPrefs(role);
+      if (cancelled) return;
+      if (!prefs.hide && !prefs.completed) {
         setOpen(true);
       }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      checkPrefs();
     }, 250);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(timeoutId);
     };
   }, [pathname, role, steps.length]);
@@ -453,12 +508,12 @@ export default function GuidedTour({
   }, [isBrowser, open, targetRect]);
 
   const handleClose = (completed = false) => {
-    const keys = getStorageKeys(role);
+    // Save to DB + localStorage
     if (dontShowAgain) {
-      window.localStorage.setItem(keys.hide, '1');
+      saveTourPrefs(role, { hide: true });
     }
     if (completed) {
-      window.localStorage.setItem(keys.completed, '1');
+      saveTourPrefs(role, { completed: true });
     }
     setOpen(false);
   };

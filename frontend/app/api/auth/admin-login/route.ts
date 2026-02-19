@@ -83,6 +83,16 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
+    // Cookie marcador legível pelo JavaScript do cliente
+    // (não contém dados sensíveis — apenas sinaliza sessão admin ativa)
+    response.cookies.set('admin_session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24,
+      path: '/',
+    });
+
     logger.info('Login admin bem-sucedido', { email: ADMIN_EMAIL });
 
     return response;

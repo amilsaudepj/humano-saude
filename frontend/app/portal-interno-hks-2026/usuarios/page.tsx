@@ -44,6 +44,15 @@ import {
     type UsuarioStats,
 } from '@/app/actions/usuarios';
 import { toast } from 'sonner';
+import PermissionsSheet from '@/app/components/PermissionsSheet';
+import { assignGradeToCorretor, type GradeId } from '@/app/actions/grades';
+
+const GRADE_OPTIONS: { id: GradeId; label: string; color: string }[] = [
+    { id: 'interno', label: 'Interno', color: 'bg-green-500/10 text-green-400 border-green-500/30' },
+    { id: 'externo', label: 'Externo', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+    { id: 'personalizado_1', label: 'Personalizado 1', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+    { id: 'personalizado_2', label: 'Personalizado 2', color: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
+];
 
 // ─── Modal de Edição ──────────────────────────────────
 function EditarModal({ usuario, onClose, onSave }: { usuario: Usuario; onClose: () => void; onSave: () => void }) {
@@ -338,7 +347,26 @@ function ConfirmarModal({
 function DetalhesModal({ usuario, onClose, onAction }: { usuario: Usuario; onClose: () => void; onAction: () => void }) {
     const [modalAberto, setModalAberto] = useState<'editar' | 'senha' | 'suspender' | 'reativar' | 'excluir' | null>(null);
     const [reenviandoEmail, setReenviandoEmail] = useState(false);
+    const [showPermissions, setShowPermissions] = useState(false);
+    const [selectedGrade, setSelectedGrade] = useState<string>(
+        usuario.corretor?.grade_comissionamento || 'interno'
+    );
+    const [savingGrade, setSavingGrade] = useState(false);
     const isSuspenso = usuario.banned_until && new Date(usuario.banned_until) > new Date();
+
+    const handleChangeGrade = async (gradeId: string) => {
+        if (!usuario.corretor) return;
+        setSavingGrade(true);
+        setSelectedGrade(gradeId);
+        const result = await assignGradeToCorretor(usuario.corretor.id, gradeId);
+        if (result.success) {
+            toast.success(`Grade alterada para "${GRADE_OPTIONS.find(g => g.id === gradeId)?.label}"`);
+            onAction();
+        } else {
+            toast.error(result.error || 'Erro ao alterar grade');
+        }
+        setSavingGrade(false);
+    };
 
     const handleSuspender = async () => {
         const result = await suspenderUsuario(usuario.id);
@@ -498,10 +526,47 @@ function DetalhesModal({ usuario, onClose, onAction }: { usuario: Usuario; onClo
                                 </p>
                             </div>
                         )}
+
+                        {/* Grade de Comissionamento */}
+                        {usuario.corretor && (
+                            <div className="bg-white/[0.03] rounded-xl p-3">
+                                <span className="text-xs text-white/40 uppercase block mb-2">Grade de Comissionamento</span>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {GRADE_OPTIONS.map((grade) => (
+                                        <button
+                                            key={grade.id}
+                                            onClick={() => handleChangeGrade(grade.id)}
+                                            disabled={savingGrade}
+                                            className={cn(
+                                                'px-3 py-2 rounded-lg border text-xs font-semibold transition-all',
+                                                selectedGrade === grade.id
+                                                    ? cn(grade.color, 'ring-1 ring-white/20')
+                                                    : 'bg-white/[0.02] text-white/40 border-white/[0.06] hover:bg-white/[0.05]',
+                                                savingGrade && 'opacity-50 cursor-not-allowed',
+                                            )}
+                                        >
+                                            {selectedGrade === grade.id && <Check className="inline h-3 w-3 mr-1" />}
+                                            {grade.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Ações */}
                     <div className="space-y-2">
+                        {/* Permissões RBAC — apenas para corretores vinculados */}
+                        {usuario.corretor && (
+                            <button
+                                onClick={() => setShowPermissions(true)}
+                                className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] transition-all font-medium"
+                            >
+                                <Shield className="h-4 w-4" />
+                                Ajustar Permissões
+                            </button>
+                        )}
+
                         <button
                             onClick={() => setModalAberto('editar')}
                             className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-white transition-all"
@@ -602,6 +667,21 @@ function DetalhesModal({ usuario, onClose, onAction }: { usuario: Usuario; onClo
                     />
                 )}
             </AnimatePresence>
+
+            {/* Sheet de Permissões RBAC */}
+            {usuario.corretor && (
+                <PermissionsSheet
+                    open={showPermissions}
+                    onClose={() => setShowPermissions(false)}
+                    corretor={{
+                        id: usuario.corretor.id,
+                        nome: usuario.corretor.nome,
+                        email: usuario.email,
+                        role: usuario.corretor.role,
+                    }}
+                    onSaved={onAction}
+                />
+            )}
         </>
     );
 }

@@ -24,8 +24,11 @@ const jetbrainsMono = JetBrains_Mono({
 // Fallback para serif se não estiver instalada no sistema
 
 export const metadata: Metadata = {
-  title: "Humano Saúde - Enterprise",
-  description: "Sistema completo de gestão e cotações para corretores de saúde com IA - Private Banking",
+  title: {
+    default: "Humano Saúde",
+    template: "%s | Humano Saúde",
+  },
+  description: "Sistema completo de gestão e cotações para corretores de saúde com IA",
   keywords: ["saúde", "corretora", "cotações", "IA", "broker", "private banking", "luxo"],
   authors: [{ name: "Humano Saúde" }],
   creator: "Humano Saúde",

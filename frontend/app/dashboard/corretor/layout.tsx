@@ -8,6 +8,80 @@ import { Shield, ArrowRight, LogOut, Clock, FileText, Landmark } from 'lucide-re
 import { getCorretorIdFromCookie } from './hooks/useCorretorToken';
 import GuidedTour from '@/app/components/tour/GuidedTour';
 
+// Mapa de títulos por rota — Corretor
+const CORRETOR_TITLE_MAP: Record<string, string> = {
+  '/dashboard/corretor': 'Visão Geral',
+  '/dashboard/corretor/login': 'Login',
+  '/dashboard/corretor/cadastro': 'Cadastro',
+  '/dashboard/corretor/onboarding': 'Onboarding',
+  // Comercial
+  '/dashboard/corretor/funil': 'Pipeline Visual',
+  '/dashboard/corretor/propostas/fila': 'Fila de Propostas',
+  '/dashboard/corretor/scanner': 'Scanner Inteligente',
+  '/dashboard/corretor/cotacoes': 'Cotações',
+  '/dashboard/corretor/planos': 'Tabela de Preços',
+  '/dashboard/corretor/crm': 'CRM',
+  '/dashboard/corretor/crm/leads': 'Leads',
+  '/dashboard/corretor/crm/contacts': 'Contatos',
+  '/dashboard/corretor/crm/companies': 'Empresas',
+  '/dashboard/corretor/crm/deals': 'Oportunidades',
+  '/dashboard/corretor/crm/metricas': 'Analytics CRM',
+  '/dashboard/corretor/contratos': 'Contratos',
+  '/dashboard/corretor/vendas': 'Vendas',
+  // Materiais
+  '/dashboard/corretor/materiais': 'Materiais de Vendas',
+  '/dashboard/corretor/materiais/banners': 'CriativoPRO',
+  '/dashboard/corretor/materiais/galeria': 'Galeria',
+  '/dashboard/corretor/materiais/ia-clone': 'IA Clone',
+  '/dashboard/corretor/materiais/uploads': 'Uploads',
+  // Marketing & Ads
+  '/dashboard/corretor/metricas': 'Métricas & KPIs',
+  '/dashboard/corretor/performance': 'Performance',
+  '/dashboard/corretor/relatorios': 'Relatórios',
+  '/dashboard/corretor/cockpit': 'Cockpit',
+  '/dashboard/corretor/analytics': 'Google Analytics',
+  '/dashboard/corretor/meta-ads': 'Meta Ads',
+  // Social Flow
+  '/dashboard/corretor/social-flow': 'Social Flow',
+  '/dashboard/corretor/social-flow/composer': 'Composer',
+  '/dashboard/corretor/social-flow/calendar': 'Calendário',
+  '/dashboard/corretor/social-flow/library': 'Biblioteca',
+  '/dashboard/corretor/social-flow/approval': 'Aprovação',
+  '/dashboard/corretor/social-flow/connect': 'Conectar Contas',
+  '/dashboard/corretor/social-flow/analytics': 'Analytics Social',
+  // IA & Automação
+  '/dashboard/corretor/ai-performance': 'AI Performance',
+  '/dashboard/corretor/insights': 'Insights IA',
+  '/dashboard/corretor/automacao': 'Automações IA',
+  '/dashboard/corretor/workflows': 'Workflows CRM',
+  // Operações
+  '/dashboard/corretor/clientes': 'Clientes',
+  '/dashboard/corretor/documentos': 'Documentos',
+  '/dashboard/corretor/tarefas': 'Tarefas',
+  '/dashboard/corretor/indicacoes': 'Indicações',
+  '/dashboard/corretor/renovacoes': 'Renovações',
+  // Treinamento
+  '/dashboard/corretor/treinamento': 'Treinamento',
+  '/dashboard/corretor/treinamento/tour': 'Tour da Plataforma',
+  '/dashboard/corretor/treinamento/produto': 'Treinamento de Produto',
+  '/dashboard/corretor/treinamento/mercado-seguros': 'Mercado de Seguros',
+  // Comunicação
+  '/dashboard/corretor/whatsapp': 'WhatsApp',
+  '/dashboard/corretor/chat': 'Chat Equipe',
+  '/dashboard/corretor/email': 'E-mail',
+  '/dashboard/corretor/notificacoes': 'Notificações',
+  // Financeiro
+  '/dashboard/corretor/financeiro': 'Financeiro',
+  '/dashboard/corretor/financeiro/comissoes': 'Comissões',
+  '/dashboard/corretor/financeiro/producao': 'Produção',
+  '/dashboard/corretor/financeiro/extrato': 'Extrato',
+  '/dashboard/corretor/financeiro/faturamento': 'Faturamento',
+  // Configurações
+  '/dashboard/corretor/configuracoes': 'Configurações',
+  '/dashboard/corretor/perfil': 'Meu Perfil',
+  '/dashboard/corretor/seguranca': 'Segurança',
+};
+
 export default function CorretorLayout({
   children,
 }: {
@@ -44,6 +118,12 @@ export default function CorretorLayout({
         setOnboardingCompleto(true); // fallback
       });
   }, [isPublicPage, pathname]);
+
+  // Atualizar título da aba do navegador
+  useEffect(() => {
+    const title = CORRETOR_TITLE_MAP[pathname] || 'Painel do Corretor';
+    document.title = `${title} · Corretor | Humano Saúde`;
+  }, [pathname]);
 
   // Páginas públicas (login/cadastro/onboarding) renderizam sem sidebar
   if (isPublicPage) {

@@ -18,8 +18,12 @@ import {
   badgeStyles,
   resolveColors,
   footerItems,
+  type SubItem,
 } from "@/lib/sidebar-config"
 import { useSidebarNav, useSidebarConvite } from "./hooks/useSidebar"
+import { usePermissions } from "@/hooks/use-permissions"
+import { useMemo } from "react"
+import { SIDEBAR_PERMISSION_MAP } from "@/lib/permissions"
 
 const SIDEBAR_COLLAPSED_WIDTH = 72
 const SIDEBAR_EXPANDED_WIDTH = 332
@@ -31,6 +35,24 @@ const SIDEBAR_EXPANDED_WIDTH = 332
 export default function DockSidebar() {
   const nav = useSidebarNav()
   const convite = useSidebarConvite()
+  const { canSeeSidebarItem, isAdmin, loading: permLoading, permissions } = usePermissions()
+
+  // ─── Filtra itens pela permissão do usuário ─────
+  // Se admin, loading, ou sem permissions definidas → mostra tudo
+  const filteredSidebarItems = useMemo(() => {
+    if (isAdmin || permLoading || !permissions) return sidebarItems
+    return sidebarItems
+      .filter((item) => canSeeSidebarItem(item.id))
+      .map((item) => {
+        if (!item.children?.length) return item
+        const filteredChildren = item.children.filter((child: SubItem) => {
+          const childKey = SIDEBAR_PERMISSION_MAP[child.id]
+          return !childKey || canSeeSidebarItem(child.id)
+        })
+        return { ...item, children: filteredChildren }
+      })
+      .filter((item) => !item.children || item.children.length > 0)
+  }, [canSeeSidebarItem, isAdmin, permLoading, permissions])
 
   // ─── Render menu items ──────────────────
   const renderSubItems = (
@@ -106,7 +128,7 @@ export default function DockSidebar() {
 
   const renderMenu = (expanded: boolean, onNav?: () => void) => (
     <nav className="space-y-0.5 px-2">
-      {sidebarItems.map((item) => {
+      {filteredSidebarItems.map((item) => {
         const Icon = item.icon
         const hasChildren = !!item.children?.length
         const isOpen = hasChildren ? nav.isMenuOpen(item) : false

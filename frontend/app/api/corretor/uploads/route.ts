@@ -7,19 +7,27 @@ const supabase = createServiceClient();
 export async function GET(req: NextRequest) {
   try {
     const corretorId = req.nextUrl.searchParams.get('corretorId');
-    if (!corretorId) {
-      return NextResponse.json({ error: 'corretorId obrigatório' }, { status: 400 });
-    }
+    const all = req.nextUrl.searchParams.get('all');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('corretor_uploads')
       .select('*')
-      .eq('corretor_id', corretorId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
+    if (all === 'true') {
+      // Admin: retorna todos os uploads
+      query = query.limit(500);
+    } else if (corretorId) {
+      query = query.eq('corretor_id', corretorId);
+    } else {
+      return NextResponse.json({ error: 'corretorId obrigatório' }, { status: 400 });
+    }
+
+    const { data, error } = await query;
+
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ uploads: data ?? [] });
+    return NextResponse.json({ success: true, uploads: data ?? [] });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erro interno' },
