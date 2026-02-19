@@ -469,6 +469,9 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Alias para uso direto como middleware (Next.js espera export named 'middleware')
+export { proxy as middleware };
+
 export const config = {
   matcher: [
     '/portal-interno-hks-2026/:path*',
