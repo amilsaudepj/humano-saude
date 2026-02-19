@@ -36,9 +36,9 @@ export default function AISimulator() {
             <span className="inline-block px-4 py-1.5 bg-[#B8941F]/10 text-[#B8941F] rounded-full text-xs font-bold uppercase tracking-[3px] mb-6 border border-[#B8941F]/20">
               Eficiência nos benefícios
             </span>
-            <h3 className="text-4xl lg:text-5xl font-black uppercase text-black leading-[1.1] mb-6" style={{ fontFamily: 'Cinzel, serif' }}>
-              O FIM DO<br />
-              <span className="text-[#D4AF37]">CUSTO INEFICIENTE</span>
+            <h3 className="text-4xl lg:text-5xl font-black text-black leading-[1.1] mb-6" style={{ fontFamily: 'Cinzel, serif' }}>
+              O fim do<br />
+              <span className="text-[#B8941F]">custo ineficiente</span>
             </h3>
             <p className="text-lg text-gray-500 leading-relaxed mb-10">
               Nossa IA analisa em tempo real o mercado para identificar a{' '}
@@ -58,17 +58,17 @@ export default function AISimulator() {
 
           {/* Simulador */}
           <div className="lg:col-span-3">
-            <div className="relative bg-black h-[420px] lg:h-[480px] rounded-3xl border border-[#D4AF37]/28 overflow-hidden shadow-2xl shadow-black/30">
+            <div className="relative bg-black h-[420px] lg:h-[480px] rounded-3xl border border-[#B8941F]/15 overflow-hidden shadow-2xl shadow-black/30">
               
               {/* Glow de fundo */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#D4AF37]/12 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#B8941F]/5 rounded-full blur-3xl pointer-events-none" />
 
               {/* Logo Central com anéis */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[5]">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="absolute w-28 h-28 border border-[#D4AF37]/60 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-                  <div className="absolute w-48 h-48 border border-[#D4AF37]/35 rounded-full animate-pulse" style={{ animationDuration: '4s' }} />
-                  <div className="absolute w-72 h-72 border border-[#D4AF37]/18 rounded-full" />
+                  <div className="absolute w-28 h-28 border border-[#B8941F]/40 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+                  <div className="absolute w-48 h-48 border border-[#B8941F]/15 rounded-full animate-pulse" style={{ animationDuration: '4s' }} />
+                  <div className="absolute w-72 h-72 border border-[#B8941F]/8 rounded-full" />
                 </div>
                 <img
                   src="/images/logos/LOGO 1 SEM FUNDO.png"
@@ -86,8 +86,8 @@ export default function AISimulator() {
                   key={step.id}
                   className={`absolute ${step.position} px-4 py-2.5 rounded-lg transition-all duration-500 backdrop-blur-md z-10 ${
                     step.isSuccess
-                      ? 'bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] text-black font-bold text-sm px-6 py-3 shadow-xl shadow-[#D4AF37]/45'
-                      : 'bg-[#D4AF37]/8 border border-[#D4AF37]/30 text-[#E6C76A] text-xs font-medium tracking-wide'
+                      ? 'bg-[#B8941F] text-black font-bold text-sm px-6 py-3 shadow-lg shadow-[#B8941F]/30'
+                      : 'bg-white/5 border border-[#B8941F]/20 text-[#B8941F]/80 text-xs font-medium tracking-wide'
                   } ${
                     activeStep >= i ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                   }`}
@@ -97,10 +97,10 @@ export default function AISimulator() {
               ))}
 
               {/* Corner accents */}
-              <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-[#D4AF37]/55 rounded-tl-lg" />
-              <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[#D4AF37]/55 rounded-tr-lg" />
-              <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-[#D4AF37]/55 rounded-bl-lg" />
-              <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-[#D4AF37]/55 rounded-br-lg" />
+              <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-[#B8941F]/30 rounded-tl-lg" />
+              <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[#B8941F]/30 rounded-tr-lg" />
+              <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-[#B8941F]/30 rounded-bl-lg" />
+              <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-[#B8941F]/30 rounded-br-lg" />
             </div>
           </div>
         </div>

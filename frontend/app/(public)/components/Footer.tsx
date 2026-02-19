@@ -91,12 +91,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#depoimentos" className="text-gray-400 hover:text-gold-400 transition-colors">
+                <Link href="#testimonials" className="text-gray-400 hover:text-gold-400 transition-colors">
                   Depoimentos
                 </Link>
               </li>
               <li>
-                <Link href="#duvidas" className="text-gray-400 hover:text-gold-400 transition-colors">
+                <Link href="#faq" className="text-gray-400 hover:text-gold-400 transition-colors">
                   Dúvidas Frequentes
                 </Link>
               </li>

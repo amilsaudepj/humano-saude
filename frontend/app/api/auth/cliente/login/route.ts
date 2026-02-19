@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { createServiceClient } from '@/lib/supabase';
 import { signToken } from '@/lib/auth-jwt';
 import { checkRateLimit, loginLimiter } from '@/lib/rate-limit';
+import { registrarLogin } from '@/lib/login-tracker';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest) {
       .from('portal_client_accounts')
       .update({ ultimo_login_em: new Date().toISOString() })
       .eq('id', account.id);
+
+    // Registrar login em user_login_logs para auditoria (não bloqueante)
+    try {
+      await registrarLogin(String(account.email), 'user', request, String(account.id));
+    } catch {
+      // Não atrapalha o fluxo de login — registrarLogin já faz log interno em caso de erro
+    }
 
     const token = await signToken({
       email: String(account.email),

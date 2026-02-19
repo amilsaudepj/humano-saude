@@ -5,7 +5,6 @@ import "./globals.css";
 import MetaPixel from "./components/MetaPixel";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import GoogleTagManager, { GoogleTagManagerNoScript } from "./components/GoogleTagManager";
-import HotjarInit from "./components/HotjarInit";
 
 // Inter para corpo de texto
 const inter = Inter({
@@ -25,11 +24,9 @@ const jetbrainsMono = JetBrains_Mono({
 // Fallback para serif se não estiver instalada no sistema
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://humanosaude.com.br"),
-  title: "Humano Saúde | Reduza até 40% no Plano de Saúde",
-  description:
-    "Especialistas em redução de custos de planos de saúde Individual, Familiar e Empresarial. Análise com IA em 10 minutos.",
-  keywords: ["plano de saúde", "redução de custos", "plano empresarial", "MEI", "PME", "Humano Saúde"],
+  title: "Humano Saúde - Enterprise",
+  description: "Sistema completo de gestão e cotações para corretores de saúde com IA - Private Banking",
+  keywords: ["saúde", "corretora", "cotações", "IA", "broker", "private banking", "luxo"],
   authors: [{ name: "Humano Saúde" }],
   creator: "Humano Saúde",
   publisher: "Humano Saúde",
@@ -57,24 +54,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: "https://humanosaude.com.br",
-    title: "Humano Saúde | Economia Inteligente em Planos de Saúde",
-    description:
-      "Reduza até 40% mantendo sua rede hospitalar. Atendimento especializado.",
+    title: "Humano Saúde - Broker OS",
+    description: "Sistema completo de gestão e cotações para corretores de saúde com IA",
     siteName: "Humano Saúde",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Humano Saúde - Corretora Especializada",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Humano Saúde | Reduza até 40% no Plano de Saúde",
-    description: "Análise com IA em 10 minutos. Sem burocracia.",
-    images: ["/og-image.png"],
   },
 };
 
@@ -108,7 +90,6 @@ export default function RootLayout({
       >
         <GoogleTagManagerNoScript />
         <GoogleAnalytics />
-        <HotjarInit />
         {children}
       </body>
     </html>

@@ -237,8 +237,16 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'ops-clientes-portal', label: 'Clientes Portal', icon: UsersRound, href: `${P}/clientes-portal`, badge: { text: 'NOVO', variant: 'gold' } },
       { id: 'ops-documentos', label: 'Documentos', icon: FileArchive, href: `${P}/documentos` },
       { id: 'ops-tarefas', label: 'Tarefas', icon: CheckSquare, href: `${P}/tarefas` },
-      { id: 'ops-corretores', label: 'Corretores (Solicitações)', icon: Briefcase, href: `${P}/corretores` },
-      { id: 'ops-corretores-convites', label: 'Corretores (Convites)', icon: UserPlus, href: `${P}/corretores/convites` },
+      {
+        id: 'ops-corretores',
+        label: 'Corretores',
+        icon: Briefcase,
+        children: [
+          { id: 'corr-painel', label: 'Painel de Corretores', icon: Users, href: `${P}/corretores/painel` },
+          { id: 'corr-solicitacoes', label: 'Solicitações', icon: Clock, href: `${P}/corretores/solicitacoes` },
+          { id: 'corr-convites', label: 'Convites', icon: UserPlus, href: `${P}/corretores/convites` },
+        ],
+      },
       { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${P}/indicacoes` },
       { id: 'ops-treinamento', label: 'Treinamento', icon: GraduationCap, href: `${P}/treinamento` },
       { id: 'ops-treinamento-tour', label: 'Tour da Plataforma', icon: Compass, href: `${P}/treinamento/tour` },
@@ -280,6 +288,7 @@ export const sidebarItems: SidebarItem[] = [
     children: [
       { id: 'config-geral', label: 'Geral', icon: Settings, href: `${P}/configuracoes` },
       { id: 'config-apis', label: 'APIs & Integrações', icon: Plug, href: `${P}/configuracoes?tab=integracoes` },
+      { id: 'config-usuarios', label: 'Usuários do Sistema', icon: Shield, href: `${P}/usuarios`, badge: { text: 'ADMIN', variant: 'danger' } },
       { id: 'config-perfil', label: 'Perfil', icon: User, href: `${P}/perfil` },
       { id: 'config-seguranca', label: 'Segurança', icon: Shield, href: `${P}/seguranca` },
       { id: 'config-integracoes-legacy', label: 'Integrações (Legado)', icon: Plug, href: `${P}/integracoes` },

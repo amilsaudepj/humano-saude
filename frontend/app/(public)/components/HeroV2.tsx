@@ -23,10 +23,6 @@ const VIDAS_OPTIONS = [
   { value: 'a-definir', label: 'A definir com especialista' },
 ];
 
-type WindowWithMetaPixel = Window & {
-  fbq?: (action: string, eventName: string, params?: Record<string, string | number>) => void;
-};
-
 // ==============================================
 // WHATSAPP MASK HELPER
 // ==============================================
@@ -87,17 +83,14 @@ export default function HeroV2() {
     // -----------------------------------------------
     // 2) META PIXEL (fbq) – Lead event com valor
     // -----------------------------------------------
-    if (typeof window !== 'undefined') {
-      const win = window as WindowWithMetaPixel;
-      if (typeof win.fbq === 'function') {
-        win.fbq('track', 'Lead', {
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'Lead', {
         content_name: 'Cotacao_Empresarial',
         content_category: 'Health_Insurance',
         value: leadValue,
         currency: 'BRL',
         num_lives_range: formData.vidas,
-        });
-      }
+      });
     }
 
     // -----------------------------------------------
@@ -161,10 +154,7 @@ export default function HeroV2() {
         }, 1200);
       } else {
         const data = await response.json().catch(() => ({}));
-        const details = typeof data?.details === 'string' && data.details.trim().length > 0
-          ? ` (${data.details})`
-          : '';
-        alert(`Erro ao enviar: ${(data.error || 'Tente novamente.')}${details}`);
+        alert('Erro ao enviar: ' + (data.error || 'Tente novamente.'));
       }
     } catch (error) {
       console.error('[LP V2] Submit error:', error);
@@ -179,7 +169,7 @@ export default function HeroV2() {
   };
 
   return (
-    <section id="hero" className="relative bg-white min-h-screen flex items-center pt-36 pb-20 md:py-24 lg:py-28 overflow-hidden">
+    <section id="hero" className="relative bg-white min-h-screen flex items-center py-20 md:py-24 lg:py-28 overflow-hidden">
 
       {/* ===== Efeitos de fundo ===== */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

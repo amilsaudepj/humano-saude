@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split('.').pop() || 'jpg';
     const fileName = `admin/foto_${Date.now()}.${ext}`;
 
-    // Upload para Supabase Storage (bucket "documentos")
+    // Upload para Supabase Storage (bucket "documentos" - mesmo do corretor)
     const buffer = Buffer.from(await file.arrayBuffer());
     const { error: uploadError } = await supabase.storage
       .from('documentos')
@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       logger.error('[admin foto upload]', uploadError);
-      return NextResponse.json({ error: 'Erro ao fazer upload' }, { status: 500 });
+      return NextResponse.json({
+        error: `Erro ao fazer upload: ${uploadError.message}`
+      }, { status: 500 });
     }
 
     // Gerar URL pública

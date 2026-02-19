@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { signToken } from '@/lib/auth-jwt';
+import { registrarLogin } from '@/lib/login-tracker';
 
 // =============================================
 // Credenciais de teste (DEV ONLY)
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
           corretor_id: corretor.id,
         });
 
+        // Registrar login
+        await registrarLogin(email, 'corretor', request, corretor.id);
+
         const response = NextResponse.json({
           success: true,
           token,
@@ -113,6 +117,9 @@ export async function POST(request: NextRequest) {
       role: devUser.corretor.role as 'admin' | 'corretor',
       corretor_id: devUser.corretor.id,
     });
+
+    // Registrar login do dev user
+    await registrarLogin(devUser.email, 'corretor', request, devUser.corretor.id);
 
     const response = NextResponse.json({
       success: true,

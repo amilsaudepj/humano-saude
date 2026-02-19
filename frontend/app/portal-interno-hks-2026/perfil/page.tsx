@@ -13,8 +13,6 @@ export default function PerfilPage() {
     telefone: '',
     cargo: 'Administrador',
     empresa: 'Humano Saúde',
-    bio: '',
-    creci: '',
     susep: '',
     foto_url: '' as string | null,
   });
@@ -219,12 +217,16 @@ export default function PerfilPage() {
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1">Cargo</label>
-            <input
-              type="text"
+            <select
               value={profile.cargo}
               onChange={(e) => setProfile({ ...profile, cargo: e.target.value })}
               className="w-full rounded-lg border border-white/10 bg-[#111] px-4 py-2 text-white focus:border-[#D4AF37]/50 focus:outline-none"
-            />
+            >
+              <option value="Administrador">Administrador</option>
+              <option value="Gestor de Tráfego">Gestor de Tráfego</option>
+              <option value="Assistente">Assistente</option>
+              <option value="Corretor">Corretor</option>
+            </select>
           </div>
         </div>
       </div>
@@ -243,26 +245,6 @@ export default function PerfilPage() {
               className="w-full rounded-lg border border-white/10 bg-[#111] px-4 py-2 text-white placeholder-gray-600 focus:border-[#D4AF37]/50 focus:outline-none"
             />
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">CRECI</label>
-            <input
-              type="text"
-              value={profile.creci}
-              onChange={(e) => setProfile({ ...profile, creci: e.target.value })}
-              placeholder="Número CRECI"
-              className="w-full rounded-lg border border-white/10 bg-[#111] px-4 py-2 text-white placeholder-gray-600 focus:border-[#D4AF37]/50 focus:outline-none"
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm text-gray-400 mb-1">Bio / Apresentação</label>
-          <textarea
-            value={profile.bio}
-            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            placeholder="Uma breve apresentação sobre você..."
-            rows={3}
-            className="w-full rounded-lg border border-white/10 bg-[#111] px-4 py-2 text-white placeholder-gray-600 focus:border-[#D4AF37]/50 focus:outline-none"
-          />
         </div>
       </div>
     </div>

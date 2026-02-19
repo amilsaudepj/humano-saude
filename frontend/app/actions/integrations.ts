@@ -170,8 +170,7 @@ export async function upsertIntegration(input: {
           encrypted_credentials: input.encrypted_credentials,
           config: input.config || {},
           is_active: input.is_active ?? true,
-          last_sync_at: new Date().toISOString(),
-          last_error: null,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
 

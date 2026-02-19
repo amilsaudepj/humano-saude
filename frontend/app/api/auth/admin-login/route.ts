@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { signToken } from '@/lib/auth-jwt';
 import { checkRateLimit, loginLimiter } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { registrarLogin } from '@/lib/login-tracker';
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim();
 const ADMIN_PASSWORD_HASH = (process.env.ADMIN_PASSWORD_HASH || '').trim();
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
     }
 
     const token = await signToken({ email: ADMIN_EMAIL, role: 'admin' });
+
+    // Registrar login
+    await registrarLogin(ADMIN_EMAIL, 'admin', request);
 
     const response = NextResponse.json({
       success: true,
