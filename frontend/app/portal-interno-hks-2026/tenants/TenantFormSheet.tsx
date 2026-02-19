@@ -657,7 +657,7 @@ export default function TenantFormSheet({ open, onClose, tenant, onSaved }: Prop
               <button
                 onClick={handleSave}
                 disabled={isPending || !name || !slug}
-                className="flex items-center gap-2 rounded-lg bg-gold-500 px-5 py-2 text-sm font-semibold text-black hover:bg-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"ed"
+                className="flex items-center gap-2 rounded-lg bg-gold-500 px-5 py-2 text-sm font-semibold text-black hover:bg-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="h-4 w-4" />
                 {isPending ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Corretora'}
