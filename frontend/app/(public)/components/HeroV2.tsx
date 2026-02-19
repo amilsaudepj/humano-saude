@@ -168,7 +168,7 @@ export default function HeroV2() {
   };
 
   return (
-    <section id="hero" className="relative bg-white min-h-screen flex items-center py-20 md:py-24 lg:py-28 overflow-hidden">
+    <section id="hero" className="relative bg-white min-h-screen flex items-center pt-36 pb-20 sm:pt-40 sm:pb-24 md:py-24 lg:py-28 overflow-hidden">
 
       {/* ===== Efeitos de fundo ===== */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

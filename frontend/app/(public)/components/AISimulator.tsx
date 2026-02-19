@@ -36,7 +36,7 @@ export default function AISimulator() {
             <span className="inline-block px-4 py-1.5 bg-[#B8941F]/10 text-[#B8941F] rounded-full text-xs font-bold uppercase tracking-[3px] mb-6 border border-[#B8941F]/20">
               Eficiência nos benefícios
             </span>
-            <h3 className="text-4xl lg:text-5xl font-black text-black leading-[1.1] mb-6" style={{ fontFamily: 'Cinzel, serif' }}>
+            <h3 className="text-4xl lg:text-5xl font-black text-black leading-[1.1] mb-6 uppercase" style={{ fontFamily: 'Cinzel, serif' }}>
               O fim do<br />
               <span className="text-[#B8941F]">custo ineficiente</span>
             </h3>

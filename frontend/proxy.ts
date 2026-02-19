@@ -143,9 +143,56 @@ export async function proxy(request: NextRequest) {
     tenantSlug = await resolveTenantSlugByDomain(domain);
 
     if (tenantSlug) {
-      // Rewrite transparente: domínio customizado acessa as LPs do tenant
-      // Ex: arcfy.com.br/amil-pj → /(lps)/arcfy/amil-pj
       if (!pathname.startsWith('/_next') && !pathname.startsWith('/api') && !pathname.startsWith('/favicon')) {
+        // ─── Opção B: /portal em domínio customizado → portal interno do tenant ───
+        // Ex: mattosconnect.com.br/portal       → /portal-interno-hks-2026
+        //     mattosconnect.com.br/portal/leads → /portal-interno-hks-2026/leads
+        //     mattosconnect.com.br/portal/login → /portal-interno-hks-2026/login
+        if (pathname === '/portal' || pathname.startsWith('/portal/')) {
+          // Checa se tem token de autenticação válido
+          const token = request.cookies.get('admin_token')?.value;
+
+          // /portal/login → login page (sempre permitido, sem token check)
+          if (pathname === '/portal/login' || pathname.startsWith('/portal/login')) {
+            const portalPath = pathname.replace('/portal', '/portal-interno-hks-2026');
+            const url = request.nextUrl.clone();
+            url.pathname = portalPath;
+            const response = NextResponse.rewrite(url);
+            response.headers.set('X-Tenant-Slug', tenantSlug);
+            response.headers.set('X-Tenant-Domain', domain);
+            return response;
+          }
+
+          // Se não autenticado, redireciona para o login NO MESMO DOMÍNIO customizado
+          if (!token) {
+            const loginUrl = new URL(`https://${domain}/portal/login`);
+            return NextResponse.redirect(loginUrl);
+          }
+
+          // Autenticado → verifica JWT
+          const result = await resolveToken(token);
+          if (!result.valid) {
+            const loginUrl = new URL(`https://${domain}/portal/login`);
+            const response = NextResponse.redirect(loginUrl);
+            response.cookies.set('admin_token', '', { maxAge: 0, path: '/' });
+            return response;
+          }
+
+          // Rewrite para o portal interno com headers de contexto do tenant
+          const portalPath = pathname === '/portal'
+            ? '/portal-interno-hks-2026'
+            : pathname.replace('/portal', '/portal-interno-hks-2026');
+
+          const url = request.nextUrl.clone();
+          url.pathname = portalPath;
+          const response = NextResponse.rewrite(url);
+          response.headers.set('X-Tenant-Slug', tenantSlug);
+          response.headers.set('X-Tenant-Domain', domain);
+          return response;
+        }
+
+        // ─── LP rewrite: tudo mais vai para as landing pages do tenant ───
+        // Ex: arcfy.com.br/amil-pj → /(lps)/arcfy/amil-pj
         const lpPath = `/(lps)/${tenantSlug}${pathname === '/' ? '/amil-pj' : pathname}`;
         const url = request.nextUrl.clone();
         url.pathname = lpPath;
@@ -188,10 +235,18 @@ export async function proxy(request: NextRequest) {
     const token = request.cookies.get('admin_token')?.value || 
                   request.headers.get('authorization')?.replace('Bearer ', '');
 
+    // Detecta se a request veio de um domínio customizado de tenant
+    // (X-Tenant-Domain é injetado pelo bloco de rewrite acima)
+    const tenantDomain = request.headers.get('x-tenant-domain');
+
+    // URL de login: se domínio customizado → volta para /portal/login no mesmo domínio
+    const loginRedirectUrl = tenantDomain
+      ? new URL(`https://${tenantDomain}/portal/login`)
+      : new URL('/admin-login', request.url);
+
     // Se não tiver token, redireciona para login
     if (!token && pathname !== '/portal-interno-hks-2026/login') {
-      const loginUrl = new URL('/admin-login', request.url);
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(loginRedirectUrl);
     }
 
     // Se tiver token, verificar assinatura JWT
@@ -199,8 +254,7 @@ export async function proxy(request: NextRequest) {
       const result = await resolveToken(token);
       if (!result.valid) {
         // Token inválido/expirado → limpar cookie e redirecionar
-        const loginUrl = new URL('/admin-login', request.url);
-        const response = NextResponse.redirect(loginUrl);
+        const response = NextResponse.redirect(loginRedirectUrl);
         response.cookies.set('admin_token', '', { maxAge: 0, path: '/' });
         return response;
       }
