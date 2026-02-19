@@ -5,12 +5,35 @@
 export type TenantPlan = 'trial' | 'standard' | 'pro' | 'enterprise';
 
 export interface TenantFeatures {
-  ai_whatsapp: boolean;
-  social_flow: boolean;
+  // ── Módulos principais (por grupo do sidebar) ──────────────
+  /** Grupo Comercial: Leads, Pipeline, CRM, Cotações, Contratos, Vendas, Planos */
+  modulo_comercial: boolean;
+  /** Cotações online (sub-feature do comercial) */
   cotacoes: boolean;
-  meta_ads: boolean;
+  /** CRM avançado: deals, analytics, empresas */
   crm_advanced: boolean;
+  /** Grupo Materiais: banners, IA Clone, galeria, uploads */
+  modulo_materiais: boolean;
+  /** Grupo Marketing & Ads: métricas, cockpit, Meta Ads, TikTok, Google */
+  modulo_marketing: boolean;
+  /** Meta Ads — campanhas, criativos, cockpit */
+  meta_ads: boolean;
+  /** Social Flow — composer, calendário, biblioteca, aprovação */
+  social_flow: boolean;
+  /** Grupo IA & Automação: AI Performance, regras, insights, scanner, automações */
+  modulo_ia: boolean;
+  /** AI WhatsApp — disparo automático via WhatsApp */
+  ai_whatsapp: boolean;
+  /** Grupo Operações: clientes, documentos, tarefas, corretores, indicações, renovações, treinamento */
+  modulo_operacoes: boolean;
+  /** Grupo Comunicação: WhatsApp, Chat, Email, Notificações */
+  modulo_comunicacao: boolean;
+  /** Grupo Financeiro: comissões, produção, faturamento */
+  modulo_financeiro: boolean;
+  /** Seletor de tenant (trocar de corretora no painel) — apenas Super-Admin */
   tenant_switcher: boolean;
+  /** Acesso ao painel de Tenants/Corretoras */
+  modulo_tenants: boolean;
   [key: string]: boolean;
 }
 

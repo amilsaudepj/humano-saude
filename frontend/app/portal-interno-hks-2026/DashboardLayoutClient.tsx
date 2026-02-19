@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import GuidedTour from '@/app/components/tour/GuidedTour';
 import TenantInitClient from './TenantInitClient';
+import { TenantThemeProvider } from '@/app/components/TenantThemeProvider';
 
 // Mapa de títulos por rota — Admin
 const ADMIN_TITLE_MAP: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function DashboardLayoutClient({ children, tenantSlug, tenantDoma
     <div className="admin-panel relative min-h-screen bg-brand-black text-gray-100">
       {/* TenantInitClient: bootstrap do store com o tenant do domínio customizado */}
       {tenantSlug && <TenantInitClient tenantSlug={tenantSlug} tenantDomain={tenantDomain} />}
+      <TenantThemeProvider>
 
       {/* Background Effects - Black Piano Premium com Gold Premium */}
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -144,6 +146,7 @@ export default function DashboardLayoutClient({ children, tenantSlug, tenantDoma
           color: currentColor !important;
         }
       `}</style>
+      </TenantThemeProvider>
     </div>
   );
 }

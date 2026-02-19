@@ -24,6 +24,21 @@ import { useSidebarNav, useSidebarConvite } from "./hooks/useSidebar"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useMemo } from "react"
 import { SIDEBAR_PERMISSION_MAP } from "@/lib/permissions"
+import { useTenant } from "@/hooks/use-tenant"
+
+// Mapa de grupo do sidebar → feature flag do tenant
+// Se a flag existir e for false, o grupo é ocultado
+const SIDEBAR_FEATURE_MAP: Record<string, string> = {
+  'comercial':       'modulo_comercial',
+  'materiais':       'modulo_materiais',
+  'marketing-ads':   'modulo_marketing',
+  'social-flow':     'social_flow',
+  'ia-automacao':    'modulo_ia',
+  'operacoes':       'modulo_operacoes',
+  'comunicacao':     'modulo_comunicacao',
+  'financeiro':      'modulo_financeiro',
+  'configuracoes':   'configuracoes', // sempre visível para admin
+}
 
 const SIDEBAR_COLLAPSED_WIDTH = 72
 const SIDEBAR_EXPANDED_WIDTH = 332
@@ -36,12 +51,26 @@ export default function DockSidebar() {
   const nav = useSidebarNav()
   const convite = useSidebarConvite()
   const { canSeeSidebarItem, isAdmin, loading: permLoading, permissions } = usePermissions()
+  const { features } = useTenant()
 
-  // ─── Filtra itens pela permissão do usuário ─────
-  // Se admin, loading, ou sem permissions definidas → mostra tudo
+  // ─── Filtra itens pela permissão do usuário E pelas features do tenant ─────
+  // Se admin, loading, ou sem permissions definidas → mostra tudo (permissões)
+  // Feature flags: se a flag existir no tenant e for false → oculta o grupo
   const filteredSidebarItems = useMemo(() => {
-    if (isAdmin || permLoading || !permissions) return sidebarItems
-    return sidebarItems
+    let items = sidebarItems
+
+    // 1. Filtro por feature flags do tenant (ex: meta_ads: false → remove marketing-ads)
+    items = items.filter((item) => {
+      const featureKey = SIDEBAR_FEATURE_MAP[item.id]
+      if (!featureKey) return true // sem mapeamento → sempre visível
+      // Se a feature não existe no objeto → visível (compatibilidade com tenants antigos)
+      if (!(featureKey in features)) return true
+      return features[featureKey] !== false
+    })
+
+    // 2. Filtro por permissões do usuário
+    if (isAdmin || permLoading || !permissions) return items
+    return items
       .filter((item) => canSeeSidebarItem(item.id))
       .map((item) => {
         if (!item.children?.length) return item
@@ -52,7 +81,7 @@ export default function DockSidebar() {
         return { ...item, children: filteredChildren }
       })
       .filter((item) => !item.children || item.children.length > 0)
-  }, [canSeeSidebarItem, isAdmin, permLoading, permissions])
+  }, [canSeeSidebarItem, isAdmin, permLoading, permissions, features])
 
   // ─── Render menu items ──────────────────
   const renderSubItems = (
@@ -80,7 +109,7 @@ export default function DockSidebar() {
                     isActive ? activeClass : "text-white/60 hover:text-white/80 hover:bg-white/5",
                   )}
                 >
-                  <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                  <ChildIcon className="h-4 w-4 shrink-0" />
                   <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
                   {child.badge && (
                     <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold ml-auto", badgeStyles[child.badge.variant])}>
@@ -98,10 +127,10 @@ export default function DockSidebar() {
                 onClick={() => nav.toggleMenu(child.id, isOpen)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
-                  highlighted ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "text-white/60 hover:text-white/80 hover:bg-white/5",
+                  highlighted ? "bg-gold-500/10 text-gold-500" : "text-white/60 hover:text-white/80 hover:bg-white/5",
                 )}
               >
-                <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                <ChildIcon className="h-4 w-4 shrink-0" />
                 <span className="text-sm flex-1 min-w-0 text-left whitespace-normal leading-snug">{child.label}</span>
                 <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
               </button>
@@ -141,7 +170,7 @@ export default function DockSidebar() {
           return (
             <Link key={item.id} href={item.href} onClick={onNav}>
               <div className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative", colors.parentBg)}>
-                <Icon className={cn("h-5 w-5 flex-shrink-0", colors.icon)} />
+                <Icon className={cn("h-5 w-5 shrink-0", colors.icon)} />
                 {expanded && (
                   <>
                     <span className={cn("text-sm font-medium flex-1 min-w-0 whitespace-normal leading-snug", colors.text)}>{item.label}</span>
@@ -162,7 +191,7 @@ export default function DockSidebar() {
               onClick={() => expanded ? nav.toggleMenu(item.id, isOpen) : nav.setIsExpanded(true)}
               className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative", colors.parentBg)}
             >
-              <Icon className={cn("h-5 w-5 flex-shrink-0", colors.icon)} />
+              <Icon className={cn("h-5 w-5 shrink-0", colors.icon)} />
               {expanded && (
                 <>
                   <span className={cn("text-sm font-medium flex-1 min-w-0 text-left whitespace-normal leading-snug", colors.text)}>{item.label}</span>
@@ -173,7 +202,7 @@ export default function DockSidebar() {
                 </>
               )}
               {!expanded && (
-                <div className="absolute left-full ml-2 px-3 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60]">
+                <div className="absolute left-full ml-2 px-3 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-60">
                   <p className="text-sm font-medium text-white">{item.label}</p>
                   <p className="text-xs text-white/40 mt-0.5">{item.children?.length} sub-itens</p>
                 </div>
@@ -204,15 +233,15 @@ export default function DockSidebar() {
     <div className="border-t border-white/10 p-2 space-y-1">
       <button
         onClick={() => { convite.setShowConvite(true); onNav?.() }}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group relative"
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gold-500/10 transition-colors group relative"
       >
-        <UserPlus className="h-5 w-5 text-[#D4AF37] flex-shrink-0" />
-        {expanded && <span className="text-sm text-[#D4AF37] font-semibold">{footerItems.convite.label}</span>}
-        <Tooltip expanded={expanded} label={footerItems.convite.label} className="text-[#D4AF37]" />
+        <UserPlus className="h-5 w-5 text-gold-500 shrink-0" />
+        {expanded && <span className="text-sm text-gold-500 font-semibold">{footerItems.convite.label}</span>}
+        <Tooltip expanded={expanded} label={footerItems.convite.label} className="text-gold-500" />
       </button>
       <Link href={footerItems.ajuda.href!} onClick={onNav}>
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group relative">
-          <footerItems.ajuda.icon className="h-5 w-5 text-white/50 flex-shrink-0" />
+          <footerItems.ajuda.icon className="h-5 w-5 text-white/50 shrink-0" />
           {expanded && <span className="text-sm text-white/70">{footerItems.ajuda.label}</span>}
           <Tooltip expanded={expanded} label={footerItems.ajuda.label} />
         </div>
@@ -221,7 +250,7 @@ export default function DockSidebar() {
         onClick={() => { onNav?.(); nav.handleLogout() }}
         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group relative"
       >
-        <footerItems.sair.icon className="h-5 w-5 text-white/50 flex-shrink-0" />
+        <footerItems.sair.icon className="h-5 w-5 text-white/50 shrink-0" />
         {expanded && <span className="text-sm text-white/70">{footerItems.sair.label}</span>}
         <Tooltip expanded={expanded} label={footerItems.sair.label} />
       </div>
@@ -245,11 +274,11 @@ export default function DockSidebar() {
           <AnimatePresence mode="wait">
             {nav.isExpanded ? (
               <motion.div key="full" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.2 }} className="flex items-center justify-center h-10 w-full">
-                <Logo variant="2" size="sm" className="max-w-[140px] max-h-[32px] [&_img]:max-h-[32px] [&_img]:w-auto" />
+                <Logo variant="2" size="sm" className="max-w-35 max-h-8 [&_img]:max-h-8 [&_img]:w-auto" />
               </motion.div>
             ) : (
               <motion.div key="icon" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.2 }} className="flex items-center justify-center h-8 w-8">
-                <LogoIcon variant="2" size="sm" className="max-h-[28px] max-w-[28px] [&_img]:max-h-[28px] [&_img]:w-auto" />
+                <LogoIcon variant="2" size="sm" className="max-h-7 max-w-7 [&_img]:max-h-7 [&_img]:w-auto" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -263,7 +292,7 @@ export default function DockSidebar() {
       {/* MOBILE TOGGLE */}
       <button
         onClick={() => nav.setIsMobileOpen(!nav.isMobileOpen)}
-        className="lg:hidden fixed bottom-4 right-4 h-14 w-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#F6E05E] flex items-center justify-center shadow-lg shadow-[#D4AF37]/30 z-50"
+        className="lg:hidden fixed bottom-4 right-4 h-14 w-14 rounded-full bg-linear-to-br from-gold-500 to-gold-400 flex items-center justify-center shadow-lg shadow-gold-500/30 z-50"
       >
         {nav.isMobileOpen ? <X className="h-6 w-6 text-black" /> : <LayoutDashboard className="h-6 w-6 text-black" />}
       </button>
@@ -281,7 +310,7 @@ export default function DockSidebar() {
               className="lg:hidden fixed left-0 top-0 h-screen w-80 bg-[#0B1215]/98 backdrop-blur-xl border-r border-white/10 flex flex-col z-50"
             >
               <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
-                <Logo variant="2" size="sm" className="max-w-[140px] max-h-[36px]" />
+                <Logo variant="2" size="sm" className="max-w-35 max-h-9" />
                 <button onClick={() => nav.setIsMobileOpen(false)} className="h-8 w-8 rounded-lg hover:bg-white/5 flex items-center justify-center">
                   <X className="h-5 w-5 text-white/60" />
                 </button>
@@ -309,7 +338,7 @@ export default function DockSidebar() {
 function Tooltip({ expanded, label, className }: { expanded: boolean; label: string; className?: string }) {
   if (expanded) return null
   return (
-    <div className="absolute left-full ml-2 px-3 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60]">
+    <div className="absolute left-full ml-2 px-3 py-2 bg-[#0a0a0a] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-60">
       <p className={cn("text-sm font-medium text-white", className)}>{label}</p>
     </div>
   )
@@ -335,18 +364,18 @@ function ConviteModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeConvite}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-70"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[90vw] bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 z-[71]"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-105 max-w-[90vw] bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 z-71"
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
-                  <UserPlus className="h-5 w-5 text-[#D4AF37]" />
+                <div className="h-10 w-10 rounded-xl bg-gold-500/10 flex items-center justify-center">
+                  <UserPlus className="h-5 w-5 text-gold-500" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Convidar Corretor</h3>
@@ -374,7 +403,7 @@ function ConviteModal({
                       value={conviteEmail}
                       onChange={(e) => setConviteEmail(e.target.value)}
                       placeholder="email@exemplo.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4AF37]/50"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-gold-500/50"
                       onKeyDown={(e) => e.key === 'Enter' && handleEnviarConvite()}
                     />
                   </div>
@@ -387,7 +416,7 @@ function ConviteModal({
                 <button
                   onClick={handleEnviarConvite}
                   disabled={conviteLoading || !conviteEmail.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#D4AF37] text-black font-semibold text-sm hover:bg-[#F6E05E] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gold-500 text-black font-semibold text-sm hover:bg-gold-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {conviteLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
