@@ -53,6 +53,7 @@ const ADMIN_TITLE_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/usuarios': 'Usuários',
   '/portal-interno-hks-2026/integracoes': 'Integrações',
   '/portal-interno-hks-2026/seguranca': 'Segurança',
+  '/portal-interno-hks-2026/tenants': 'Corretoras',
 };
 
 export default function DashboardLayout({

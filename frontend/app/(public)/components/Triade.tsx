@@ -111,7 +111,7 @@ export default function Triade() {
         <h2 className="mb-4 text-3xl font-black text-white md:text-4xl lg:text-5xl" style={{ fontFamily: 'Cinzel, serif' }}>
           A Tríade <span className="text-[#D9B651]">Humana</span>
         </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-base text-gray-300 sm:text-lg">
+        <p className="mx-auto mb-12 max-w-2xl text-[1.05rem] text-gray-300 sm:text-lg">
           Um fluxo simples de três etapas para reduzir custo, proteger cobertura e manter sua empresa no controle.
         </p>
 
@@ -124,7 +124,7 @@ export default function Triade() {
               <p className="text-[10px] font-semibold uppercase tracking-[2.6px] text-[#D9B651]">
                 {item.value}
               </p>
-              <p className="mt-1 text-sm text-white/85">{item.label}</p>
+              <p className="mt-1 text-base text-white/85">{item.label}</p>
             </div>
           ))}
         </div>
@@ -136,14 +136,27 @@ export default function Triade() {
               <div className="mt-4 inline-flex items-center rounded-full border border-[#D9B651]/35 bg-[#D9B651]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[2.3px] text-[#F7DA8B]">
                 Passo {triadSteps[activeIndex].num}
               </div>
-              <h3 className="mt-4 text-2xl font-bold text-white" style={{ fontFamily: 'Cinzel, serif' }}>
+              <h3 className="mt-4 text-2xl font-bold text-white sm:text-[1.9rem]" style={{ fontFamily: 'Cinzel, serif' }}>
                 {triadSteps[activeIndex].title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-gray-300">{triadSteps[activeIndex].desc}</p>
+              <p className="mt-2 text-base leading-relaxed text-gray-300">
+                O painel à direita mostra o detalhe de cada fase sem repetição. Aqui você acompanha o progresso em tempo real.
+              </p>
 
-              <div className="mt-5 rounded-xl border border-[#D9B651]/20 bg-[#D9B651]/8 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[2.2px] text-[#F3D37A]">Impacto esperado</p>
-                <p className="mt-1 text-sm text-[#F9E6AF]">{triadSteps[activeIndex].impact}</p>
+              <div className="mt-5 space-y-2.5">
+                {triadSteps.map((step, index) => (
+                  <div
+                    key={step.num}
+                    className={`rounded-lg border px-3 py-2 text-sm transition-all ${
+                      index === activeIndex
+                        ? 'border-[#D9B651]/40 bg-[#D9B651]/12 text-[#F6D985]'
+                        : 'border-white/10 bg-white/[0.02] text-gray-300'
+                    }`}
+                  >
+                    <span className="font-bold tracking-[1.8px] uppercase text-[10px]">Passo {step.num}</span>
+                    <p className="mt-0.5 text-base">{step.title}</p>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -227,7 +240,7 @@ export default function Triade() {
                       <h3 className="relative mt-3 text-2xl font-bold text-white sm:text-[1.9rem]" style={{ fontFamily: 'Cinzel, serif' }}>
                         {step.title}
                       </h3>
-                      <p className="relative mt-3 text-sm leading-relaxed text-gray-300 sm:text-base">
+                      <p className="relative mt-3 text-base leading-relaxed text-gray-300 sm:text-[1.06rem]">
                         {step.desc}
                       </p>
 
@@ -237,7 +250,7 @@ export default function Triade() {
                         }`}
                       >
                         <p className="text-[10px] font-bold uppercase tracking-[2.2px] text-[#E7CA74]">Resultado de negócio</p>
-                        <p className="mt-1 text-sm text-[#F5E0A5]">{step.impact}</p>
+                        <p className="mt-1 text-base text-[#F5E0A5] sm:text-[1.03rem]">{step.impact}</p>
                       </div>
                     </div>
                   </article>

@@ -318,6 +318,7 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'config-geral', label: 'Geral', icon: Settings, href: `${P}/configuracoes` },
       { id: 'config-apis', label: 'APIs & Integrações', icon: Plug, href: `${P}/configuracoes?tab=integracoes` },
       { id: 'config-usuarios', label: 'Usuários do Sistema', icon: Shield, href: `${P}/usuarios`, badge: { text: 'ADMIN', variant: 'danger' } },
+      { id: 'config-tenants', label: 'Corretoras (Tenants)', icon: Building2, href: `${P}/tenants`, badge: { text: 'SUPER', variant: 'gold' } },
       { id: 'config-perfil', label: 'Perfil', icon: User, href: `${P}/perfil` },
       { id: 'config-seguranca', label: 'Segurança', icon: Shield, href: `${P}/seguranca` },
       { id: 'config-integracoes-legacy', label: 'Integrações (Legado)', icon: Plug, href: `${P}/integracoes` },

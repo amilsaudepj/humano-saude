@@ -114,9 +114,10 @@ export const lpLeadSchema = z.object({
     .string()
     .min(1, 'Nome é obrigatório')
     .refine(isValidName, 'Nome inválido'),
-  empresa: z
+  email: z
     .string()
-    .optional(),
+    .min(1, 'E-mail é obrigatório')
+    .email('E-mail inválido'),
   whatsapp: z
     .string()
     .min(1, 'WhatsApp é obrigatório')

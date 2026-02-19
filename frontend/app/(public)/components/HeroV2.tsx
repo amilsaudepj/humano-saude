@@ -36,7 +36,7 @@ function formatWhatsApp(value: string): string {
 export default function HeroV2() {
   const [formData, setFormData] = useState({
     nome: '',
-    empresa: '',
+    email: '',
     whatsapp: '',
     vidas: '',
   });
@@ -120,7 +120,7 @@ export default function HeroV2() {
     // -----------------------------------------------
     const payload = {
       name: formData.nome,
-      company: formData.empresa || null,
+      email: formData.email,
       whatsapp: formData.whatsapp,
       lives_range: formData.vidas,
       lead_score_value: leadValue,
@@ -137,10 +137,9 @@ export default function HeroV2() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: formData.nome,
-          email: '', // campo não obrigatório na v2
+          email: formData.email,
           telefone: formData.whatsapp,
           perfil: `Empresarial ${formData.vidas}`,
-          empresa: formData.empresa,
           lead_score_value: leadValue,
           source: 'lp_v2_refactor',
           origem: 'hero_form',
@@ -160,7 +159,7 @@ export default function HeroV2() {
       console.error('[LP V2] Submit error:', error);
       // Fallback: redireciona pro WhatsApp com dados
       const msg = encodeURIComponent(
-        `Olá! Sou ${formData.nome}${formData.empresa ? ` da ${formData.empresa}` : ''}. Tenho interesse em plano empresarial (${formData.vidas}).`
+        `Olá! Sou ${formData.nome}. Tenho interesse em plano empresarial (${formData.vidas}). Meu e-mail é ${formData.email}.`
       );
       window.open(`https://wa.me/5521988179407?text=${msg}`, '_blank');
     } finally {
@@ -201,8 +200,10 @@ export default function HeroV2() {
 
           {/* H2 */}
           <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8">
-            Chega de aumentos fora de controle. Compare as tabelas exclusivas<br className="hidden lg:block" />
-            para <strong className="text-black">MEI e PME</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor<br className="hidden lg:block" />
+            Chega de aumentos fora de controle. Compare as tabelas exclusivas{' '}
+            <br className="hidden lg:block" />
+            para <strong className="text-black">MEI e PME</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor{' '}
+            <br className="hidden lg:block" />
             resultado para o seu <strong className="text-black">CNPJ</strong>.
           </p>
 
@@ -213,7 +214,7 @@ export default function HeroV2() {
               'Cotação pronta em até 10 minutos',
               'Redução de carência e migração sem burocracia',
             ].map((text, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm sm:text-base text-gray-700">
+              <li key={i} className="flex items-start gap-3 text-base sm:text-lg lg:text-[1.15rem] text-gray-700">
                 <span className="relative flex h-3 w-3 mt-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#B8941F] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-[#B8941F]"></span>
@@ -225,7 +226,7 @@ export default function HeroV2() {
         </div>
 
         {/* ===== COLUNA DIREITA: FORMULÁRIO FLUTUANTE ===== */}
-        <div className="relative">
+        <div className="relative lg:pt-3">
           <div className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 border border-gray-200">
             {/* Header do form */}
             <div className="text-center mb-6">
@@ -278,21 +279,33 @@ export default function HeroV2() {
                   )}
                 </div>
 
-                {/* Nome da Empresa (Opcional) */}
+                {/* E-mail */}
                 <div>
-                  <label htmlFor="lp-empresa" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Nome da Empresa <span className="text-gray-400 font-normal">(opcional)</span>
+                  <label htmlFor="lp-email" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    E-mail *
                   </label>
                   <input
-                    id="lp-empresa"
-                    type="text"
-                    name="empresa"
-                    value={formData.empresa}
+                    id="lp-email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
-                    placeholder="Ex: Empresa LTDA"
-                    autoComplete="organization"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-base bg-gray-50 focus:bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-100 focus:outline-none transition-all"
+                    placeholder="Ex: joao@empresa.com.br"
+                    autoComplete="email"
+                    className={`w-full px-4 py-3 rounded-xl border-2 text-base bg-gray-50 focus:bg-white focus:outline-none transition-all ${
+                      errors.email
+                        ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+                        : 'border-gray-200 focus:border-gray-900 focus:ring-2 focus:ring-gray-100'
+                    }`}
                   />
+                  {errors.email && (
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
 
                 {/* WhatsApp */}

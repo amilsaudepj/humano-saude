@@ -134,7 +134,7 @@ export default function HeaderV2() {
 
       {/* ===== Menu Mobile Overlay ===== */}
       <div
-        className={`fixed inset-0 z-[10000] lg:hidden transition-all duration-300 ${
+        className={`fixed inset-0 z-[10002] lg:hidden transition-all duration-300 ${
           isMenuOpen ? 'visible' : 'invisible'
         }`}
       >

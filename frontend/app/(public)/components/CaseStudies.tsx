@@ -38,9 +38,9 @@ export default function CaseStudies() {
       toName: 'Bradesco Saúde',
       toLogo: '/images/operadoras/bradesco-logo.png',
       custoAnterior: 'R$ 14.040,00',
-      novoCusto: 'R$ 10.980,00',
-      reducao: '22% de redução',
-      economia: 'R$ 3.060,00/mês',
+      novoCusto: 'R$ 8.424,00',
+      reducao: '40% de redução',
+      economia: 'R$ 5.616,00/mês',
       extra: 'Rede hospitalar equivalente mantida',
     },
   ];

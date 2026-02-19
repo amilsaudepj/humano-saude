@@ -57,6 +57,7 @@ const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/corretores': 'nav_ops_corretores',
   '/portal-interno-hks-2026/usuarios': 'nav_config_usuarios',
   '/portal-interno-hks-2026/configuracoes': 'nav_configuracoes',
+  '/portal-interno-hks-2026/tenants': 'nav_config_usuarios',
   '/portal-interno-hks-2026/clientes': 'nav_ops_clientes',
   '/portal-interno-hks-2026/clientes-portal': 'nav_ops_clientes_portal',
   '/portal-interno-hks-2026/documentos': 'nav_ops_documentos',
