@@ -217,7 +217,10 @@ export async function GET(
       } catch {
         // 404
         const notFound = await readFile(path.join(mcDir, '404.html')).catch(() => Buffer.from('Not found'));
-        return new NextResponse(new Uint8Array(notFound), {
+        let notFoundHtml = notFound.toString('utf-8');
+        notFoundHtml = notFoundHtml.replace(/\/_next\/image\?url=%2F([^&"'\s]+)(?:&[^"'\s]*)*/g, '/api/lp-mc/$1');
+        notFoundHtml = notFoundHtml.replace(/\/_next\//g, '/api/lp-mc/_next/');
+        return new NextResponse(new TextEncoder().encode(notFoundHtml), {
           status: 404,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
         });
@@ -230,8 +233,18 @@ export async function GET(
     // ── Injeta CSS de tema Mattos Connect em páginas HTML ──
     let finalContent: Buffer | string = fileContent;
     if (mime.includes('html')) {
-      const html = fileContent.toString('utf-8');
-      // Injeta o <style> logo após o <head> para máxima prioridade
+      let html = fileContent.toString('utf-8');
+
+      // 1. Reescreve /_next/image?url=%2FFILENAME.ext&w=N&q=N → /api/lp-mc/FILENAME.ext
+      //    (O Next.js Image Optimizer buscaria a imagem em public/ raiz, mas ela está em
+      //     public/_mc/ → servimos o arquivo estático diretamente pelo nosso API route)
+      html = html.replace(/\/_next\/image\?url=%2F([^&"'\s]+)(?:&[^"'\s]*)*/g, '/api/lp-mc/$1');
+
+      // 2. Reescreve todos os demais /_next/ → /api/lp-mc/_next/
+      //    (JS chunks, CSS, fontes, build manifests — tudo no nosso API route, não no build principal)
+      html = html.replace(/\/_next\//g, '/api/lp-mc/_next/');
+
+      // 3. Injeta o <style> logo antes do </head> para máxima prioridade
       finalContent = html.replace('</head>', `${MC_THEME_CSS}</head>`);
     }
 

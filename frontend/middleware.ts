@@ -154,16 +154,14 @@ export async function middleware(request: NextRequest) {
     tenantSlug = await resolveTenantSlugByDomain(domain);
 
     if (tenantSlug) {
-      if (!pathname.startsWith('/_next') && !pathname.startsWith('/api') && !pathname.startsWith('/favicon')) {
-        // ─── Opção B: /portal em domínio customizado → portal interno do tenant ───
-        // Ex: mattosconnect.com.br/portal       → /portal-interno-hks-2026
-        //     mattosconnect.com.br/portal/leads → /portal-interno-hks-2026/leads
-        //     mattosconnect.com.br/portal/login → /portal-interno-hks-2026/login
+      // ─── Mattos Connect: todas as rotas (incluindo /_next/) vão para /api/lp-mc ───
+      // Os assets /_next/ do site Mattos são servidos pela mesma API route
+      // Exceção: /portal e /api/* (portal interno e APIs do sistema)
+      if (tenantSlug === 'mattosconnect') {
+        // Portal interno → mantém fluxo normal
         if (pathname === '/portal' || pathname.startsWith('/portal/')) {
-          // Checa se tem token de autenticação válido
           const token = request.cookies.get('admin_token')?.value;
 
-          // /portal/login → login page (sempre permitido, sem token check)
           if (pathname === '/portal/login' || pathname.startsWith('/portal/login')) {
             const portalPath = pathname.replace('/portal', '/portal-interno-hks-2026');
             const url = request.nextUrl.clone();
@@ -174,22 +172,17 @@ export async function middleware(request: NextRequest) {
             return response;
           }
 
-          // Se não autenticado, redireciona para o login NO MESMO DOMÍNIO customizado
           if (!token) {
-            const loginUrl = new URL(`https://${domain}/portal/login`);
-            return NextResponse.redirect(loginUrl);
+            return NextResponse.redirect(new URL(`https://${domain}/portal/login`));
           }
 
-          // Autenticado → verifica JWT
           const result = await resolveToken(token);
           if (!result.valid) {
-            const loginUrl = new URL(`https://${domain}/portal/login`);
-            const response = NextResponse.redirect(loginUrl);
+            const response = NextResponse.redirect(new URL(`https://${domain}/portal/login`));
             response.cookies.set('admin_token', '', { maxAge: 0, path: '/' });
             return response;
           }
 
-          // Rewrite para o portal interno com headers de contexto do tenant
           const portalPath = pathname === '/portal'
             ? '/portal-interno-hks-2026'
             : pathname.replace('/portal', '/portal-interno-hks-2026');
@@ -202,25 +195,22 @@ export async function middleware(request: NextRequest) {
           return response;
         }
 
-        // ─── LP rewrite: serve os arquivos estáticos do tenant ─────────
-        // Mattos Connect: tenant tem LP própria em public/_mc/ (site next export)
-        //   mattosconnect.com.br/          → /api/lp-mc/index.html
-        //   mattosconnect.com.br/contato   → /api/lp-mc/contato.html
-        //   mattosconnect.com.br/_next/... → /api/lp-mc/_next/...
-        //   mattosconnect.com.br/LOGO_...  → /api/lp-mc/LOGO_...
-        // Outros tenants: rewrite para /(lps)/{slug}/{path}
-        if (tenantSlug === 'mattosconnect') {
-          // Assets com extensão → serve diretamente via API
-          // Páginas sem extensão → resolve para .html
-          const rawPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
-          const url = request.nextUrl.clone();
-          url.pathname = `/api/lp-mc/${rawPath}`;
-          const response = NextResponse.rewrite(url);
-          response.headers.set('X-Tenant-Slug', tenantSlug);
-          return response;
+        // APIs internas → passa direto (não intercepta /api/lp-mc nem outras APIs)
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.next();
         }
 
-        // Outros tenants: rewrite para /(lps)/{slug}/{path}
+        // Tudo mais (LP, /_next/, imagens, fontes, favicon) → /api/lp-mc/*
+        const rawPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
+        const url = request.nextUrl.clone();
+        url.pathname = `/api/lp-mc/${rawPath}`;
+        const response = NextResponse.rewrite(url);
+        response.headers.set('X-Tenant-Slug', tenantSlug);
+        return response;
+      }
+
+      // Outros tenants: rewrite para /(lps)/{slug}/{path}
+      if (!pathname.startsWith('/_next') && !pathname.startsWith('/api') && !pathname.startsWith('/favicon')) {
         const lpPath = `/(lps)/${tenantSlug}${pathname === '/' ? '/amil-pj' : pathname}`;
         const url = request.nextUrl.clone();
         url.pathname = lpPath;
