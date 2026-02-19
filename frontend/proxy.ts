@@ -8,7 +8,9 @@ const DOMAIN_CACHE = new Map<string, { slug: string; ts: number }>();
 const DOMAIN_CACHE_TTL = 5 * 60 * 1000;
 
 async function resolveTenantSlugByDomain(domain: string): Promise<string | null> {
-  const cached = DOMAIN_CACHE.get(domain);
+  // Normaliza: remove www. para matching (mattosconnect.com.br = www.mattosconnect.com.br)
+  const normalizedDomain = domain.replace(/^www\./, '');
+  const cached = DOMAIN_CACHE.get(normalizedDomain);
   if (cached && Date.now() - cached.ts < DOMAIN_CACHE_TTL) return cached.slug;
 
   try {
@@ -16,21 +18,29 @@ async function resolveTenantSlugByDomain(domain: string): Promise<string | null>
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!supabaseUrl || !supabaseKey) return null;
 
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/tenants?domain=eq.${encodeURIComponent(domain)}&is_active=eq.true&select=slug&limit=1`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-        // Edge fetch sem cache para ter dados frescos
-        cache: 'no-store',
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const slug: string | null = data?.[0]?.slug ?? null;
-    if (slug) DOMAIN_CACHE.set(domain, { slug, ts: Date.now() });
+    // Tenta primeiro com o domínio normalizado (sem www)
+    // depois com o original, para cobrir casos onde o banco tem www
+    const domainsToTry = Array.from(new Set([normalizedDomain, domain]));
+    let slug: string | null = null;
+
+    for (const d of domainsToTry) {
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/tenants?domain=eq.${encodeURIComponent(d)}&is_active=eq.true&select=slug&limit=1`,
+        {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          cache: 'no-store',
+        }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      slug = data?.[0]?.slug ?? null;
+      if (slug) break;
+    }
+
+    if (slug) DOMAIN_CACHE.set(normalizedDomain, { slug, ts: Date.now() });
     return slug;
   } catch {
     return null;
@@ -124,7 +134,8 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') ?? '';
   // Remove porta para matching de domínio (ex: arcfy.com.br:3000 → arcfy.com.br)
-  const domain = hostname.replace(/:\d+$/, '');
+  // Remove www. para normalização (www.mattosconnect.com.br → mattosconnect.com.br)
+  const domain = hostname.replace(/:\d+$/, '').replace(/^www\./, '');
 
   // ============================================
   // TENANT DETECTION: Domínio customizado
