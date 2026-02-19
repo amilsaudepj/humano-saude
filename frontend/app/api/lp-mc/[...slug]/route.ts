@@ -128,9 +128,13 @@ const MC_THEME_CSS = `
   footer a:hover { color: #0066CC !important; }
   footer p, footer div { color: #555555 !important; }
 
-  /* ── Loading screen: oculta (não relevante na versão estática servida) ── */
-  div[aria-label="Carregando"],
-  [class*="z-\\[120\\]"] { display: none !important; }
+  /* ── Loading overlays: oculta ambos (z-[100] barra topo + z-[120] tela inicial) ── */
+  /* O JS vai removê-los mas o CSS garante que não aparecem mesmo antes */
+  [aria-label="Carregando"],
+  div[aria-hidden="true"].pointer-events-none.fixed,
+  .pointer-events-none.fixed.left-0.right-0.top-0,
+  div[class*="z-\\[120\\]"],
+  div[class*="z-\\[100\\]"].pointer-events-none.fixed { display: none !important; }
 
   /* ── Inputs e formulários ── */
   input, textarea {
@@ -244,8 +248,34 @@ export async function GET(
       //    (JS chunks, CSS, fontes, build manifests — tudo no nosso API route, não no build principal)
       html = html.replace(/\/_next\//g, '/api/lp-mc/_next/');
 
-      // 3. Injeta o <style> logo antes do </head> para máxima prioridade
-      finalContent = html.replace('</head>', `${MC_THEME_CSS}</head>`);
+      // 3. Remove scripts de hidratação Next.js (__next_f) — causam o App Router tentar
+      //    inicializar no domínio mattosconnect e mostrar "404 | This page could not be found"
+      html = html.replace(/<script[^>]*>\s*\(self\.__next_f[\s\S]*?<\/script>/g, '');
+      html = html.replace(/<script[^>]*id="_R_"[^>]*><\/script>/g, '');
+
+      // 4. Injeta script que oculta os overlays de loading antes de qualquer render
+      //    (o site tem dois: z-[100] barra de progresso e z-[120] tela de loading)
+      //    e também desativa o invert do logo (que era para fundo escuro)
+      const MC_LOADING_KILL = `<script>
+        (function(){
+          function hideLoading(){
+            // Remove loading overlays pelo aria-label e por classes z-index altas
+            document.querySelectorAll('[aria-label="Carregando"]').forEach(function(el){ el.remove(); });
+            document.querySelectorAll('[aria-hidden="true"].pointer-events-none.fixed').forEach(function(el){ el.remove(); });
+            // Remove a barra de progresso fixa no topo
+            var prog = document.querySelector('.pointer-events-none.fixed.left-0.right-0.top-0');
+            if(prog) prog.remove();
+          }
+          if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', hideLoading);
+          } else {
+            hideLoading();
+          }
+        })();
+      </script>`;
+
+      // 5. Injeta o <style> + kill-script logo antes do </head>
+      finalContent = html.replace('</head>', `${MC_THEME_CSS}${MC_LOADING_KILL}</head>`);
     }
 
     // Cache agressivo para assets estáticos (CSS/JS/fontes/imagens)
