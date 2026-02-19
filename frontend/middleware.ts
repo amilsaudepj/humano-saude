@@ -202,8 +202,25 @@ export async function middleware(request: NextRequest) {
           return response;
         }
 
-        // ─── LP rewrite: tudo mais vai para as landing pages do tenant ───
-        // Ex: arcfy.com.br/amil-pj → /(lps)/arcfy/amil-pj
+        // ─── LP rewrite: serve os arquivos estáticos do tenant ─────────
+        // Mattos Connect: tenant tem LP própria em public/_mc/ (site next export)
+        //   mattosconnect.com.br/          → /api/lp-mc/index.html
+        //   mattosconnect.com.br/contato   → /api/lp-mc/contato.html
+        //   mattosconnect.com.br/_next/... → /api/lp-mc/_next/...
+        //   mattosconnect.com.br/LOGO_...  → /api/lp-mc/LOGO_...
+        // Outros tenants: rewrite para /(lps)/{slug}/{path}
+        if (tenantSlug === 'mattosconnect') {
+          // Assets com extensão → serve diretamente via API
+          // Páginas sem extensão → resolve para .html
+          const rawPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
+          const url = request.nextUrl.clone();
+          url.pathname = `/api/lp-mc/${rawPath}`;
+          const response = NextResponse.rewrite(url);
+          response.headers.set('X-Tenant-Slug', tenantSlug);
+          return response;
+        }
+
+        // Outros tenants: rewrite para /(lps)/{slug}/{path}
         const lpPath = `/(lps)/${tenantSlug}${pathname === '/' ? '/amil-pj' : pathname}`;
         const url = request.nextUrl.clone();
         url.pathname = lpPath;

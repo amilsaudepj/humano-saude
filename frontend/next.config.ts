@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'www.humanosaude.com.br',
       },
+      {
+        protocol: 'https',
+        hostname: 'mattosconnect.com.br',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.mattosconnect.com.br',
+      },
+      {
+        protocol: 'https',
+        hostname: 'mattosconnect.com',
+      },
     ],
   },
   
