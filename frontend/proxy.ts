@@ -2,6 +2,41 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
+// ─── Cache de domínio → slug (TTL 5min no Edge) ────────────
+// Evita round-trip ao Supabase em cada request de LP
+const DOMAIN_CACHE = new Map<string, { slug: string; ts: number }>();
+const DOMAIN_CACHE_TTL = 5 * 60 * 1000;
+
+async function resolveTenantSlugByDomain(domain: string): Promise<string | null> {
+  const cached = DOMAIN_CACHE.get(domain);
+  if (cached && Date.now() - cached.ts < DOMAIN_CACHE_TTL) return cached.slug;
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) return null;
+
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/tenants?domain=eq.${encodeURIComponent(domain)}&is_active=eq.true&select=slug&limit=1`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        // Edge fetch sem cache para ter dados frescos
+        cache: 'no-store',
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const slug: string | null = data?.[0]?.slug ?? null;
+    if (slug) DOMAIN_CACHE.set(domain, { slug, ts: Date.now() });
+    return slug;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Mapa de rotas → chaves de permissão (Edge-compatible, inlined) ────
 const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/leads': 'nav_comercial_leads',
@@ -84,8 +119,48 @@ async function resolveToken(token: string): Promise<{ valid: boolean; role?: str
   return { valid: false };
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.headers.get('host') ?? '';
+  // Remove porta para matching de domínio (ex: arcfy.com.br:3000 → arcfy.com.br)
+  const domain = hostname.replace(/:\d+$/, '');
+
+  // ============================================
+  // TENANT DETECTION: Domínio customizado
+  // Resolve o slug do tenant pelo domínio e injeta
+  // o header X-Tenant-Slug para uso nas rotas RSC.
+  // Só aplica em domínios fora do humano principal.
+  // ============================================
+  const isHumanoDomain =
+    domain.includes('humanosaude.com.br') ||
+    domain.includes('localhost') ||
+    domain.includes('vercel.app');
+
+  let tenantSlug: string | null = null;
+
+  if (!isHumanoDomain) {
+    tenantSlug = await resolveTenantSlugByDomain(domain);
+
+    if (tenantSlug) {
+      // Rewrite transparente: domínio customizado acessa as LPs do tenant
+      // Ex: arcfy.com.br/amil-pj → /(lps)/arcfy/amil-pj
+      if (!pathname.startsWith('/_next') && !pathname.startsWith('/api') && !pathname.startsWith('/favicon')) {
+        const lpPath = `/(lps)/${tenantSlug}${pathname === '/' ? '/amil-pj' : pathname}`;
+        const url = request.nextUrl.clone();
+        url.pathname = lpPath;
+        const response = NextResponse.rewrite(url);
+        response.headers.set('X-Tenant-Slug', tenantSlug);
+        return response;
+      }
+    }
+  }
+
+  // Injeta o slug nas rotas de LP (slug via URL path)
+  if (pathname.startsWith('/(lps)/') || pathname.match(/^\/[^/]+\/amil-pj|bradesco-pj|sulamerica-pj/)) {
+    const response = NextResponse.next();
+    if (tenantSlug) response.headers.set('X-Tenant-Slug', tenantSlug);
+    return response;
+  }
 
   // ============================================
   // BYPASS: Cron Jobs assinados por CRON_SECRET
@@ -335,5 +410,9 @@ export const config = {
     '/dashboard/:path*',
     '/admin/:path*',
     '/api/:path*',
+    // LPs multi-tenant (grupo de rotas)
+    '/(lps)/:path*',
+    // Captura requisições de domínios customizados (não-Vercel, não-localhost)
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

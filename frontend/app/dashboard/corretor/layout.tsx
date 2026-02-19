@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Shield, ArrowRight, LogOut, Clock, FileText, Landmark } from 'lucide-react';
 import { getCorretorIdFromCookie } from './hooks/useCorretorToken';
 import GuidedTour from '@/app/components/tour/GuidedTour';
+import { TenantThemeProvider } from '@/app/components/TenantThemeProvider';
 
 // Mapa de títulos por rota — Corretor
 const CORRETOR_TITLE_MAP: Record<string, string> = {
@@ -154,6 +155,7 @@ export default function CorretorLayout({
   ];
 
   return (
+    <TenantThemeProvider>
     <div className="relative min-h-screen bg-[#050505] text-gray-100">
       {/* Background Black Piano Premium com Glassmorphism */}
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -260,5 +262,6 @@ export default function CorretorLayout({
       <Toaster position="top-right" richColors closeButton />
       <GuidedTour role="corretor" />
     </div>
+    </TenantThemeProvider>
   );
 }
