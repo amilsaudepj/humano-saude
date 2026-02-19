@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { SidebarItem, SubItem } from '@/lib/sidebar-config';
+import { sidebarItems } from '@/lib/sidebar-config';
 
 type SidebarNode = {
   id: string;
@@ -21,6 +22,24 @@ function parseSidebarHref(href: string): ParsedSidebarHref {
   const query = new URLSearchParams(queryPart.split('#')[0] ?? '');
   return { path, query };
 }
+
+/** Collect all href paths from sidebar config (flattened) */
+function collectAllPaths(items: SidebarItem[]): string[] {
+  const paths: string[] = [];
+  const walk = (nodes: (SidebarItem | SubItem)[]) => {
+    for (const node of nodes) {
+      if (node.href) {
+        const { path } = parseSidebarHref(node.href);
+        paths.push(path);
+      }
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(items);
+  return paths;
+}
+
+const allSidebarPaths = collectAllPaths(sidebarItems);
 
 // ═══════════════════════════════════════════
 // Hook: Sidebar navigation state
@@ -61,10 +80,25 @@ export function useSidebarNav() {
   const isHrefMatch = useCallback(
     (href: string) => {
       const target = parseSidebarHref(href);
-      if (target.query.size > 0) {
-        return pathname === target.path && hasRequiredQuery(target.query);
+      // Exact path match (with optional query params)
+      if (pathname === target.path) {
+        return target.query.size === 0 || hasRequiredQuery(target.query);
       }
-      return pathname === target.path || pathname.startsWith(target.path + '/');
+      // For items with query requirements, only exact path matches count
+      if (target.query.size > 0) return false;
+      // Prefix match: /propostas matches /propostas/fila
+      // BUT only if NO other sidebar item has a more specific path that also matches
+      if (pathname.startsWith(target.path + '/')) {
+        const hasMoreSpecificSibling = allSidebarPaths.some(
+          (otherPath) =>
+            otherPath !== target.path &&
+            otherPath.length > target.path.length &&
+            otherPath.startsWith(target.path + '/') &&
+            (pathname === otherPath || pathname.startsWith(otherPath + '/'))
+        );
+        return !hasMoreSpecificSibling;
+      }
+      return false;
     },
     [hasRequiredQuery, pathname],
   );

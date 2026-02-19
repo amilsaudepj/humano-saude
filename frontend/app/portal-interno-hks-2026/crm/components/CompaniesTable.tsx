@@ -111,7 +111,7 @@ export default function CompaniesTable({
     },
     {
       key: 'total_deals',
-      header: 'Deals',
+      header: 'Oportunidades',
       sortable: true,
       hidden: 'md',
       render: (c) => (

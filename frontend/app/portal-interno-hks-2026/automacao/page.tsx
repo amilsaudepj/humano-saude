@@ -14,10 +14,10 @@ const actionIcons: Record<string, typeof MessageSquare> = {
 };
 
 const triggerLabels: Record<string, string> = {
-  'deal.stage.changed': 'Deal muda de etapa',
-  'deal.created': 'Novo deal criado',
-  'deal.won': 'Deal ganho',
-  'deal.lost': 'Deal perdido',
+  'deal.stage.changed': 'Oportunidade muda de etapa',
+  'deal.created': 'Nova oportunidade criada',
+  'deal.won': 'Oportunidade ganha',
+  'deal.lost': 'Oportunidade perdida',
   'contact.created': 'Novo contato',
   'contact.lifecycle.changed': 'Lifecycle alterado',
   'activity.overdue': 'Atividade vencida',
@@ -44,7 +44,7 @@ const workflowActionLabels: Record<string, string> = {
   create_task: 'Criar tarefa',
   assign_corretor: 'Atribuir corretor',
   move_stage: 'Mover de etapa',
-  update_deal: 'Atualizar deal',
+  update_deal: 'Atualizar oportunidade',
   webhook: 'Chamar webhook',
   notify: 'Notificar equipe',
 };

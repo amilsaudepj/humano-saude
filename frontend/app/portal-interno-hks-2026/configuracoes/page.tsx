@@ -1477,7 +1477,7 @@ export default function ConfiguracoesPage() {
                 role="Supervisor"
                 cor="text-purple-400"
                 permissions={[
-                  'Gerenciar deals e contatos',
+                  'Gerenciar oportunidades e contatos',
                   'Ver relatórios da equipe',
                   'Configurar pipelines',
                   'Não pode gerenciar membros',
@@ -1487,7 +1487,7 @@ export default function ConfiguracoesPage() {
                 role="Corretor"
                 cor="text-gray-400"
                 permissions={[
-                  'Criar e gerenciar seus deals',
+                  'Criar e gerenciar suas oportunidades',
                   'Adicionar contatos e empresas',
                   'Ver relatórios pessoais',
                   'Acesso ao portal do corretor',

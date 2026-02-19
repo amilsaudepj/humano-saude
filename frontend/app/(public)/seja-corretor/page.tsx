@@ -140,7 +140,7 @@ const DIFERENCIAIS = [
   {
     icon: Laptop,
     title: 'Plataforma completa (CRM)',
-    desc: 'CRM profissional, Pipeline Kanban, gerador de cotacoes, propostas automatizadas. Tudo integrado em um painel moderno. De qualquer dispositivo.',
+    desc: 'CRM profissional, gerador de cotacoes, propostas automatizadas. Tudo integrado em um painel moderno. De qualquer dispositivo.',
     highlight: 'All-in-One',
   },
 ];
@@ -663,7 +663,7 @@ export default function SejaCorretorPage() {
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">profissional</span>
             </h2>
             <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              CRM completo, pipeline Kanban, financeiro, IA e tudo que voce precisa . Acessivel de qualquer dispositivo.
+              CRM completo, financeiro, IA e tudo que voce precisa . Acessivel de qualquer dispositivo.
             </p>
           </motion.div>
 
@@ -691,9 +691,9 @@ export default function SejaCorretorPage() {
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                {/* Pipeline Kanban */}
+                {/* CRM */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 h-44">
-                  <p className="text-xs text-white/40 mb-3 font-semibold">Pipeline Kanban</p>
+                  <p className="text-xs text-white/40 mb-3 font-semibold">CRM</p>
                   <div className="flex gap-2 h-28">
                     {[
                       { name: 'Novo', count: 12, color: 'bg-blue-500/20' },
@@ -738,7 +738,7 @@ export default function SejaCorretorPage() {
           </motion.div>
 
           <motion.div variants={fadeUp} custom={2} className="text-center mt-8">
-            <p className="text-sm sm:text-base text-white/40">CRM · Pipeline Kanban · Multicalculo · Financeiro · IA · Marketing. Tudo em um so lugar</p>
+            <p className="text-sm sm:text-base text-white/40">CRM · Multicalculo · Financeiro · IA · Marketing. Tudo em um so lugar</p>
           </motion.div>
         </div>
       </Section>

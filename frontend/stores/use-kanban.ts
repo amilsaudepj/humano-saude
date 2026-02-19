@@ -70,12 +70,12 @@ export function useKanbanWithStore(initialPipelineId?: string) {
 
     const res = await moveDeal(dealId, destStageId, newPosition, corretorId);
     if (!res.success) {
-      toast.error('Erro ao mover deal. Recarregando...');
+      toast.error('Erro ao mover oportunidade. Recarregando...');
       await fetchBoard();
     } else if (res.data?.is_won) {
-      toast.success('🏆 Deal fechado como ganho!');
+      toast.success('🏆 Oportunidade fechada como ganha!');
     } else if (res.data?.is_lost) {
-      toast.info('Deal marcado como perdido');
+      toast.info('Oportunidade marcada como perdida');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchBoard]);
@@ -84,11 +84,11 @@ export function useKanbanWithStore(initialPipelineId?: string) {
   const handleCreateDeal = useCallback(async (input: CrmDealInsert) => {
     const res = await createDeal(input);
     if (res.success && res.data) {
-      toast.success('Deal criado!');
+      toast.success('Oportunidade criada!');
       await fetchBoard(); // Refresh para pegar o deal completo
       return res.data;
     } else {
-      toast.error(res.error ?? 'Erro ao criar deal');
+      toast.error(res.error ?? 'Erro ao criar oportunidade');
       return null;
     }
   }, [fetchBoard]);
@@ -98,10 +98,10 @@ export function useKanbanWithStore(initialPipelineId?: string) {
     store.removeDealOptimistic(dealId);
     const res = await deleteDeal(dealId);
     if (!res.success) {
-      toast.error('Erro ao excluir deal');
+      toast.error('Erro ao excluir oportunidade');
       await fetchBoard();
     } else {
-      toast.success('Deal excluído');
+      toast.success('Oportunidade excluída');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchBoard]);
@@ -110,10 +110,10 @@ export function useKanbanWithStore(initialPipelineId?: string) {
   const handleWinDeal = useCallback(async (dealId: string, corretorId: string) => {
     const res = await markDealWon(dealId, corretorId);
     if (res.success) {
-      toast.success('🏆 Deal ganho!');
+      toast.success('🏆 Oportunidade ganha!');
       await fetchBoard();
     } else {
-      toast.error(res.error ?? 'Erro ao ganhar deal');
+      toast.error(res.error ?? 'Erro ao ganhar oportunidade');
     }
   }, [fetchBoard]);
 
@@ -126,10 +126,10 @@ export function useKanbanWithStore(initialPipelineId?: string) {
   ) => {
     const res = await markDealLost(dealId, motivo, detalhe, corretorId);
     if (res.success) {
-      toast.info('Deal marcado como perdido');
+      toast.info('Oportunidade marcada como perdida');
       await fetchBoard();
     } else {
-      toast.error(res.error ?? 'Erro ao perder deal');
+      toast.error(res.error ?? 'Erro ao perder oportunidade');
     }
   }, [fetchBoard]);
 

@@ -172,7 +172,7 @@ export function useDealsList(initialFilters: CrmDealFilters = {}) {
     const merged = { ...filters, ...overrides };
     const res = await getDealsList(merged);
     if (res.success && res.data) setResult(res.data);
-    else toast.error(res.error ?? 'Erro ao carregar deals');
+    else toast.error(res.error ?? 'Erro ao carregar oportunidades');
     setLoading(false);
   }, [filters]);
 

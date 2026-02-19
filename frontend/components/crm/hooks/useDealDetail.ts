@@ -30,7 +30,7 @@ export function useDealDetail(dealId: string | null) {
     if (res.success && res.data) {
       setDeal(res.data);
     } else {
-      toast.error(res.error ?? 'Erro ao carregar deal');
+      toast.error(res.error ?? 'Erro ao carregar oportunidade');
     }
     setLoading(false);
   }, [dealId]);
@@ -92,7 +92,7 @@ export function useDealDetail(dealId: string | null) {
 
     if (res.success) {
       await fetch();
-      toast.success(isFollowing ? 'Deixou de seguir' : 'Seguindo deal');
+      toast.success(isFollowing ? 'Deixou de seguir' : 'Seguindo oportunidade');
     } else {
       toast.error(res.error);
     }

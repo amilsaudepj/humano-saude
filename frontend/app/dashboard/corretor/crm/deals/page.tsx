@@ -80,7 +80,7 @@ export default function CorretorDealsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Briefcase className="h-6 w-6 text-[#D4AF37]" />
-            Meus <span className="text-[#D4AF37]">Deals</span>
+            Minhas <span className="text-[#D4AF37]">Oportunidades</span>
           </h1>
           <p className="text-sm text-white/40 mt-1">
             Visão em lista de todos os seus negócios no pipeline
@@ -124,7 +124,7 @@ export default function CorretorDealsPage() {
         </select>
 
         <span className="text-xs text-white/30">
-          {total} deal{total !== 1 ? 's' : ''}
+          {total} oportunidade{total !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -138,16 +138,16 @@ export default function CorretorDealsPage() {
       ) : deals.length === 0 ? (
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-12 text-center">
           <Briefcase className="h-12 w-12 text-white/10 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white/60">Nenhum deal encontrado</h3>
+          <h3 className="text-lg font-semibold text-white/60">Nenhuma oportunidade encontrada</h3>
           <p className="text-sm text-white/30 mt-1">
-            Crie leads no <span className="text-[#D4AF37]">Pipeline Kanban</span> para vê-los aqui
+            Crie leads no <span className="text-[#D4AF37]">CRM</span> para vê-los aqui
           </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-white/5 text-xs font-medium text-white/40">
-            <div className="col-span-4">Deal</div>
+            <div className="col-span-4">Oportunidade</div>
             <div className="col-span-2">Etapa</div>
             <div className="col-span-2 hidden md:block">Valor</div>
             <div className="col-span-2 hidden md:block">Prioridade</div>

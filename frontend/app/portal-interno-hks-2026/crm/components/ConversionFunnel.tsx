@@ -44,7 +44,7 @@ export default function ConversionFunnel({ data = sampleData }: ConversionFunnel
             color: '#fff',
             fontSize: 12,
           }}
-          formatter={(value) => [`${value} deals`, 'Quantidade']}
+          formatter={(value) => [`${value} oportunidades`, 'Quantidade']}
           labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
         />
         <Bar dataKey="deals" radius={[0, 6, 6, 0]} barSize={24}>

@@ -311,13 +311,13 @@ export default function DashboardPage() {
             tone="gold"
           />
           <MetricCard
-            title="Deals abertos no pipeline"
+            title="Oportunidades abertas no pipeline"
             value={stats?.pipeline_deals_abertos || 0}
             icon={FileText}
             loading={statsLoading}
           />
           <MetricCard
-            title="Deals estagnados no pipeline"
+            title="Oportunidades estagnadas no pipeline"
             value={stats?.pipeline_deals_estagnados || 0}
             icon={AlertTriangle}
             loading={statsLoading}

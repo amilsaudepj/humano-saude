@@ -36,7 +36,7 @@ export function useCorretorDeals(corretorId: string | null, initialFilters: CrmD
     const merged = { ...filters, ...overrides, owner_corretor_id: corretorId };
     const res = await getDealsList(merged);
     if (res.success && res.data) setResult(res.data);
-    else toast.error(res.error ?? 'Erro ao carregar deals');
+    else toast.error(res.error ?? 'Erro ao carregar oportunidades');
     setLoading(false);
   }, [corretorId, filters]);
 

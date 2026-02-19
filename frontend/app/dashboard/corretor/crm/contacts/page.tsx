@@ -45,7 +45,7 @@ export default function CorretorContactsPage() {
           <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 max-w-md mx-auto text-left">
             <p className="text-xs text-[#D4AF37] font-semibold mb-1">💡 Dica</p>
             <p className="text-xs text-white/40">
-              Enquanto isso, use o <span className="text-white/60 font-medium">Pipeline Kanban</span> para
+              Enquanto isso, use o <span className="text-white/60 font-medium">CRM</span> para
               gerenciar seus leads. Todos os dados de contato ficam no card do lead.
             </p>
           </div>

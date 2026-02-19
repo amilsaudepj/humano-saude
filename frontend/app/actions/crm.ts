@@ -501,7 +501,7 @@ export async function getDealDetail(dealId: string): Promise<ActionResult<CrmDea
     return ok(enriched);
   } catch (e) {
     logger.error('[getDealDetail]', e);
-    return err('Erro ao carregar deal');
+    return err('Erro ao carregar oportunidade');
   }
 }
 
@@ -569,7 +569,7 @@ export async function getDealsList(
     });
   } catch (e) {
     logger.error('[getDealsList]', e);
-    return err('Erro ao carregar deals');
+    return err('Erro ao carregar oportunidades');
   }
 }
 

@@ -35,6 +35,7 @@ import {
   GraduationCap,
   BookOpen,
   Compass,
+  CheckSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import NextImage from 'next/image';
@@ -92,12 +93,12 @@ const menuItems: SidebarItem[] = [
     icon: Kanban,
     color: 'gold',
     children: [
-      { id: 'crm-kanban', label: 'Pipeline Kanban', icon: Kanban, href: `${B}/crm`, badge: { text: '🔥', variant: 'gold' } },
-      { id: 'crm-deals', label: 'Meus Deals', icon: Briefcase, href: `${B}/crm/deals`, badge: { text: 'NOVO', variant: 'gold' } },
-      { id: 'crm-leads', label: 'Meus Leads', icon: Users, href: `${B}/crm/leads` },
+      { id: 'crm-kanban', label: 'CRM', icon: Kanban, href: `${B}/crm`, badge: { text: '🔥', variant: 'gold' } },
+      { id: 'crm-deals', label: 'Oportunidades', icon: Briefcase, href: `${B}/crm/deals`, badge: { text: 'NOVO', variant: 'gold' } },
+      { id: 'crm-leads', label: 'Leads', icon: Users, href: `${B}/crm/leads` },
       { id: 'crm-contacts', label: 'Contatos', icon: UserPlus, href: `${B}/crm/contacts` },
       { id: 'crm-companies', label: 'Empresas', icon: Building2, href: `${B}/crm/companies` },
-      { id: 'crm-metricas', label: 'Métricas', icon: TrendingUp, href: `${B}/crm/metricas` },
+      { id: 'crm-metricas', label: 'Analytics CRM', icon: TrendingUp, href: `${B}/crm/metricas` },
     ],
   },
   {
@@ -107,7 +108,8 @@ const menuItems: SidebarItem[] = [
     color: 'gold',
     children: [
       { id: 'propostas-scanner', label: 'Scanner Inteligente', icon: Sparkles, href: `${B}/propostas`, badge: { text: 'IA', variant: 'gold' } },
-      { id: 'propostas-fila', label: 'Fila de propostas', icon: ClipboardList, href: `${B}/propostas/fila` },
+      { id: 'propostas-fila', label: 'Fila de Propostas', icon: ClipboardList, href: `${B}/propostas/fila` },
+      { id: 'propostas-manual', label: 'Proposta Manual', icon: CheckSquare, href: `${B}/propostas/manual` },
     ],
   },
   {

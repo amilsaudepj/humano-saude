@@ -90,7 +90,7 @@ export default function CrmPage() {
       owner_corretor_id: null,
       crm_card_id: null,
       lead_id: null,
-      titulo: 'Novo Deal',
+      titulo: 'Nova Oportunidade',
       valor: null,
       valor_recorrente: null,
       moeda: 'BRL',
@@ -113,10 +113,10 @@ export default function CrmPage() {
 
     const res = await createDeal(input);
     if (res.success) {
-      toast.success('Deal criado!');
+      toast.success('Oportunidade criada!');
       kanban.fetchBoard();
     } else {
-      toast.error(res.error ?? 'Erro ao criar deal');
+      toast.error(res.error ?? 'Erro ao criar oportunidade');
     }
   }, [kanban]);
 
@@ -131,8 +131,8 @@ export default function CrmPage() {
     <div className="space-y-6">
       <PageHeader
         title="CRM"
-        description="Pipeline de negócios e gestão de deals"
-        actionLabel="Novo Deal"
+        description="Pipeline de negócios e gestão de oportunidades"
+        actionLabel="Nova Oportunidade"
         onAction={handleNewDeal}
       >
         <ViewSwitcher view={view} onChange={setView} />

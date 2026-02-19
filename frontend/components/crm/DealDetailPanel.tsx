@@ -326,7 +326,7 @@ export default function DealDetailPanel({
                     mobileSection === 'properties' && '!block flex-1 lg:flex-none lg:w-[280px]',
                   )}>
                     {/* Deal Properties */}
-                    <Section title="Dados do Deal">
+                    <Section title="Dados da Oportunidade">
                       <div className="space-y-3">
                         <EditableField
                           label="Valor"
@@ -646,7 +646,7 @@ export default function DealDetailPanel({
 
                     {/* Related Deals */}
                     {deal.related_deals.length > 0 && (
-                      <Section title="Deals Relacionados">
+                      <Section title="Oportunidades Relacionadas">
                         <div className="space-y-1.5">
                           {deal.related_deals.map((rd) => (
                             <div key={rd.id} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03]">
@@ -676,7 +676,7 @@ export default function DealDetailPanel({
                     )}
 
                     {/* Deal Health */}
-                    <Section title="Saúde do Deal">
+                    <Section title="Saúde da Oportunidade">
                       <div className="space-y-2">
                         <HealthIndicator
                           label="Score"

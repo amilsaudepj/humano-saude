@@ -284,7 +284,7 @@ export default function DealDetailPage() {
         <div className="lg:col-span-3 space-y-4">
           {/* Deal Properties */}
           <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-4">
-            <Section title="Dados do Deal" icon={Edit3}>
+            <Section title="Dados da Oportunidade" icon={Edit3}>
               <div className="space-y-3">
                 <EditableField label="Valor" value={deal.valor} type="currency" onSave={(v) => handleFieldUpdate('valor', v)} />
                 <EditableField label="Mensalidade" value={deal.valor_recorrente} type="currency" onSave={(v) => handleFieldUpdate('valor_recorrente', v)} />
@@ -561,7 +561,7 @@ export default function DealDetailPage() {
           {/* Related Deals */}
           {deal.related_deals && deal.related_deals.length > 0 && (
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-3">
-              <Section title="Deals Relacionados" icon={Activity}>
+              <Section title="Oportunidades Relacionadas" icon={Activity}>
                 <div className="space-y-2">
                   {deal.related_deals.map((rd) => (
                     <button
@@ -582,7 +582,7 @@ export default function DealDetailPage() {
 
           {/* Deal Health */}
           <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-3">
-            <Section title="Saúde do Deal" icon={Activity}>
+            <Section title="Saúde da Oportunidade" icon={Activity}>
               <div className="space-y-2">
                 <HealthRow label="Dias sem atividade" value={deal.dias_no_stage} threshold={7} suffix="d" />
                 <HealthRow label="Score" value={deal.score} threshold={50} invert />

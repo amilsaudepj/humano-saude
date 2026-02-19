@@ -191,7 +191,7 @@ export default function CrmMetricsDashboard({ pipelineId }: { pipelineId?: strin
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           icon={Briefcase}
-          label="Total de Deals"
+          label="Total de Oportunidades"
           value={loading ? '...' : (m?.total_deals ?? 0).toLocaleString()}
           color="gold"
         />
@@ -209,14 +209,14 @@ export default function CrmMetricsDashboard({ pipelineId }: { pipelineId?: strin
         />
         <StatCard
           icon={Flame}
-          label="Deals Hot"
+          label="Oportunidades Hot"
           value={loading ? '...' : (m?.deals_hot ?? 0).toLocaleString()}
           subValue="Alto potencial"
           color="gold"
         />
         <StatCard
           icon={AlertTriangle}
-          label="Deals Parados"
+          label="Oportunidades Paradas"
           value={loading ? '...' : (m?.deals_stale ?? 0).toLocaleString()}
           subValue="Necessitam atenção"
           color="red"
