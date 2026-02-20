@@ -1,0 +1,18 @@
+# Monorepo folders not required by this Vercel project
+backend
+database
+docs
+scripts
+.git
+.vercel
+.DS_Store
+.env.local
+
+# Frontend local/dev artifacts
+frontend/node_modules
+frontend/.next
+frontend/.next_bak_*
+frontend/.next_corrupt_*
+frontend/.vercel
+frontend/.env.local
+frontend/tsconfig.tsbuildinfo
