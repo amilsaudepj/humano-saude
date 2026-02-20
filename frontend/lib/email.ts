@@ -49,28 +49,21 @@ function guardApiKey(): { ok: false; result: { success: false; error: string } }
   return { ok: true };
 }
 
-// ─── Helper: send via Resend ─────────────────────────────────
-async function sendViaResend(opts: {
-  to: string | string[];
-  subject: string;
-  html: string;
-  cc?: string[];
-}): Promise<{ success: true; id?: string } | { success: false; error: string }> {
-  const { data, error } = await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: Array.isArray(opts.to) ? opts.to : [opts.to],
-    cc: opts.cc,
-    subject: opts.subject,
-    html: opts.html,
+// ─── Helper: send via Resend (with tracking/logging) ────────
+async function sendViaResend(opts: SendEmailOptions): Promise<{ success: true; id?: string } | { success: false; error: string }> {
+  const result = await sendTransactionalEmail({
+    ...opts,
+    emailType: opts.emailType || 'transactional',
+    triggeredBy: opts.triggeredBy || 'system',
+    saveHtmlContent: opts.saveHtmlContent !== false,
+    injectTrackingPixel: opts.injectTrackingPixel !== false,
   });
 
-  if (error) {
-    log.error('Resend error', error);
-    return { success: false, error: error.message };
+  if (!result.success) {
+    return { success: false, error: result.error || 'Falha ao enviar e-mail' };
   }
 
-  log.info('Email sent', { subject: opts.subject, to: opts.to, id: data?.id });
-  return { success: true, id: data?.id };
+  return { success: true, id: result.id };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -139,54 +132,74 @@ export async function enviarEmailNotificacaoAdmin(dados: {
       })
     );
 
-    // Send with CC fallback
-    const emailOptions: {
-      from: string;
-      to: string[];
-      cc?: string[];
-      subject: string;
-      html: string;
-    } = {
-      from: FROM_EMAIL,
+    const subject = `Novo Corretor — ${dados.nome} (${dados.tipoPessoa.toUpperCase()})`;
+
+    // Preferencial: admin + CC no mesmo envio
+    const primary = await sendViaResend({
       to: ADMIN_EMAILS,
-      subject: `Novo Corretor — ${dados.nome} (${dados.tipoPessoa.toUpperCase()})`,
+      cc: CC_EMAILS,
+      subject,
       html,
-    };
+      templateName: 'novo_corretor_admin',
+      category: 'onboarding',
+      tags: ['admin', 'cadastro-corretor'],
+      triggeredBy: 'system',
+      metadata: {
+        corretor_nome: dados.nome,
+        corretor_email: dados.email,
+        tipo_pessoa: dados.tipoPessoa,
+      },
+    });
 
-    try {
-      emailOptions.cc = CC_EMAILS;
-      const { data, error } = await getResend().emails.send(emailOptions);
-
-      if (error) {
-        log.warn('CC falhou, enviando sem CC', { error: error.message });
-        delete emailOptions.cc;
-        const { data: data2, error: error2 } = await getResend().emails.send(emailOptions);
-
-        if (error2) {
-          log.error('Erro ao notificar admin', error2);
-          return { success: false, error: error2.message };
-        }
-
-        try {
-          await getResend().emails.send({
-            from: FROM_EMAIL,
-            to: CC_EMAILS,
-            subject: `[CC] Novo Corretor — ${dados.nome} (${dados.tipoPessoa.toUpperCase()})`,
-            html,
-          });
-        } catch (ccErr) {
-          log.warn('Copia CC falhou (nao critico)', { error: ccErr instanceof Error ? ccErr.message : String(ccErr) });
-        }
-
-        return { success: true, id: data2?.id };
-      }
-
-      log.info('Notificacao admin enviada com CC', { id: data?.id });
-      return { success: true, id: data?.id };
-    } catch (err) {
-      log.error('Erro inesperado notificacao admin', err);
-      return { success: false, error: 'Erro inesperado' };
+    if (primary.success) {
+      log.info('Notificacao admin enviada com CC', { id: primary.id });
+      return primary;
     }
+
+    // Fallback: envio sem CC e tentativa separada de cópia
+    log.warn('CC falhou, enviando sem CC', { error: primary.error });
+
+    const fallback = await sendViaResend({
+      to: ADMIN_EMAILS,
+      subject,
+      html,
+      templateName: 'novo_corretor_admin',
+      category: 'onboarding',
+      tags: ['admin', 'cadastro-corretor'],
+      triggeredBy: 'system',
+      metadata: {
+        corretor_nome: dados.nome,
+        corretor_email: dados.email,
+        tipo_pessoa: dados.tipoPessoa,
+        fallback_sem_cc: true,
+      },
+    });
+
+    if (!fallback.success) {
+      log.error('Erro ao notificar admin', fallback.error);
+      return fallback;
+    }
+
+    const ccCopy = await sendViaResend({
+      to: CC_EMAILS,
+      subject: `[CC] ${subject}`,
+      html,
+      templateName: 'novo_corretor_admin_cc',
+      category: 'onboarding',
+      tags: ['admin', 'cadastro-corretor', 'cc'],
+      triggeredBy: 'system',
+      metadata: {
+        corretor_nome: dados.nome,
+        corretor_email: dados.email,
+        tipo_pessoa: dados.tipoPessoa,
+      },
+    });
+
+    if (!ccCopy.success) {
+      log.warn('Copia CC falhou (nao critico)', { error: ccCopy.error });
+    }
+
+    return fallback;
   } catch (err) {
     log.error('enviarEmailNotificacaoAdmin', err);
     return { success: false, error: 'Erro inesperado' };
@@ -671,8 +684,8 @@ export async function enviarEmailAcessoPortalCliente(dados: {
   };
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const resend = getResend();
-    if (!resend) return { success: false, error: 'Resend não configurado' };
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
@@ -694,12 +707,23 @@ export async function enviarEmailAcessoPortalCliente(dados: {
       </div>
     `;
 
-    await resend.emails.send({
-      from: FROM_EMAIL,
+    const result = await sendViaResend({
       to: dados.email,
       subject: 'Seus dados de acesso — Portal Humano Saúde',
       html,
+      templateName: 'portal_cliente_acesso',
+      category: 'portal-cliente',
+      tags: ['portal-cliente', 'acesso'],
+      triggeredBy: 'system',
+      metadata: {
+        portal_link: dados.portalLink,
+        resumo: dados.resumo || null,
+      },
     });
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
 
     return { success: true };
   } catch (err) {

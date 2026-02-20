@@ -78,6 +78,7 @@ export default function EmailAdminPage() {
   // ─── State ─────────────────────────────────────────────────
   const [emails, setEmails] = useState<EmailLog[]>([]);
   const [stats, setStats] = useState<EmailStats | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -92,9 +93,14 @@ export default function EmailAdminPage() {
   // ─── Fetch stats ───────────────────────────────────────────
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/emails?action=stats');
+      const res = await fetch('/api/admin/emails?action=stats', { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error(`Falha ao buscar estatísticas (${res.status})`);
+      }
       const json = await res.json();
-      if (json.success) setStats(json.data);
+      if (json.success) {
+        setStats(json.data);
+      }
     } catch (err) {
       console.error('Failed to fetch email stats:', err);
     }
@@ -103,6 +109,7 @@ export default function EmailAdminPage() {
   // ─── Fetch emails ──────────────────────────────────────────
   const fetchEmails = useCallback(async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -113,16 +120,24 @@ export default function EmailAdminPage() {
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
 
-      const res = await fetch(`/api/admin/emails?${params}`);
+      const res = await fetch(`/api/admin/emails?${params}`, { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error(`Falha ao buscar emails (${res.status})`);
+      }
       const json = await res.json();
       if (json.success) {
         const data = json.data as ListEmailsResponse;
         setEmails(data.emails);
         setTotalPages(data.totalPages);
         setTotal(data.total);
+      } else {
+        setEmails([]);
+        setErrorMessage(json.error || 'Não foi possível carregar os emails de tracking.');
       }
     } catch (err) {
       console.error('Failed to fetch emails:', err);
+      setEmails([]);
+      setErrorMessage(err instanceof Error ? err.message : 'Erro inesperado ao carregar emails.');
     } finally {
       setLoading(false);
     }
@@ -131,11 +146,16 @@ export default function EmailAdminPage() {
   // ─── Fetch events for modal ────────────────────────────────
   const fetchEvents = useCallback(async (emailId: string) => {
     try {
-      const res = await fetch(`/api/admin/emails/${emailId}/events`);
+      const res = await fetch(`/api/admin/emails/${emailId}/events`, { cache: 'no-store' });
       const json = await res.json();
-      if (json.success) setEmailEvents(json.data);
+      if (json.success) {
+        setEmailEvents(json.data);
+      } else {
+        setEmailEvents([]);
+      }
     } catch (err) {
       console.error('Failed to fetch events:', err);
+      setEmailEvents([]);
     }
   }, []);
 
@@ -203,6 +223,12 @@ export default function EmailAdminPage() {
       </div>
 
       {/* Stats Cards */}
+      {errorMessage && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <StatCard icon={Send} label="Enviados (30d)" value={stats?.total_sent ?? 0} color="text-blue-400" />
         <StatCard icon={CheckCircle} label="Entregues" value={stats?.total_delivered ?? 0} subValue={stats?.delivery_rate ? `${stats.delivery_rate}%` : undefined} color="text-emerald-400" />

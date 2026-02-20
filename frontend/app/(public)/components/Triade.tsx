@@ -129,55 +129,7 @@ export default function Triade() {
           ))}
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
-          <aside className="lg:sticky lg:top-24 lg:text-left">
-            <div className="rounded-3xl border border-[#B8941F]/25 bg-gradient-to-b from-[#2b2109]/50 via-[#1a1407]/50 to-black/70 p-6 text-left shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[2.6px] text-[#D9B651]">Etapa em destaque</p>
-              <div className="mt-4 inline-flex items-center rounded-full border border-[#D9B651]/35 bg-[#D9B651]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[2.3px] text-[#F7DA8B]">
-                Passo {triadSteps[activeIndex].num}
-              </div>
-              <h3 className="mt-4 text-2xl font-bold text-white sm:text-[1.9rem]" style={{ fontFamily: 'Cinzel, serif' }}>
-                {triadSteps[activeIndex].title}
-              </h3>
-              <p className="mt-2 text-base leading-relaxed text-gray-300">
-                O painel à direita mostra o detalhe de cada fase sem repetição. Aqui você acompanha o progresso em tempo real.
-              </p>
-
-              <div className="mt-5 space-y-2.5">
-                {triadSteps.map((step, index) => (
-                  <div
-                    key={step.num}
-                    className={`rounded-lg border px-3 py-2 text-sm transition-all ${
-                      index === activeIndex
-                        ? 'border-[#D9B651]/40 bg-[#D9B651]/12 text-[#F6D985]'
-                        : 'border-white/10 bg-white/[0.02] text-gray-300'
-                    }`}
-                  >
-                    <span className="font-bold tracking-[1.8px] uppercase text-[10px]">Passo {step.num}</span>
-                    <p className="mt-0.5 text-base">{step.title}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#B8941F] via-[#E0BC58] to-[#B8941F] transition-all duration-500"
-                  style={{ width: `${((activeIndex + 1) / triadSteps.length) * 100}%` }}
-                />
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                {triadSteps.map((step, index) => (
-                  <span
-                    key={step.num}
-                    className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                      index <= activeIndex ? 'bg-[#D9B651]' : 'bg-white/15'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </aside>
-
+        <div className="mx-auto max-w-4xl">
           <div id="timeline-container" ref={containerRef} className="relative pb-2 pl-14 text-left sm:pl-20">
             <div className="absolute bottom-0 left-5 top-0 w-[2px] rounded-full bg-white/10 sm:left-8">
               <div
