@@ -201,7 +201,7 @@ export default function HeroV2() {
 
           {/* H2 — sem quebras forçadas no desktop para evitar palavras órfãs */}
           <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl">
-            Chega de aumentos fora de controle. Compare as tabelas exclusivas para <strong className="text-black">MEI e PME</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor resultado para o seu <strong className="text-black">CNPJ</strong>.
+            Chega de aumentos fora de controle. Compare as tabelas exclusivas para <strong className="text-black">MEI</strong>, <strong className="text-black">PME</strong> e <strong className="text-black">Empresas</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor resultado para o seu <strong className="text-black">CNPJ</strong>.
           </p>
 
           {/* Benefícios com bolinhas piscantes */}
