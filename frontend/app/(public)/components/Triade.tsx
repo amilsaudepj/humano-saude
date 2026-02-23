@@ -49,8 +49,12 @@ const quickWins = [
 
 export default function Triade() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const firstIconRef = useRef<HTMLDivElement>(null);
+  const lastIconRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const [progress, setProgress] = useState(0);
+  const [trackStyle, setTrackStyle] = useState<{ top: number; height: number }>({ top: 0, height: 1 });
+
   const activeIndex = useMemo(() => {
     const next = Math.floor((progress / 100) * triadSteps.length);
     return Math.max(0, Math.min(next, triadSteps.length - 1));
@@ -66,6 +70,14 @@ export default function Triade() {
       const pct = Math.max(0, Math.min(passed / rect.height, 1)) * 100;
 
       setProgress(pct);
+
+      if (firstIconRef.current && lastIconRef.current) {
+        const firstRect = firstIconRef.current.getBoundingClientRect();
+        const lastRect = lastIconRef.current.getBoundingClientRect();
+        const top = firstRect.top - rect.top + firstRect.height / 2;
+        const bottom = lastRect.top - rect.top + lastRect.height / 2;
+        setTrackStyle({ top, height: Math.max(1, bottom - top) });
+      }
     };
 
     const handleScroll = () => {
@@ -79,8 +91,10 @@ export default function Triade() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll);
     updateProgress();
+    const t = window.setTimeout(updateProgress, 100);
 
     return () => {
+      window.clearTimeout(t);
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current);
       }
@@ -108,7 +122,7 @@ export default function Triade() {
         <span className="mb-6 inline-block rounded-full border border-[#B8941F]/25 bg-[#B8941F]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[3px] text-[#D9B651]">
           Nosso método
         </span>
-        <h2 className="mb-4 text-3xl font-black text-white md:text-4xl lg:text-5xl" style={{ fontFamily: 'Cinzel, serif' }}>
+        <h2 className="mb-4 text-3xl font-black text-white md:text-4xl lg:text-5xl">
           A Tríade <span className="text-[#D9B651]">Humana</span>
         </h2>
         <p className="mx-auto mb-12 max-w-2xl text-[1.05rem] text-gray-300 sm:text-lg">
@@ -131,7 +145,10 @@ export default function Triade() {
 
         <div className="mx-auto max-w-4xl">
           <div id="timeline-container" ref={containerRef} className="relative pb-2 pl-14 text-left sm:pl-20">
-            <div className="absolute bottom-0 left-5 top-0 w-[2px] rounded-full bg-white/10 sm:left-8">
+            <div
+              className="absolute left-5 w-[2px] rounded-full bg-white/10 sm:left-8"
+              style={{ top: trackStyle.top, height: trackStyle.height }}
+            >
               <div
                 className="w-full rounded-full bg-gradient-to-b from-[#E5C66A] via-[#B8941F] to-[#8A6A17] transition-all duration-300 ease-out"
                 style={{ height: `${progress}%` }}
@@ -143,10 +160,14 @@ export default function Triade() {
                 const stepThreshold = (index / triadSteps.length) * 100;
                 const isActive = progress >= stepThreshold || index <= activeIndex;
                 const isCurrent = index === activeIndex;
+                const iconRef = index === 0 ? firstIconRef : index === triadSteps.length - 1 ? lastIconRef : null;
 
                 return (
                   <article key={step.num} className="relative group">
-                    <div className="absolute -left-[2.6rem] top-7 flex items-center justify-center sm:-left-[3.3rem]">
+                    <div
+                      ref={iconRef}
+                      className="absolute -left-[2.6rem] top-7 flex items-center justify-center sm:-left-[3.3rem]"
+                    >
                       <div
                         className={`absolute rounded-full transition-all duration-700 ${
                           isActive ? 'h-12 w-12 bg-[#D9B651]/20 shadow-[0_0_30px_rgba(184,148,31,0.4)]' : 'h-10 w-10 bg-transparent'
@@ -189,7 +210,7 @@ export default function Triade() {
                         </span>
                       </div>
 
-                      <h3 className="relative mt-3 text-2xl font-bold text-white sm:text-[1.9rem]" style={{ fontFamily: 'Cinzel, serif' }}>
+                      <h3 className="relative mt-3 text-2xl font-bold text-white sm:text-[1.9rem]">
                         {step.title}
                       </h3>
                       <p className="relative mt-3 text-base leading-relaxed text-gray-300 sm:text-[1.06rem]">

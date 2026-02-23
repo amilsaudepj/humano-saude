@@ -36,9 +36,8 @@ export default function AISimulator() {
             <span className="inline-block px-4 py-1.5 bg-[#B8941F]/10 text-[#B8941F] rounded-full text-xs font-bold uppercase tracking-[3px] mb-6 border border-[#B8941F]/20">
               Eficiência nos benefícios
             </span>
-            <h3 className="text-4xl lg:text-5xl font-black text-black leading-[1.1] mb-6 uppercase" style={{ fontFamily: 'Cinzel, serif' }}>
-              O fim do<br />
-              <span className="text-[#B8941F]">custo ineficiente</span>
+            <h3 className="text-2xl sm:text-3xl lg:text-[2rem] xl:text-[2.25rem] font-black text-black leading-tight mb-6 uppercase">
+              O fim do <span className="text-[#B8941F]">custo ineficiente</span>
             </h3>
             <p className="text-lg text-gray-500 leading-relaxed mb-10">
               Nossa IA analisa em tempo real o mercado para identificar a{' '}
@@ -86,8 +85,8 @@ export default function AISimulator() {
                   key={step.id}
                   className={`absolute ${step.position} px-4 py-2.5 rounded-lg transition-all duration-500 backdrop-blur-md z-10 ${
                     step.isSuccess
-                      ? 'bg-[#B8941F] text-black font-bold text-sm px-6 py-3 shadow-lg shadow-[#B8941F]/30'
-                      : 'bg-white/5 border border-[#B8941F]/20 text-[#B8941F]/80 text-xs font-medium tracking-wide'
+                      ? 'bg-[#E5C66A] text-black font-bold text-sm px-6 py-3 shadow-lg shadow-[#D9B651]/40'
+                      : 'bg-white/5 border border-[#D9B651]/50 text-[#E5C66A] text-xs font-medium tracking-wide'
                   } ${
                     activeStep >= i ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                   }`}
@@ -151,7 +150,7 @@ export default function AISimulator() {
               {card.ctaType === 'form' && (
                 <a
                   href="#hero"
-                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#B8941F]/35 px-6 py-3 text-xs sm:text-sm font-black uppercase tracking-[2px] text-[#8A6812] transition-all hover:-translate-y-0.5 hover:bg-[#B8941F]/10"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#B8941F]/35 px-4 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[1.5px] text-[#8A6812] transition-all hover:-translate-y-0.5 hover:bg-[#B8941F]/10 whitespace-nowrap"
                 >
                   Solicitar análise
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -165,7 +164,7 @@ export default function AISimulator() {
                   href="https://wa.me/5521988179407?text=Olá! Gostaria de falar com um especialista."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-6 py-3 text-xs sm:text-sm font-black uppercase tracking-[2px] text-white transition-all hover:-translate-y-0.5 hover:bg-[#20BD5A]"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[1.5px] text-white transition-all hover:-translate-y-0.5 hover:bg-[#20BD5A] whitespace-nowrap"
                 >
                   Falar com especialista
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 448 512">
@@ -177,7 +176,7 @@ export default function AISimulator() {
               {card.ctaType === 'calculadora' && (
                 <a
                   href="#calculadora"
-                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#111111] px-6 py-3 text-xs sm:text-sm font-black uppercase tracking-[2px] text-white transition-all hover:-translate-y-0.5 hover:bg-black"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#111111] px-4 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[1.5px] text-white transition-all hover:-translate-y-0.5 hover:bg-black whitespace-nowrap"
                 >
                   Abrir calculadora
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">

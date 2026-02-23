@@ -1,12 +1,5 @@
-import { Cinzel, Montserrat } from 'next/font/google';
+import { Montserrat } from 'next/font/google';
 import type { Metadata } from 'next';
-
-const cinzel = Cinzel({
-  subsets: ['latin'],
-  weight: ['400', '700', '900'],
-  variable: '--font-cinzel',
-  display: 'swap',
-});
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -78,7 +71,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${cinzel.variable} ${montserrat.variable} font-montserrat`}>
+    <div className={`${montserrat.variable} font-montserrat`}>
       {children}
     </div>
   );

@@ -41,7 +41,7 @@ export default function NovoLeadEmail({
   parcial = false,
   dataCriacao = new Date().toISOString(),
 }: NovoLeadEmailProps) {
-  const origemLabel = origem === 'calculadora' ? 'Calculadora' : origem === 'hero_form' ? 'Formulário do topo' : 'Landing page';
+  const origemLabel = origem === 'calculadora' ? 'Calculadora' : origem === 'hero_form' ? 'Formulário do topo' : origem === 'email_form' ? 'Formulário do e-mail' : 'Landing page';
   const intencaoLabel = intencao === 'reduzir' ? 'Reduzir custo atual' : intencao === 'contratar' ? 'Contratar 1º plano' : '—';
   const perfilLabel = perfilCnpj === 'mei' ? 'MEI' : perfilCnpj === 'pme' ? 'PME / Empresa' : '—';
 

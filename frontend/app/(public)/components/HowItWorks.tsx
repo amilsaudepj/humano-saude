@@ -43,7 +43,7 @@ export default function HowItWorks() {
           <span className="inline-block px-5 py-1.5 bg-[#B8941F]/10 text-[#B8941F] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-[#B8941F]/20">
             Como funciona
           </span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-black mb-4" style={{ fontFamily: 'Cinzel, serif' }}>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-black mb-4">
             Seu atendimento{' '}
             <span className="text-[#B8941F]">rápido e personalizado</span>
           </h2>
@@ -90,7 +90,7 @@ export default function HowItWorks() {
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-[#B8941F]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative text-center">
-            <h3 className="text-3xl md:text-4xl font-black text-white mb-4" style={{ fontFamily: 'Cinzel, serif' }}>
+            <h3 className="text-3xl md:text-4xl font-black text-white mb-4">
               Pronto para <span className="text-[#B8941F]">economizar?</span>
             </h3>
             

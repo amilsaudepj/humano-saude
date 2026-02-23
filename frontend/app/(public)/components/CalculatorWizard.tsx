@@ -129,7 +129,7 @@ export default function CalculatorWizard() {
     <section id="calculadora" className="py-12 sm:py-16 lg:py-20 bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-black text-black mb-4 leading-[1.1]" style={{ fontFamily: 'Cinzel, serif' }}>Simule seu <span className="text-[#B8941F]">Plano de Saúde</span> com CNPJ</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-[2rem] xl:text-[2.25rem] font-bold text-black mb-4 leading-tight">Simule seu <span className="text-[#B8941F]">Plano de Saúde</span> com CNPJ</h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Em menos de 2 minutos, descubra quanto sua empresa pode economizar</p>
         </div>
 

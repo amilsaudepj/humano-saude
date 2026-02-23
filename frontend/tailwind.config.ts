@@ -94,7 +94,7 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        cinzel: ["var(--font-cinzel)", "serif"],
+        cinzel: ["var(--font-montserrat)", "sans-serif"],
         perpetua: ["var(--font-perpetua)", "serif"],
       },
       animation: {

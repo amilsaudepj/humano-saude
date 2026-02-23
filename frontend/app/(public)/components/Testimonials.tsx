@@ -53,13 +53,13 @@ export default function Testimonials() {
 
         {/* Mobile & Desktop Carousel */}
         <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-8">
+          <div className="flex gap-6 md:gap-10">
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
-                className="flex-[0_0_100%] md:flex-[0_0_calc(33.333%-1.5rem)] min-w-0"
+                className="flex-[0_0_100%] md:flex-[0_0_calc((100%-5rem)/3)] min-w-0"
               >
-                <div className="bg-white p-10 rounded-2xl border border-gray-200 h-full flex flex-col hover:shadow-md transition-all duration-300">
+                <div className="bg-white p-10 rounded-2xl border border-gray-200 h-full flex flex-col hover:shadow-md transition-all duration-300 shadow-sm">
                   {/* Stars */}
                   <div className="flex gap-1 mb-6">
                     {Array.from({ length: testimonial.stars }).map((_, i) => (

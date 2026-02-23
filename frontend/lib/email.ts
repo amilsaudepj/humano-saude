@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 
 // React Email templates
 import ConfirmacaoCadastroEmail from '@/emails/ConfirmacaoCadastroEmail';
+import ConfirmacaoLeadClienteEmail from '@/emails/ConfirmacaoLeadClienteEmail';
 import NotificacaoAdminEmail from '@/emails/NotificacaoAdminEmail';
 import AprovacaoEmail from '@/emails/AprovacaoEmail';
 import AlteracaoBancariaCorretorEmail from '@/emails/AlteracaoBancariaCorretorEmail';
@@ -610,7 +611,45 @@ export async function sendPixPendingEmail(dados: {
 export { getResend as _getResend };
 
 // ─────────────────────────────────────────────────────────────
-// 14. NOVO LEAD — Notificação para equipe comercial
+// 14. CONFIRMAÇÃO LEAD — E-mail para o cliente que cadastrou
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailConfirmacaoLeadCliente(dados: {
+  nome: string;
+  email: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '');
+    const completarUrl = `${baseUrl}/completar-cotacao?nome=${encodeURIComponent(dados.nome)}&email=${encodeURIComponent(dados.email)}`;
+    const html = await render(
+      ConfirmacaoLeadClienteEmail({ nome: dados.nome, email: dados.email, completarUrl })
+    );
+
+    const result = await sendViaResend({
+      to: dados.email,
+      subject: 'Recebemos seu cadastro — Humano Saúde',
+      html,
+      templateName: 'confirmacao_lead_cliente',
+      category: 'leads',
+      tags: ['lead', 'confirmacao', 'cliente'],
+      triggeredBy: 'system',
+      metadata: { lead_email: dados.email },
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailConfirmacaoLeadCliente', err);
+    return { success: false, error: 'Erro ao enviar e-mail de confirmação' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 15. NOVO LEAD — Notificação para equipe comercial
 // ─────────────────────────────────────────────────────────────
 export async function enviarEmailNovoLead(dados: {
   nome: string;
@@ -654,12 +693,24 @@ export async function enviarEmailNovoLead(dados: {
       })
     );
 
-    const origemLabel = dados.origem === 'calculadora' ? 'Calculadora' : dados.origem === 'hero_form' ? 'Formulário' : 'Landing';
+    const origemLabel = dados.origem === 'calculadora' ? 'Calculadora' : dados.origem === 'hero_form' ? 'Formulário' : dados.origem === 'email_form' ? 'Formulário do e-mail' : 'Landing';
     const prefix = dados.parcial ? '⚠️ Lead parcial' : '🔥 Novo lead';
 
+    // Nunca enviar "Novo lead" para o e-mail do lead — só para equipe (ADMIN + CC)
+    const leadEmailLower = (dados.email || '').trim().toLowerCase();
+    const toList = (leadEmailLower ? ADMIN_EMAILS.filter((e) => e.trim().toLowerCase() !== leadEmailLower) : [...ADMIN_EMAILS])
+      .filter((e) => e.trim().toLowerCase() !== leadEmailLower);
+    const ccList = (leadEmailLower ? CC_EMAILS.filter((e) => e.trim().toLowerCase() !== leadEmailLower) : [...CC_EMAILS])
+      .filter((e) => e.trim().toLowerCase() !== leadEmailLower);
+
+    if (toList.length === 0 && ccList.length === 0) {
+      log.warn('enviarEmailNovoLead: nenhum destinatário após excluir o lead; não enviando e-mail de admin');
+      return { success: true, id: undefined };
+    }
+
     return sendViaResend({
-      to: ADMIN_EMAILS,
-      cc: CC_EMAILS,
+      to: toList.length > 0 ? toList : ccList,
+      cc: toList.length > 0 ? ccList : undefined,
       subject: `${prefix} — ${dados.nome || 'Sem nome'} (${origemLabel})`,
       html,
     });
@@ -670,7 +721,7 @@ export async function enviarEmailNovoLead(dados: {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 15. ACESSO PORTAL CLIENTE — Envio de credenciais
+// 16. ACESSO PORTAL CLIENTE — Envio de credenciais
 // ─────────────────────────────────────────────────────────────
 export async function enviarEmailAcessoPortalCliente(dados: {
   nome: string;

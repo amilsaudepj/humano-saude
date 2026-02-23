@@ -146,6 +146,7 @@ export async function middleware(request: NextRequest) {
   const isHumanoDomain =
     domain.includes('humanosaude.com.br') ||
     domain.includes('localhost') ||
+    domain.includes('127.0.0.1') ||
     domain.includes('vercel.app');
 
   let tenantSlug: string | null = null;
@@ -478,6 +479,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/portal-interno-hks-2026/:path*',
     '/portal-cliente/:path*',
     '/dashboard/:path*',

@@ -8,7 +8,7 @@ import { z } from 'zod';
 const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
 
 /** Valida telefone brasileiro (10-11 dígitos, DDD 11-99, não repetido) */
-const isValidBrazilianPhone = (phone: string): boolean => {
+export const isValidBrazilianPhone = (phone: string): boolean => {
   const digits = cleanPhone(phone);
   if (digits.length < 10 || digits.length > 11) return false;
   if (/^(\d)\1+$/.test(digits)) return false;
@@ -175,33 +175,54 @@ export type CotacaoInputValidated = z.infer<typeof cotacaoInputSchema>;
 // SCHEMAS – API /api/leads (SERVER-SIDE)
 // ============================================
 
-export const apiLeadSchema = z.object({
-  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').optional().default(''),
-  email: z.string().optional().default(''),
-  telefone: z.string().optional().default(''),
-  perfil: z.string().optional().default(''),
-  // Campos opcionais (calculadora v2)
-  intencao: z.enum(['reduzir', 'contratar']).optional(),
-  perfil_cnpj: z.enum(['mei', 'pme']).optional(),
-  usa_bypass: z.boolean().optional(),
-  qtd_vidas_estimada: z.number().optional(),
-  tipo_contratacao: z.string().optional(),
-  cnpj: z.string().nullable().optional(),
-  acomodacao: z.string().optional(),
-  idades_beneficiarios: z.array(z.string()).optional(),
-  bairro: z.string().optional(),
-  top_3_planos: z.union([z.string(), z.array(z.string())]).optional(),
-  // Origem e status
-  origem: z.enum(['calculadora', 'hero_form', 'landing']).optional(),
-  parcial: z.boolean().optional(),
-  source: z.string().optional(),
-  lead_score_value: z.number().optional(),
-  empresa: z.string().optional(),
-  // UTM
-  utm_source: z.string().optional(),
-  utm_medium: z.string().optional(),
-  utm_campaign: z.string().optional(),
-});
+const emailOptional = z
+  .string()
+  .optional()
+  .default('')
+  .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'E-mail inválido');
+
+const telefoneOptional = z
+  .string()
+  .optional()
+  .default('')
+  .refine((v) => !v || isValidBrazilianPhone(v), 'Telefone inválido. Use DDD + número (10 ou 11 dígitos), ex: (21) 98888-7777');
+
+export const apiLeadSchema = z
+  .object({
+    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').optional().default(''),
+    email: emailOptional,
+    telefone: telefoneOptional,
+    perfil: z.string().optional().default(''),
+    intencao: z.enum(['reduzir', 'contratar']).optional(),
+    perfil_cnpj: z.enum(['mei', 'pme']).optional(),
+    usa_bypass: z.boolean().optional(),
+    qtd_vidas_estimada: z.union([z.number(), z.string()]).optional(),
+    tipo_contratacao: z.string().optional(),
+    cnpj: z.string().nullable().optional(),
+    acomodacao: z.string().optional(),
+    idades_beneficiarios: z.array(z.string()).optional(),
+    bairro: z.string().optional(),
+    operadora_atual: z.string().optional().nullable(),
+    top_3_planos: z.union([z.string(), z.array(z.string())]).optional(),
+    origem: z.enum(['calculadora', 'hero_form', 'landing', 'email_form']).optional(),
+    parcial: z.boolean().optional(),
+    source: z.string().optional(),
+    lead_score_value: z.number().optional(),
+    empresa: z.string().optional(),
+    utm_source: z.string().optional(),
+    utm_medium: z.string().optional(),
+    utm_campaign: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.parcial === true) return true;
+      const nomeOk = (data.nome ?? '').trim().length >= 2;
+      const emailOk = (data.email ?? '').trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((data.email ?? '').trim());
+      const telOk = (data.telefone ?? '').trim().length > 0 && isValidBrazilianPhone((data.telefone ?? '').trim());
+      return nomeOk && (emailOk || telOk);
+    },
+    { message: 'Lead completo exige nome (mín. 2 caracteres) e e-mail válido ou telefone válido.' }
+  );
 
 export type ApiLeadInput = z.infer<typeof apiLeadSchema>;
 

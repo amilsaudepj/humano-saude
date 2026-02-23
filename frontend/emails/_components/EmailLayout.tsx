@@ -1,6 +1,6 @@
 // ─── Blueprint 14: React Email — Shared Layout ──────────────
 // Base layout for all Humano Saúde email templates.
-// Dark header, gold accents, responsive, dark-mode ready.
+// Força tema claro para exibição correta em dark mode (mobile e desktop).
 
 import {
   Html,
@@ -8,14 +8,11 @@ import {
   Body,
   Container,
   Section,
-  Img,
   Text,
   Hr,
   Link,
 } from '@react-email/components';
 import * as React from 'react';
-
-const LOGO_URL = 'https://humanosaude.com.br/images/logos/LOGO%201%20SEM%20FUNDO.png';
 
 interface EmailLayoutProps {
   preview: string;
@@ -27,24 +24,34 @@ export function EmailLayout({ preview, children, showSpamWarning = false }: Emai
   return (
     <Html>
       <Head>
-        <meta name="color-scheme" content="light dark" />
-        <meta name="supported-color-schemes" content="light dark" />
+        <meta name="color-scheme" content="light only" />
+        <meta name="supported-color-schemes" content="light" />
+        <style>{`
+          :root { color-scheme: light only; }
+          @media (prefers-color-scheme: dark) {
+            body, .email-body { background-color: #ffffff !important; color: #111827 !important; }
+            .email-container { background-color: #ffffff !important; }
+            .email-content { background-color: #FAFAFA !important; color: #111827 !important; }
+            .email-content * { border-color: #E5E7EB !important; }
+            a.email-cta-whatsapp, a.email-cta-whatsapp *, .email-cta-whatsapp, .email-cta-whatsapp *,
+            .email-cta-text { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+            .email-spam { background-color: #FFFBEB !important; color: #92400E !important; }
+            .email-spam * { color: #92400E !important; }
+            .email-footer { background-color: transparent !important; color: #6b7280 !important; }
+            .email-copyright { color: #6b7280 !important; }
+            .email-footer-link { color: #D4AF37 !important; }
+          }
+        `}</style>
       </Head>
-      <Body style={main}>
-        <Container style={container}>
-          {/* Header */}
-          <Section style={header}>
-            <Img src={LOGO_URL} width="220" height="73" alt="Humano Saúde" style={logo} />
-          </Section>
-
-          {/* Content */}
-          <Section style={content}>
+      <Body style={main} className="email-body">
+        <Container style={container} className="email-container">
+          <Section style={content} className="email-content">
             {children}
           </Section>
 
           {/* Spam Warning */}
           {showSpamWarning && (
-            <Section style={spamBox}>
+            <Section style={spamBox} className="email-spam">
               <Text style={spamText}>
                 <strong>⚠️ Importante:</strong> Nossos e-mails podem cair na pasta{' '}
                 <strong>Spam/Lixo Eletrônico</strong>. Marque como &quot;Não é spam&quot; para receber
@@ -56,11 +63,11 @@ export function EmailLayout({ preview, children, showSpamWarning = false }: Emai
           <Hr style={divider} />
 
           {/* Footer */}
-          <Section style={footer}>
-            <Text style={copyright}>
+          <Section style={footer} className="email-footer">
+            <Text style={copyright} className="email-copyright">
               © {new Date().getFullYear()} Humano Saúde — Todos os direitos reservados
             </Text>
-            <Link href="https://humanosaude.com.br" style={footerLink}>
+            <Link href="https://humanosaude.com.br" style={footerLink} className="email-footer-link">
               humanosaude.com.br
             </Link>
           </Section>
@@ -75,6 +82,7 @@ const main: React.CSSProperties = {
   backgroundColor: '#FFFFFF',
   fontFamily:
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  colorScheme: 'light',
 };
 
 const container: React.CSSProperties = {
@@ -83,23 +91,11 @@ const container: React.CSSProperties = {
   padding: '32px 16px',
 };
 
-const header: React.CSSProperties = {
-  backgroundColor: '#0A0A0A',
-  borderRadius: '16px 16px 0 0',
-  padding: '32px',
-  textAlign: 'center' as const,
-};
-
-const logo: React.CSSProperties = {
-  margin: '0 auto',
-};
-
 const content: React.CSSProperties = {
   padding: '32px 40px',
   backgroundColor: '#FAFAFA',
   border: '1px solid #E5E7EB',
-  borderTop: 'none',
-  borderRadius: '0 0 16px 16px',
+  borderRadius: '16px',
 };
 
 const spamBox: React.CSSProperties = {
