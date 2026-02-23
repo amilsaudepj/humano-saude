@@ -1,12 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function Footer() {
+interface FooterProps {
+  /** Oculta a coluna "Links Rápidos" (ex.: página completar-cotacao) */
+  hideLinksRapidos?: boolean;
+}
+
+export default function Footer({ hideLinksRapidos = false }: FooterProps) {
   return (
     <footer className="bg-black text-white border-t border-white/5">
       {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-        <div className="grid md:grid-cols-3 gap-12 md:gap-8">
+        <div className={`grid gap-12 md:gap-8 ${hideLinksRapidos ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
           {/* Column 1: Logo + Description */}
           <div>
             <Image
@@ -69,39 +74,41 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Quick Links */}
-          <div>
-            <h3 className="text-lg font-bold mb-6 text-gold-400">
-              Links Rápidos
-            </h3>
-            <ul className="space-y-4 text-sm">
-              <li>
-                <Link href="#ia" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  Tecnologia IA
-                </Link>
-              </li>
-              <li>
-                <Link href="#pratica" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  Resultados Reais
-                </Link>
-              </li>
-              <li>
-                <Link href="#metodo" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  Método Tríade
-                </Link>
-              </li>
-              <li>
-                <Link href="#testimonials" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  Depoimentos
-                </Link>
-              </li>
-              <li>
-                <Link href="#faq" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  Dúvidas Frequentes
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Column 3: Quick Links (oculto em completar-cotacao) */}
+          {!hideLinksRapidos && (
+            <div>
+              <h3 className="text-lg font-bold mb-6 text-gold-400">
+                Links Rápidos
+              </h3>
+              <ul className="space-y-4 text-sm">
+                <li>
+                  <Link href="#ia" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Tecnologia IA
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#pratica" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Resultados Reais
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#metodo" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Método Tríade
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#testimonials" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Depoimentos
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#faq" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Dúvidas Frequentes
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

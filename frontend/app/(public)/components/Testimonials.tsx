@@ -51,17 +51,17 @@ export default function Testimonials() {
           </h2>
         </div>
 
-        {/* Mobile & Desktop Carousel */}
+        {/* Mobile & Desktop Carousel — gap e margem nos cards para não ficarem colados */}
         <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-6 md:gap-10">
+          <div className="flex items-stretch gap-6 md:gap-10 lg:gap-12">
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
-                className="flex-[0_0_100%] md:flex-[0_0_calc((100%-5rem)/3)] min-w-0"
+                className="flex-[0_0_calc(100%-1.5rem)] md:flex-[0_0_calc((100%-5rem)/3)] min-w-0 shrink-0 flex"
               >
-                <div className="bg-white p-10 rounded-2xl border border-gray-200 h-full flex flex-col hover:shadow-md transition-all duration-300 shadow-sm">
+                <div className="bg-white p-10 rounded-2xl border border-gray-200 w-full flex flex-col hover:shadow-md transition-all duration-300 shadow-sm mx-2 md:mx-3 min-h-0">
                   {/* Stars */}
-                  <div className="flex gap-1 mb-6">
+                  <div className="flex gap-1 mb-6 flex-shrink-0">
                     {Array.from({ length: testimonial.stars }).map((_, i) => (
                       <svg
                         key={i}
@@ -74,13 +74,13 @@ export default function Testimonials() {
                     ))}
                   </div>
 
-                  {/* Quote */}
-                  <p className="text-gray-600 text-lg leading-relaxed mb-8 flex-1">
+                  {/* Quote — flex-1 + min-h-0 para o rodapé ficar sempre alinhado entre os cards */}
+                  <p className="text-gray-600 text-lg leading-relaxed mb-8 flex-1 min-h-0">
                     "{testimonial.text}"
                   </p>
 
-                  {/* Author */}
-                  <div className="border-t border-gray-100 pt-6">
+                  {/* Author — sempre no final do card */}
+                  <div className="border-t border-gray-100 pt-6 flex-shrink-0">
                     <p className="font-bold text-black text-lg">
                       {testimonial.name}
                     </p>

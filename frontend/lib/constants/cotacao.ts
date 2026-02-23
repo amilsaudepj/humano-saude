@@ -1,37 +1,35 @@
-// Bairros principais do RJ para o formulário de cotação (com "Outros")
-export const BAIRROS_RJ = [
-  'Barra da Tijuca',
-  'Botafogo',
-  'Campo Grande',
-  'Centro',
-  'Copacabana',
-  'Flamengo',
-  'Ilha do Governador',
-  'Ipanema',
-  'Jacarepaguá',
-  'Leblon',
-  'Madureira',
-  'Méier',
-  'Niterói',
-  'Nova Iguaçu',
-  'Recreio dos Bandeirantes',
-  'São Gonçalo',
-  'Tijuca',
-  'Outros',
-] as const;
+// Bairros do RJ por zona (para o formulário de cotação)
+export const BAIRROS_POR_ZONA: { zona: string; bairros: string[] }[] = [
+  { zona: 'Zona Sul', bairros: ['Copacabana', 'Ipanema', 'Leblon', 'Leme', 'Botafogo', 'Flamengo', 'Laranjeiras', 'Catete', 'Glória', 'Santa Teresa'] },
+  { zona: 'Zona Norte', bairros: ['Tijuca', 'Vila Isabel', 'Grajaú', 'Méier', 'Engenho Novo', 'Riachuelo', 'Madureira', 'Campo Grande', 'Pavuna', 'Ilha do Governador'] },
+  { zona: 'Zona Oeste', bairros: ['Barra da Tijuca', 'Recreio dos Bandeirantes', 'Jacarepaguá', 'Taquara', 'Curicica', 'Campo Grande', 'Santa Cruz', 'Guaratiba'] },
+  { zona: 'Centro', bairros: ['Centro', 'Lapa', 'Saúde', 'Gamboa', 'Cidade Nova', 'São Cristóvão'] },
+  { zona: 'Baixada Fluminense', bairros: ['Niterói', 'São Gonçalo', 'Nova Iguaçu', 'Duque de Caxias', 'Belford Roxo', 'Mesquita'] },
+  { zona: 'Outros', bairros: ['Outros'] },
+];
 
-// Principais operadoras de saúde (com "Outros")
+// Lista flat de todos os bairros (para validação)
+export const TODOS_BAIRROS = BAIRROS_POR_ZONA.flatMap((z) => z.bairros);
+
+// Operadoras de saúde (conforme solicitado)
 export const OPERADORAS = [
-  'Amil',
-  'Bradesco Saúde',
-  'SulAmérica',
-  'Unimed',
-  'NotreDame Intermédica',
-  'Hapvida',
-  'Prevent Senior',
-  'Care Plus',
-  'One Health',
-  'Outros',
+  'AMIL',
+  'BRADESCO',
+  'SULAMERICA',
+  'PORTO SEGURO',
+  'ASSIM',
+  'UNIMED FERJ',
+  'UNIMED LESTE FLUMINENSE',
+  'UNIMED SEGUROS',
+  'LEVE SAUDE',
+  'MEDSENIOR',
+  'PREVENT SENIOR AMPLA',
+  'HAPVIDA NOTREDAME',
+  'KLINI',
+  'ONMED',
+  'SELECT',
+  'SAMOC',
+  'OUTROS',
 ] as const;
 
 export const FAIXAS_ETARIAS = [

@@ -107,12 +107,10 @@ export default function CaseStudies() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-[#555]">{item.fromName}</p>
+              <div className="mt-4 flex justify-center">
                 <span className="rounded-full border border-[#B8941F]/30 bg-[#B8941F]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[2px] text-[#8C6913]">
                   {item.reducao}
                 </span>
-                <p className="text-right text-xs font-semibold text-[#7A5D14]">{item.toName}</p>
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.insurance_leads (
   
   -- Dados do Lead
   nome VARCHAR(255) NOT NULL,
-  whatsapp VARCHAR(20) NOT NULL,
+  whatsapp VARCHAR(20),  -- NULL quando lead veio só por e-mail (ex.: completar cotação)
   email VARCHAR(255),
   
   -- Dados do Plano Atual
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.insurance_leads (
   arquivado BOOLEAN DEFAULT FALSE,
   
   -- Índices para busca
-  CONSTRAINT whatsapp_format CHECK (whatsapp ~ '^\+?[0-9]{10,15}$'),
+  CONSTRAINT whatsapp_format CHECK (whatsapp IS NULL OR whatsapp ~ '^\+?[0-9]{10,15}$'),
   CONSTRAINT status_valido CHECK (status IN (
     'novo', 'contatado', 'negociacao', 
     'proposta_enviada', 'ganho', 'perdido', 'pausado'

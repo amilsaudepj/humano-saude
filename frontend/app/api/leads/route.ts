@@ -4,7 +4,7 @@ import { apiLeadSchema } from '@/lib/validations';
 import { checkRateLimit, leadsLimiter } from '@/lib/rate-limit';
 import { createServiceClient } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
-import { enviarEmailNovoLead, enviarEmailConfirmacaoLeadCliente } from '@/lib/email';
+import { enviarEmailNovoLead, enviarEmailConfirmacaoLeadCliente, enviarEmailDadosRecebidosCompletarCotacao } from '@/lib/email';
 
 function parseValidIp(ip: string): string | null {
   const raw = (ip || '').trim().split(',')[0].trim();
@@ -22,6 +22,9 @@ function normalizeWhatsapp(value: string | null | undefined): string | null {
   if (digits.length < 10 || digits.length > 15) return null;
   return digits;
 }
+
+/** Placeholder quando lead não tem telefone (ex.: completar cotação por e-mail). Permite salvar mesmo se a coluna whatsapp for NOT NULL no banco. */
+const WHATSAPP_PLACEHOLDER_SEM_TELEFONE = '0000000000';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,16 +49,20 @@ export async function POST(request: NextRequest) {
     const isParcial = validatedData.parcial === true;
 
     const whatsappNormalized = normalizeWhatsapp(validatedData.telefone);
+    // Se não tem telefone (ex.: completar cotação por e-mail), usar placeholder para não falhar se whatsapp for NOT NULL no banco
+    const whatsappParaInsert =
+      whatsappNormalized ?? (validatedData.email?.trim() ? WHATSAPP_PLACEHOLDER_SEM_TELEFONE : null);
 
     const supabase = createServiceClient();
     const insertPayload = {
       nome: validatedData.nome || null,
       email: validatedData.email || null,
-      whatsapp: whatsappNormalized,
+      whatsapp: whatsappParaInsert,
       telefone: validatedData.telefone || null,
       perfil: validatedData.perfil || null,
       tipo_contratacao: validatedData.tipo_contratacao || null,
       cnpj: validatedData.cnpj || null,
+      empresa: validatedData.empresa || null,
       acomodacao: validatedData.acomodacao || null,
       idades_beneficiarios: validatedData.idades_beneficiarios || null,
       bairro: validatedData.bairro || null,
@@ -88,9 +95,17 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (error) {
-      logger.error('Erro ao inserir lead', error as Error, { origem });
+      logger.error('Erro ao inserir lead', error as Error, { origem, details: (error as { message?: string }).message });
+      const msg = (error as { message?: string }).message ?? String(error);
+      const code = (error as { code?: string }).code;
+      const isWhatsappConstraint =
+        msg.includes('whatsapp') || msg.includes('null value') || code === '23502';
+      const details =
+        isWhatsappConstraint && !whatsappNormalized
+          ? 'Lead sem telefone: execute a migração 20260223_allow_lead_whatsapp_null.sql no Supabase para permitir whatsapp NULL.'
+          : msg;
       return NextResponse.json(
-        { error: 'Erro ao salvar lead', details: error.message },
+        { error: 'Erro ao salvar lead', details },
         { status: 500 }
       );
     }
@@ -117,12 +132,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isParcial && validatedData.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedData.email.trim())) {
-      enviarEmailConfirmacaoLeadCliente({
-        nome: (validatedData.nome || '').trim() || 'Cliente',
-        email: validatedData.email.trim(),
-      }).catch((err: unknown) => {
-        logger.error('Erro ao enviar email de confirmação ao cliente', err as Error, { lead_id: data.id });
-      });
+      if (origem === 'email_form') {
+        enviarEmailDadosRecebidosCompletarCotacao({
+          nome: (validatedData.nome || '').trim() || 'Cliente',
+          email: validatedData.email.trim(),
+        }).catch((err: unknown) => {
+          logger.error('Erro ao enviar email dados recebidos (completar cotação)', err as Error, { lead_id: data.id });
+        });
+      } else {
+        enviarEmailConfirmacaoLeadCliente({
+          nome: (validatedData.nome || '').trim() || 'Cliente',
+          email: validatedData.email.trim(),
+        }).catch((err: unknown) => {
+          logger.error('Erro ao enviar email de confirmação ao cliente', err as Error, { lead_id: data.id });
+        });
+      }
     }
 
     return NextResponse.json(

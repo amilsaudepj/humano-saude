@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger';
 // React Email templates
 import ConfirmacaoCadastroEmail from '@/emails/ConfirmacaoCadastroEmail';
 import ConfirmacaoLeadClienteEmail from '@/emails/ConfirmacaoLeadClienteEmail';
+import DadosRecebidosCompletarCotacaoEmail from '@/emails/DadosRecebidosCompletarCotacaoEmail';
 import NotificacaoAdminEmail from '@/emails/NotificacaoAdminEmail';
 import AprovacaoEmail from '@/emails/AprovacaoEmail';
 import AlteracaoBancariaCorretorEmail from '@/emails/AlteracaoBancariaCorretorEmail';
@@ -644,6 +645,42 @@ export async function enviarEmailConfirmacaoLeadCliente(dados: {
     return { success: true };
   } catch (err) {
     log.error('enviarEmailConfirmacaoLeadCliente', err);
+    return { success: false, error: 'Erro ao enviar e-mail de confirmação' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14b. DADOS RECEBIDOS (completar cotação) — E-mail simples para quem já preencheu o link do e-mail
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailDadosRecebidosCompletarCotacao(dados: {
+  nome: string;
+  email: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const html = await render(
+      DadosRecebidosCompletarCotacaoEmail({ nome: dados.nome })
+    );
+
+    const result = await sendViaResend({
+      to: dados.email,
+      subject: 'Dados recebidos — Humano Saúde',
+      html,
+      templateName: 'dados_recebidos_completar_cotacao',
+      category: 'leads',
+      tags: ['lead', 'completar-cotacao', 'dados-recebidos'],
+      triggeredBy: 'system',
+      metadata: { lead_email: dados.email },
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailDadosRecebidosCompletarCotacao', err);
     return { success: false, error: 'Erro ao enviar e-mail de confirmação' };
   }
 }

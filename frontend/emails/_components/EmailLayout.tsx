@@ -33,8 +33,8 @@ export function EmailLayout({ preview, children, showSpamWarning = false }: Emai
             .email-container { background-color: #ffffff !important; }
             .email-content { background-color: #FAFAFA !important; color: #111827 !important; }
             .email-content * { border-color: #E5E7EB !important; }
-            a.email-cta-whatsapp, a.email-cta-whatsapp *, .email-cta-whatsapp, .email-cta-whatsapp *,
-            .email-cta-text { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+            a.email-cta-whatsapp { background-color: #B8941F !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+            a.email-cta-whatsapp *, .email-cta-whatsapp *, .email-cta-text { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
             .email-spam { background-color: #FFFBEB !important; color: #92400E !important; }
             .email-spam * { color: #92400E !important; }
             .email-footer { background-color: transparent !important; color: #6b7280 !important; }
