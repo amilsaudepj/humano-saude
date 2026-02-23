@@ -199,13 +199,9 @@ export default function HeroV2() {
             usando seu <span className="text-[#B8941F] whitespace-nowrap">CNPJ</span>
           </h1>
 
-          {/* H2 */}
-          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8">
-            Chega de aumentos fora de controle. Compare as tabelas exclusivas{' '}
-            <br className="hidden lg:block" />
-            para <strong className="text-black">MEI e PME</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor{' '}
-            <br className="hidden lg:block" />
-            resultado para o seu <strong className="text-black">CNPJ</strong>.
+          {/* H2 — sem quebras forçadas no desktop para evitar palavras órfãs */}
+          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl">
+            Chega de aumentos fora de controle. Compare as tabelas exclusivas para <strong className="text-black">MEI e PME</strong> e descubra <span className="text-[#B8941F] font-semibold">em minutos</span> a operadora com o melhor resultado para o seu <strong className="text-black">CNPJ</strong>.
           </p>
 
           {/* Benefícios com bolinhas piscantes */}
