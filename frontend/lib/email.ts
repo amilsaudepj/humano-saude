@@ -26,6 +26,9 @@ import ConviteCorretorEmail from '@/emails/ConviteCorretorEmail';
 import BemVindoEmail from '@/emails/BemVindoEmail';
 import CompraConfirmadaEmail from '@/emails/CompraConfirmadaEmail';
 import PixPendenteEmail from '@/emails/PixPendenteEmail';
+import DesignSystemSolicitacaoAdminEmail from '@/emails/DesignSystemSolicitacaoAdminEmail';
+import DesignSystemSolicitacaoRecebidaEmail from '@/emails/DesignSystemSolicitacaoRecebidaEmail';
+import DesignSystemAcessoAprovadoEmail from '@/emails/DesignSystemAcessoAprovadoEmail';
 
 // ─── Resend client (lazy) ────────────────────────────────────
 let _resend: Resend | null = null;
@@ -88,6 +91,9 @@ export async function enviarEmailConfirmacaoCadastro(dados: {
       to: dados.email,
       subject: 'Cadastro recebido — Humano Saúde',
       html,
+      templateName: 'confirmacao_cadastro',
+      category: 'onboarding',
+      tags: ['cadastro', 'corretor'],
     });
   } catch (err) {
     log.error('enviarEmailConfirmacaoCadastro', err);
@@ -234,6 +240,9 @@ export async function enviarEmailAprovacao(dados: {
       to: dados.email,
       subject: 'Cadastro aprovado — Humano Saúde',
       html,
+      templateName: 'aprovacao_cadastro',
+      category: 'onboarding',
+      tags: ['aprovacao', 'corretor'],
     });
   } catch (err) {
     log.error('enviarEmailAprovacao', err);
@@ -266,6 +275,9 @@ export async function enviarEmailAlteracaoBancariaCorretor(dados: {
       to: dados.email,
       subject: 'Solicitação de alteração bancária recebida — Humano Saúde',
       html,
+      templateName: 'alteracao_bancaria_corretor',
+      category: 'financeiro',
+      tags: ['alteracao-bancaria'],
     });
   } catch (err) {
     log.error('enviarEmailAlteracaoBancariaCorretor', err);
@@ -301,6 +313,9 @@ export async function enviarEmailAlteracaoBancariaAdmin(dados: {
       to: ADMIN_EMAILS,
       subject: `Alteração Bancária — ${dados.corretorNome}`,
       html,
+      templateName: 'alteracao_bancaria_admin',
+      category: 'financeiro',
+      tags: ['admin', 'alteracao-bancaria'],
     });
   } catch (err) {
     log.error('enviarEmailAlteracaoBancariaAdmin', err);
@@ -331,6 +346,9 @@ export async function enviarEmailAlteracaoBancariaAprovada(dados: {
       to: dados.email,
       subject: 'Alteração bancária aprovada — Humano Saúde',
       html,
+      templateName: 'alteracao_bancaria_aprovada',
+      category: 'financeiro',
+      tags: ['alteracao-bancaria'],
     });
   } catch (err) {
     log.error('enviarEmailAlteracaoBancariaAprovada', err);
@@ -361,9 +379,103 @@ export async function enviarEmailAlteracaoBancariaRejeitada(dados: {
       to: dados.email,
       subject: 'Alteração bancária não aprovada — Humano Saúde',
       html,
+      templateName: 'alteracao_bancaria_rejeitada',
+      category: 'financeiro',
+      tags: ['alteracao-bancaria'],
     });
   } catch (err) {
     log.error('enviarEmailAlteracaoBancariaRejeitada', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DESIGN SYSTEM — Notificação admin (solicitação de acesso)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailDesignSystemSolicitacaoAdmin(dados: {
+  emailSolicitante: string;
+  approveLink: string;
+}) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(
+      DesignSystemSolicitacaoAdminEmail({
+        emailSolicitante: dados.emailSolicitante,
+        approveLink: dados.approveLink,
+      })
+    );
+
+    const to = process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL] : ADMIN_EMAILS;
+    return sendViaResend({
+      to,
+      subject: `Design System: ${dados.emailSolicitante} solicitou acesso`,
+      html,
+      templateName: 'design_system_solicitacao_admin',
+      category: 'design-system',
+      tags: ['design-system', 'admin', 'solicitacao'],
+    });
+  } catch (err) {
+    log.error('enviarEmailDesignSystemSolicitacaoAdmin', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DESIGN SYSTEM — Confirmação para quem solicitou (solicitação recebida)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailDesignSystemSolicitacaoRecebida(dados: { email: string }) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(
+      DesignSystemSolicitacaoRecebidaEmail({ email: dados.email })
+    );
+
+    return sendViaResend({
+      to: dados.email,
+      subject: 'Solicitação de acesso ao Design System recebida — Humano Saúde',
+      html,
+      templateName: 'design_system_solicitacao_recebida',
+      category: 'design-system',
+      tags: ['design-system', 'solicitante'],
+    });
+  } catch (err) {
+    log.error('enviarEmailDesignSystemSolicitacaoRecebida', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DESIGN SYSTEM — Aviso de acesso aprovado (para quem solicitou)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailDesignSystemAcessoAprovado(dados: {
+  email: string;
+  designSystemUrl: string;
+}) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(
+      DesignSystemAcessoAprovadoEmail({
+        email: dados.email,
+        designSystemUrl: dados.designSystemUrl,
+      })
+    );
+
+    return sendViaResend({
+      to: dados.email,
+      subject: 'Acesso ao Design System aprovado — Humano Saúde',
+      html,
+      templateName: 'design_system_acesso_aprovado',
+      category: 'design-system',
+      tags: ['design-system', 'aprovado'],
+    });
+  } catch (err) {
+    log.error('enviarEmailDesignSystemAcessoAprovado', err);
     return { success: false, error: 'Erro inesperado' };
   }
 }
@@ -387,6 +499,9 @@ export async function enviarEmailAguardeVerificacao(dados: {
       to: dados.email,
       subject: 'Onboarding concluído — Aguarde a verificação — Humano Saúde',
       html,
+      templateName: 'aguarde_verificacao',
+      category: 'onboarding',
+      tags: ['onboarding', 'corretor'],
     });
   } catch (err) {
     log.error('enviarEmailAguardeVerificacao', err);
@@ -420,6 +535,9 @@ export async function enviarEmailOnboardingConcluidoAdmin(dados: {
       to: ADMIN_EMAILS,
       subject: `Onboarding concluído — ${dados.corretorNome}`,
       html,
+      templateName: 'onboarding_concluido_admin',
+      category: 'onboarding',
+      tags: ['admin', 'onboarding'],
     });
   } catch (err) {
     log.error('enviarEmailOnboardingConcluidoAdmin', err);
@@ -446,6 +564,9 @@ export async function enviarEmailConviteCorretor(dados: {
       to: [dados.emailConvidado],
       subject: 'Humano Saude te convidou para ser Especialista em Seguros',
       html,
+      templateName: 'convite_corretor',
+      category: 'onboarding',
+      tags: ['convite', 'corretor'],
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -773,6 +894,9 @@ export async function enviarEmailNovoLead(dados: {
       cc: toList.length > 0 ? ccList : undefined,
       subject: `${prefix} — ${dados.nome || 'Sem nome'} (${origemLabel})`,
       html,
+      templateName: 'novo_lead_admin',
+      category: 'leads',
+      tags: ['lead', 'admin', dados.origem || 'lead'],
     });
   } catch (err) {
     log.error('enviarEmailNovoLead', err);

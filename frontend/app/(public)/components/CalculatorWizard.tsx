@@ -142,6 +142,7 @@ export default function CalculatorWizard() {
       trackLeadGeneration({ leadId: `calc-${Date.now()}`, nome: state.nome, operadora: state.resultados[0]?.operadora || 'N/A', valorProposto: state.resultados[0]?.valorTotal || 0, economiaEstimada: 0 });
       trackGTMLeadSubmission({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato });
       trackLeadSubmission({ nome: state.nome, perfil: state.tipoContrato, source: 'calculator_wizard' });
+      document.cookie = 'hs_ok=1; path=/; max-age=120; SameSite=Lax';
       window.location.href = '/obrigado';
     } catch (e) { console.error(e); }
   };

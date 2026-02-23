@@ -34,10 +34,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `Calculadora de Economia | ${nome} — Humano Saúde`,
-    description: `Descubra quanto você pode economizar no seu plano de saúde com ${nome}. Análise gratuita com IA.`,
+    description: `Envie sua fatura ou dados do plano e veja em minutos sua economia com ${nome}. Metodologia: envio, análise com IA e resultado. Gratuito.`,
     openGraph: {
       title: `Economize até 40% no Plano de Saúde | ${nome}`,
-      description: 'Envie sua fatura e descubra em segundos quanto pode reduzir. 100% gratuito.',
+      description: `Envie sua fatura ou dados do plano e veja em minutos sua economia com ${nome}. Metodologia: envio, análise com IA e resultado.`,
       url: `https://humanosaude.com.br/economizar/${slug}`,
       siteName: 'Humano Saúde',
       type: 'website',
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: 'summary_large_image',
       title: `Economize até 40% no Plano de Saúde | ${nome}`,
-      description: 'Envie sua fatura e descubra em segundos quanto pode reduzir. 100% gratuito.',
+      description: `Envie sua fatura ou dados do plano e veja em minutos sua economia com ${nome}. Gratuito.`,
       images: [OG_IMAGE.url],
     },
   };

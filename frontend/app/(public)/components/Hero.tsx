@@ -82,7 +82,7 @@ export default function Hero() {
           source: 'hero_form',
         });
 
-        // Redirecionar para página de sucesso
+        document.cookie = 'hs_ok=1; path=/; max-age=120; SameSite=Lax';
         window.location.href = '/obrigado';
       } else {
         const details = typeof data?.details === 'string' && data.details.trim().length > 0

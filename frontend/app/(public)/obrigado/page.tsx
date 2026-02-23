@@ -2,11 +2,18 @@
 
 import { useEffect } from 'react';
 import { trackLeadGeneration } from '@/app/lib/metaPixel';
+
+function clearObrigadoCookie() {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'hs_ok=; path=/; max-age=0';
+  }
+}
 import { trackGTMEvent } from '@/app/components/GoogleTagManager';
 import { trackEvent } from '@/app/components/GoogleAnalytics';
 
 export default function ObrigadoPage() {
   useEffect(() => {
+    clearObrigadoCookie();
     // ✅ Meta Pixel: conversão de lead
     trackLeadGeneration({
       leadId: `conversion-${Date.now()}`,

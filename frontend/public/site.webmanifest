@@ -1,7 +1,7 @@
 {
-  "name": "Humano Saúde Enterprise",
+  "name": "Humano Saúde",
   "short_name": "Humano Saúde",
-  "description": "Sistema completo de gestão e cotações para corretores de saúde com IA - Private Banking",
+  "description": "Reduza até 40% no plano de saúde. Cotação para MEI, PME e empresas.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050505",

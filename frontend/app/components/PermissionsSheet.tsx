@@ -113,6 +113,7 @@ const CORRETOR_SIDEBAR_PREVIEW = [
       { label: 'Tarefas', permKey: 'nav_ops_tarefas' as PermissionKey },
       { label: 'Indicações', permKey: 'nav_ops_indicacoes' as PermissionKey },
       { label: 'Renovações', permKey: 'nav_ops_renovacoes' as PermissionKey },
+      { label: 'E-mails Design System', permKey: 'nav_ops_design_system_emails' as PermissionKey },
     ],
   },
   { label: 'Treinamento', permKey: 'nav_ops_treinamento' as PermissionKey, children: [] },

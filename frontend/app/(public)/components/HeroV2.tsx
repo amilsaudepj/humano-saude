@@ -148,6 +148,7 @@ export default function HeroV2() {
 
       if (response.ok) {
         setIsSuccess(true);
+        document.cookie = 'hs_ok=1; path=/; max-age=120; SameSite=Lax';
         setTimeout(() => {
           window.location.href = '/obrigado';
         }, 1200);

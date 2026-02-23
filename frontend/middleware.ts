@@ -71,6 +71,7 @@ const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/clientes': 'nav_ops_clientes',
   '/portal-interno-hks-2026/clientes-portal': 'nav_ops_clientes_portal',
   '/portal-interno-hks-2026/documentos': 'nav_ops_documentos',
+  '/portal-interno-hks-2026/design-system-emails': 'nav_ops_design_system_emails',
   '/portal-interno-hks-2026/tarefas': 'nav_ops_tarefas',
   '/portal-interno-hks-2026/indicacoes': 'nav_ops_indicacoes',
   '/portal-interno-hks-2026/treinamento': 'nav_ops_treinamento',
@@ -130,12 +131,27 @@ async function resolveToken(token: string): Promise<{ valid: boolean; role?: str
   return { valid: false };
 }
 
+// Rotas públicas sensíveis: só acessíveis após fluxo (ex: envio de formulário).
+// Ex.: /obrigado — redireciona para / se não tiver cookie hs_ok (setado no client antes do redirect).
+const PROTECTED_PUBLIC_ROUTES = ['/obrigado'];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') ?? '';
   // Remove porta para matching de domínio (ex: arcfy.com.br:3000 → arcfy.com.br)
   // Remove www. para normalização (www.mattosconnect.com.br → mattosconnect.com.br)
   const domain = hostname.replace(/:\d+$/, '').replace(/^www\./, '');
+
+  // ============================================
+  // PROTEÇÃO: Páginas públicas sensíveis (obrigado, etc.)
+  // Evita acesso direto por URL ou clonagem; exige cookie hs_ok (setado antes do redirect).
+  // ============================================
+  if (PROTECTED_PUBLIC_ROUTES.includes(pathname)) {
+    const cookie = request.cookies.get('hs_ok')?.value;
+    if (!cookie) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
 
   // ============================================
   // TENANT DETECTION: Domínio customizado
@@ -392,7 +408,7 @@ export async function middleware(request: NextRequest) {
   // ============================================
   // PROTEÇÃO: API routes internas (exceto leads, calculadora, auth, e corretor APIs)
   // ============================================
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente') && !pathname.startsWith('/api/design-system')) {
     const token = request.cookies.get('admin_token')?.value ||
                   request.headers.get('authorization')?.replace('Bearer ', '');
 
@@ -480,6 +496,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/obrigado',
     '/portal-interno-hks-2026/:path*',
     '/portal-cliente/:path*',
     '/dashboard/:path*',

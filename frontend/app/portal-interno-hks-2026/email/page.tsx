@@ -81,6 +81,7 @@ export default function EmailAdminPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -113,7 +114,7 @@ export default function EmailAdminPage() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: '20',
+        limit: String(limit),
         sortBy: 'created_at',
         sortOrder: 'desc',
       });
@@ -141,7 +142,7 @@ export default function EmailAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, limit, search, statusFilter]);
 
   // ─── Fetch events for modal ────────────────────────────────
   const fetchEvents = useCallback(async (emailId: string) => {
@@ -212,7 +213,7 @@ export default function EmailAdminPage() {
           <h1 className="text-4xl font-bold text-[#D4AF37]" style={{ fontFamily: 'Perpetua Titling MT, serif' }}>
             EMAIL TRACKING
           </h1>
-          <p className="mt-2 text-gray-400">Monitoramento de emails transacionais — Resend + Tracking</p>
+          <p className="mt-2 text-gray-400">Todos os emails disparados pelo sistema, sem exceção — Resend + Tracking</p>
         </div>
         <button
           onClick={() => { fetchEmails(); fetchStats(); }}
@@ -271,6 +272,18 @@ export default function EmailAdminPage() {
             <option value="failed">Failed</option>
           </select>
         </div>
+
+        <select
+          value={limit}
+          onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+          className="rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-2.5 text-sm text-white focus:border-[#D4AF37]/50 focus:outline-none"
+          title="Itens por página"
+        >
+          <option value={20}>20 por página</option>
+          <option value={50}>50 por página</option>
+          <option value={100}>100 por página</option>
+          <option value={200}>200 por página</option>
+        </select>
       </div>
 
       {/* Email Table */}

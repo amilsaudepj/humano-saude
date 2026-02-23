@@ -267,6 +267,7 @@ export const sidebarItems: SidebarItem[] = [
       },
       { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${P}/indicacoes` },
       { id: 'ops-renovacoes', label: 'Renovações', icon: CalendarClock, href: `${P}/renovacoes` },
+      { id: 'ops-design-system-emails', label: 'E-mails Design System', icon: Palette, href: `${P}/design-system-emails` },
       {
         id: 'ops-treinamento',
         label: 'Treinamento',

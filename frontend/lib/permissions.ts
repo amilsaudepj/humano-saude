@@ -60,6 +60,7 @@ export const PERMISSION_KEYS = [
   'nav_ops_indicacoes',
   'nav_ops_renovacoes',
   'nav_ops_treinamento',
+  'nav_ops_design_system_emails',
   // Navegação — sub-itens Comunicação
   'nav_com_whatsapp',
   'nav_com_chat',
@@ -206,6 +207,7 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
           { key: 'nav_ops_indicacoes', label: 'Indicações', sidebarId: 'ops-indicacoes' },
           { key: 'nav_ops_renovacoes', label: 'Renovações', sidebarId: 'ops-renovacoes' },
           { key: 'nav_ops_treinamento', label: 'Treinamento', sidebarId: 'ops-treinamento' },
+          { key: 'nav_ops_design_system_emails', label: 'E-mails Design System', sidebarId: 'ops-design-system-emails' },
         ],
       },
       {
@@ -315,7 +317,7 @@ export const ROLE_TEMPLATES: Record<string, UserPermissions> = {
     nav_comercial_crm_empresas: true, nav_comercial_cotacoes: true,
     // Sub-itens operações
     nav_ops_clientes: true, nav_ops_clientes_portal: true, nav_ops_documentos: true,
-    nav_ops_tarefas: true,
+    nav_ops_tarefas: true, nav_ops_design_system_emails: true,
     // Sub-itens comunicação
     nav_com_whatsapp: true, nav_com_chat: true, nav_com_email: true, nav_com_notificacoes: true,
     // Ações
@@ -448,6 +450,7 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, PermissionKey> = {
   'ops-clientes-portal': 'nav_ops_clientes_portal',
   'ops-documentos': 'nav_ops_documentos',
   'ops-tarefas': 'nav_ops_tarefas',
+  'ops-design-system-emails': 'nav_ops_design_system_emails',
   'ops-corretores': 'nav_ops_corretores',
   'ops-indicacoes': 'nav_ops_indicacoes',
   'indicacoes': 'nav_ops_indicacoes',
@@ -544,6 +547,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/portal-interno-hks-2026/clientes': 'nav_ops_clientes',
   '/portal-interno-hks-2026/clientes-portal': 'nav_ops_clientes_portal',
   '/portal-interno-hks-2026/documentos': 'nav_ops_documentos',
+  '/portal-interno-hks-2026/design-system-emails': 'nav_ops_design_system_emails',
   '/portal-interno-hks-2026/tarefas': 'nav_ops_tarefas',
   '/portal-interno-hks-2026/indicacoes': 'nav_ops_indicacoes',
   '/portal-interno-hks-2026/renovacoes': 'nav_ops_renovacoes',
