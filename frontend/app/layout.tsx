@@ -1,26 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import MetaPixel from "./components/MetaPixel";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import GoogleTagManager, { GoogleTagManagerNoScript } from "./components/GoogleTagManager";
 
-// Inter para corpo de texto
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// JetBrains Mono para código
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// Perpetua Titling MT está configurada em globals.css via @font-face
+// Fontes via link (evita module-not-found de next/font em build/dev)
 // Fallback para serif se não estiver instalada no sistema
 
 export const metadata: Metadata = {
@@ -74,7 +59,8 @@ export default function RootLayout({
       <head>
         {/* Google Tag Manager */}
         <GoogleTagManager />
-        
+        {/* Fontes: Inter + JetBrains Mono + Montserrat (evita next/font module-not-found) */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@300;400;600;700;800&display=swap" />
         {/* Contentsquare / Hotjar One Tag */}
         <script src="https://t.contentsquare.net/uxa/bf79baf35fb2a.js" async />
         
@@ -82,9 +68,7 @@ export default function RootLayout({
           <MetaPixel />
         </Suspense>
       </head>
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
-      >
+      <body className="font-sans antialiased">
         <GoogleTagManagerNoScript />
         <GoogleAnalytics />
         {children}

@@ -40,12 +40,33 @@ function validarCNPJ(cnpj: string): boolean {
 
 export default function CalculatorWizard() {
   const [state, setState] = useState<CalculadoraState>({
-    step: 1, intencao: '', perfilCnpj: '', tipoContrato: 'PME', cnpj: '',
+    step: 1, intencao: '', perfilCnpj: '', tipoContrato: 'PME', cnpj: '', empresa: '',
     acomodacao: '', beneficiarios: [{ id: 1, idade: '' }, { id: 2, idade: '' }], usaBypass: false,
     qtdVidasEstimada: '', bairro: '', nome: '', email: '', telefone: '',
     resultados: [], isLoading: false,
   });
   const [cErr, setCErr] = useState<Record<string, string>>({});
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+
+  const consultarCnpj = useCallback(async (cnpjInput: string) => {
+    const cleanCnpj = cnpjInput.replace(/\D/g, '').slice(0, 14);
+    if (cleanCnpj.length !== 14 || !validarCNPJ(cleanCnpj)) return;
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`/api/cnpj?cnpj=${cleanCnpj}`);
+      const data = await res.json();
+      if (res.ok) {
+        const nomeEmpresa = data.empresa || data.razao_social || data.nome_fantasia || '';
+        setState(p => ({ ...p, empresa: nomeEmpresa }));
+      } else {
+        setState(p => ({ ...p, empresa: '' }));
+      }
+    } catch {
+      setState(p => ({ ...p, empresa: '' }));
+    } finally {
+      setCnpjLoading(false);
+    }
+  }, []);
   const addB = () => setState(p => ({ ...p, beneficiarios: [...p.beneficiarios, { id: Date.now(), idade: '' }] }));
   const rmB = (id: number) => { if (state.beneficiarios.length > 2) setState(p => ({ ...p, beneficiarios: p.beneficiarios.filter(b => b.id !== id) })); };
   const updB = (id: number, v: string) => setState(p => ({ ...p, beneficiarios: p.beneficiarios.map(b => b.id === id ? { ...b, idade: v } : b) }));
@@ -67,7 +88,7 @@ export default function CalculatorWizard() {
     const payload = {
       nome: s.nome || '', email: s.email || '', telefone: s.telefone || '',
       perfil: s.tipoContrato, tipo_contratacao: s.tipoContrato,
-      cnpj: s.cnpj || null, acomodacao: s.acomodacao || '',
+      cnpj: s.cnpj || null, empresa: s.empresa || undefined, acomodacao: s.acomodacao || '',
       idades_beneficiarios: ids, bairro: s.bairro || '',
       intencao: s.intencao, perfil_cnpj: s.perfilCnpj,
       usa_bypass: s.usaBypass, qtd_vidas_estimada: s.qtdVidasEstimada || undefined,
@@ -117,7 +138,7 @@ export default function CalculatorWizard() {
     const ids = state.usaBypass ? [] : state.beneficiarios.map(b => b.idade).filter(Boolean);
     try {
       await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato, tipo_contratacao: state.tipoContrato, cnpj: state.cnpj || null, acomodacao: state.acomodacao, idades_beneficiarios: ids, bairro: state.bairro, intencao: state.intencao, perfil_cnpj: state.perfilCnpj, usa_bypass: state.usaBypass, qtd_vidas_estimada: state.qtdVidasEstimada, top_3_planos: state.resultados.slice(0, 3).map(p => p.nome), origem: 'calculadora' }) });
+        body: JSON.stringify({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato, tipo_contratacao: state.tipoContrato, cnpj: state.cnpj || null, empresa: state.empresa || undefined, acomodacao: state.acomodacao, idades_beneficiarios: ids, bairro: state.bairro, intencao: state.intencao, perfil_cnpj: state.perfilCnpj, usa_bypass: state.usaBypass, qtd_vidas_estimada: state.qtdVidasEstimada, top_3_planos: state.resultados.slice(0, 3).map(p => p.nome), origem: 'calculadora' }) });
       trackLeadGeneration({ leadId: `calc-${Date.now()}`, nome: state.nome, operadora: state.resultados[0]?.operadora || 'N/A', valorProposto: state.resultados[0]?.valorTotal || 0, economiaEstimada: 0 });
       trackGTMLeadSubmission({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato });
       trackLeadSubmission({ nome: state.nome, perfil: state.tipoContrato, source: 'calculator_wizard' });
@@ -193,8 +214,49 @@ export default function CalculatorWizard() {
             <p className="text-gray-500 text-center mb-8">Configure a acomodação e os beneficiários</p>
             <div className="mb-8">
               <label className="block text-sm font-bold text-gray-900 mb-2">CNPJ da Empresa <span className="text-red-400">*</span></label>
-              <input type="text" value={state.cnpj} onChange={e => { const formatted = formatCNPJ(e.target.value); setState(p => ({ ...p, cnpj: formatted })); setCErr(p => ({ ...p, cnpj: '' })); }} placeholder="00.000.000/0001-00" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${cErr.cnpj ? 'border-red-400' : 'border-gray-300'}`} onBlur={() => { if (state.cnpj && !validarCNPJ(state.cnpj)) setCErr(p => ({ ...p, cnpj: 'CNPJ inválido. Verifique os dígitos.' })); }} />
+              <input
+                type="text"
+                value={state.cnpj}
+                onChange={e => {
+                  const formatted = formatCNPJ(e.target.value);
+                  const digits = formatted.replace(/\D/g, '').slice(0, 14);
+                  setState(p => ({ ...p, cnpj: formatted, empresa: digits.length !== 14 ? '' : p.empresa }));
+                  setCErr(p => ({ ...p, cnpj: '' }));
+                  if (digits.length === 14 && validarCNPJ(formatted)) consultarCnpj(digits);
+                }}
+                onBlur={() => {
+                  if (state.cnpj && !validarCNPJ(state.cnpj)) setCErr(p => ({ ...p, cnpj: 'CNPJ inválido. Verifique os dígitos.' }));
+                  else {
+                    const d = state.cnpj.replace(/\D/g, '');
+                    if (d.length === 14 && validarCNPJ(state.cnpj)) consultarCnpj(d);
+                  }
+                }}
+                onPaste={e => {
+                  const pasted = (e.clipboardData?.getData('text') || '').replace(/\D/g, '').slice(0, 14);
+                  if (pasted.length === 14) {
+                    e.preventDefault();
+                    const formatted = formatCNPJ(pasted);
+                    setState(p => ({ ...p, cnpj: formatted }));
+                    if (validarCNPJ(formatted)) consultarCnpj(pasted);
+                  }
+                }}
+                placeholder="00.000.000/0001-00"
+                className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${cErr.cnpj ? 'border-red-400' : 'border-gray-300'}`}
+              />
+              {cnpjLoading && <p className="text-gray-500 text-xs mt-1">Buscando razão social...</p>}
+              {state.empresa && !cnpjLoading && <p className="text-green-700 text-sm mt-1 font-medium">Empresa: {state.empresa}</p>}
               {cErr.cnpj && <p className="text-red-500 text-xs mt-1">{cErr.cnpj}</p>}
+            </div>
+            <div className="mb-8">
+              <label className="block text-sm font-bold text-gray-900 mb-2">Nome da empresa</label>
+              <input
+                type="text"
+                autoComplete="organization"
+                value={state.empresa}
+                onChange={e => setState(p => ({ ...p, empresa: e.target.value }))}
+                placeholder="Preenchido automaticamente pelo CNPJ ou digite manualmente"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] focus:border-transparent"
+              />
             </div>
             <div className="mb-8">
               <label className="block text-sm font-bold text-gray-900 mb-4">Tipo de Acomodação</label>

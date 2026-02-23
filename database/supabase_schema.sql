@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.insurance_leads (
   nome VARCHAR(255) NOT NULL,
   whatsapp VARCHAR(20),  -- NULL quando lead veio só por e-mail (ex.: completar cotação)
   email VARCHAR(255),
+  empresa VARCHAR(255),  -- Razão social (consultada por CNPJ na completar-cotacao / landing)
   
   -- Dados do Plano Atual
   operadora_atual VARCHAR(100),

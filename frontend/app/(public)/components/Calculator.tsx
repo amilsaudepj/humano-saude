@@ -10,6 +10,7 @@ export default function Calculator() {
     perfilCnpj: '',
     tipoContrato: '',
     cnpj: '',
+    empresa: '',
     acomodacao: '',
     beneficiarios: [{ id: 0, idade: '' }],
     usaBypass: false,

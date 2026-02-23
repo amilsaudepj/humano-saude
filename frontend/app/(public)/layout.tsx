@@ -1,12 +1,4 @@
-import { Montserrat } from 'next/font/google';
 import type { Metadata } from 'next';
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['300', '400', '600', '700', '800'],
-  variable: '--font-montserrat',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Humano Saúde | Reduza até 40% no Plano de Saúde',
@@ -68,9 +60,5 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className={`${montserrat.variable} font-montserrat`}>
-      {children}
-    </div>
-  );
+  return <div className="font-montserrat">{children}</div>;
 }

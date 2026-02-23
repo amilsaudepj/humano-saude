@@ -617,13 +617,19 @@ export { getResend as _getResend };
 export async function enviarEmailConfirmacaoLeadCliente(dados: {
   nome: string;
   email: string;
+  telefone?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const guard = guardApiKey();
     if (!guard.ok) return { success: false, error: guard.result.error };
 
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '');
-    const completarUrl = `${baseUrl}/completar-cotacao?nome=${encodeURIComponent(dados.nome)}&email=${encodeURIComponent(dados.email)}`;
+    const params = new URLSearchParams({
+      nome: dados.nome,
+      email: dados.email,
+    });
+    if (dados.telefone?.trim()) params.set('telefone', dados.telefone.trim());
+    const completarUrl = `${baseUrl}/completar-cotacao?${params.toString()}`;
     const html = await render(
       ConfirmacaoLeadClienteEmail({ nome: dados.nome, email: dados.email, completarUrl })
     );
@@ -688,11 +694,27 @@ export async function enviarEmailDadosRecebidosCompletarCotacao(dados: {
 // ─────────────────────────────────────────────────────────────
 // 15. NOVO LEAD — Notificação para equipe comercial
 // ─────────────────────────────────────────────────────────────
+/** Rótulo da página de origem do lead (para exibir no e-mail e assunto) */
+function getOrigemPageLabel(origem: string): string {
+  const map: Record<string, string> = {
+    email_form: 'Completar cotação',
+    calculadora: 'Simule seu plano (Landing)',
+    calculadora_economia: 'Calculadora Economia',
+    hero_form: 'Formulário do topo',
+    landing: 'Landing',
+    site: 'Site',
+    manual: 'Cadastro manual',
+    scanner_pdf: 'Scanner Inteligente',
+  };
+  return map[origem] || origem || 'Landing';
+}
+
 export async function enviarEmailNovoLead(dados: {
   nome: string;
   email: string;
   telefone: string;
   cnpj?: string;
+  empresa?: string;
   perfil?: string;
   intencao?: string;
   perfilCnpj?: string;
@@ -709,6 +731,7 @@ export async function enviarEmailNovoLead(dados: {
     if (!guard.ok) return guard.result;
 
     const NovoLeadEmail = (await import('@/emails/NovoLeadEmail')).default;
+    const origemLabel = getOrigemPageLabel(dados.origem);
 
     const html = await render(
       NovoLeadEmail({
@@ -716,6 +739,7 @@ export async function enviarEmailNovoLead(dados: {
         email: dados.email,
         telefone: dados.telefone,
         cnpj: dados.cnpj || '—',
+        empresa: dados.empresa || '—',
         perfil: dados.perfil || '—',
         intencao: dados.intencao || '—',
         perfilCnpj: dados.perfilCnpj || '—',
@@ -725,12 +749,11 @@ export async function enviarEmailNovoLead(dados: {
         qtdVidas: dados.qtdVidas || '—',
         usaBypass: dados.usaBypass || false,
         origem: dados.origem,
+        origemLabel,
         parcial: dados.parcial || false,
         dataCriacao: new Date().toISOString(),
       })
     );
-
-    const origemLabel = dados.origem === 'calculadora' ? 'Calculadora' : dados.origem === 'hero_form' ? 'Formulário' : dados.origem === 'email_form' ? 'Formulário do e-mail' : 'Landing';
     const prefix = dados.parcial ? '⚠️ Lead parcial' : '🔥 Novo lead';
 
     // Nunca enviar "Novo lead" para o e-mail do lead — só para equipe (ADMIN + CC)

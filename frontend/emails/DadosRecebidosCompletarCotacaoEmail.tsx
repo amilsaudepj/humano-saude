@@ -35,6 +35,16 @@ export default function DadosRecebidosCompletarCotacaoEmail({
         Em breve você receberá sua proposta personalizada por e-mail ou WhatsApp.
       </Text>
 
+      <Section style={buttonWrap}>
+        <Link
+          href="https://wa.me/5521988179407?text=Olá! Completei meus dados para cotação. Gostaria de falar com um especialista."
+          style={ctaButton}
+          className="email-cta-whatsapp"
+        >
+          Falar com especialista agora
+        </Link>
+      </Section>
+
       <Hr style={hr} />
 
       <Text style={footerText}>
@@ -67,6 +77,18 @@ const paragraph: React.CSSProperties = {
   lineHeight: '1.6',
   color: '#374151',
   margin: '0 0 16px 0',
+};
+const buttonWrap: React.CSSProperties = { textAlign: 'center' as const, margin: '24px 0' };
+const ctaButton: React.CSSProperties = {
+  backgroundColor: '#25D366',
+  borderRadius: '8px',
+  color: '#FFFFFF',
+  fontSize: '15px',
+  fontWeight: '700',
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  padding: '12px 24px',
+  display: 'inline-block',
 };
 const hr: React.CSSProperties = { borderColor: '#E5E7EB', margin: '24px 0' };
 const footerText: React.CSSProperties = {

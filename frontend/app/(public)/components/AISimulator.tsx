@@ -28,7 +28,7 @@ export default function AISimulator() {
 
   return (
     <section id="ia" className="py-16 sm:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-center mb-24">
           
           {/* Texto */}
@@ -105,7 +105,7 @@ export default function AISimulator() {
         </div>
 
         {/* Cards de Benefícios */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 max-w-[100%]">
           {[
             {
               num: '01',
@@ -134,7 +134,7 @@ export default function AISimulator() {
           ].map((card) => (
             <div
               key={card.num}
-              className="group relative p-8 rounded-2xl bg-white border border-gray-200 hover:border-[#B8941F]/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg overflow-hidden"
+              className="group relative p-6 sm:p-8 rounded-2xl bg-white border border-gray-200 hover:border-[#B8941F]/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg overflow-hidden min-w-0"
             >
               {/* Accent line top */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-[#B8941F] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -164,7 +164,7 @@ export default function AISimulator() {
                   href="https://wa.me/5521988179407?text=Olá! Gostaria de falar com um especialista."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[1.5px] text-white transition-all hover:-translate-y-0.5 hover:bg-[#20BD5A] whitespace-nowrap"
+                  className="mt-6 inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-[10px] font-black uppercase tracking-[1px] text-white transition-all hover:-translate-y-0.5 hover:bg-[#20BD5A] whitespace-nowrap w-fit"
                 >
                   Falar com especialista
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 448 512">

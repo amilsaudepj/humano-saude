@@ -24,6 +24,7 @@ export interface CalculadoraState {
   perfilCnpj: 'mei' | 'pme' | '';
   tipoContrato: 'PF' | 'PME' | '';
   cnpj: string;
+  empresa: string;
   acomodacao: 'Enfermaria' | 'Apartamento' | '';
   beneficiarios: Beneficiario[];
   usaBypass: boolean;

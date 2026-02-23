@@ -46,7 +46,7 @@ export default function ConfirmacaoLeadClienteEmail({
 
       <Section style={buttonWrap}>
         <Link href={completarUrl} style={primaryButton} className="email-cta-whatsapp">
-          <span style={primaryButtonText} className="email-cta-text">📉 Realizar redução</span>
+          <span style={primaryButtonText} className="email-cta-text">Realizar redução agora →</span>
         </Link>
       </Section>
 

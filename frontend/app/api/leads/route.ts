@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       email: validatedData.email || '',
       telefone: validatedData.telefone || '',
       cnpj: validatedData.cnpj || undefined,
+      empresa: validatedData.empresa || undefined,
       perfil: validatedData.perfil || undefined,
       intencao: validatedData.intencao || undefined,
       perfilCnpj: validatedData.perfil_cnpj || undefined,
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
         enviarEmailConfirmacaoLeadCliente({
           nome: (validatedData.nome || '').trim() || 'Cliente',
           email: validatedData.email.trim(),
+          telefone: validatedData.telefone?.trim() || undefined,
         }).catch((err: unknown) => {
           logger.error('Erro ao enviar email de confirmação ao cliente', err as Error, { lead_id: data.id });
         });

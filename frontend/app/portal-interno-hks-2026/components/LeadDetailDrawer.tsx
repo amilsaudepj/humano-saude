@@ -283,7 +283,17 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
             <div>
               <p>{lead.nome || 'Lead sem nome'}</p>
               <p className="text-xs font-normal text-white/30 mt-0.5">
-                {lead.origem === 'calculadora_economia' ? '📊 Via Calculadora' : lead.origem || 'Origem desconhecida'}
+                {lead.origem === 'calculadora_economia'
+                  ? '📊 Calculadora Economia'
+                  : lead.origem === 'calculadora'
+                    ? '📋 Simule seu plano (Landing)'
+                    : lead.origem === 'email_form'
+                      ? '📧 Completar cotação'
+                      : lead.origem === 'scanner_pdf'
+                        ? '📄 Scanner Inteligente'
+                        : lead.origem === 'manual'
+                          ? '✏️ Manual'
+                          : lead.origem || 'Origem desconhecida'}
                 {corretor?.slug && ` • Corretor: ${corretor.slug}`}
               </p>
             </div>
@@ -302,6 +312,12 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
               href={lead.whatsapp ? `https://wa.me/55${lead.whatsapp.replace(/\D/g, '')}` : undefined}
             />
             <InfoRow label="E-mail" value={lead.email || dadosDigitados.email} />
+            {(lead.cnpj || lead.empresa) && (
+              <>
+                {lead.cnpj && <InfoRow label="CNPJ" value={lead.cnpj} />}
+                {lead.empresa && <InfoRow label="Empresa" value={lead.empresa} />}
+              </>
+            )}
             <InfoRow label="Tipo" value={dadosDigitados.tipo_pessoa || lead.tipo_contratacao} />
             {dadosOcr.documento && <InfoRow label="Documento" value={dadosOcr.documento} />}
             {dadosOcr.titular && <InfoRow label="Titular" value={dadosOcr.titular} />}

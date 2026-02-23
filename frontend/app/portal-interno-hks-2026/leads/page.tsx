@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Phone, Mail, ArrowUpRight, CheckCircle, XCircle, Pause, MessageSquare, Calculator, ScanLine, PenLine, Globe, UserCheck } from 'lucide-react';
+import { Users, Phone, Mail, ArrowUpRight, CheckCircle, XCircle, Pause, MessageSquare, Calculator, ScanLine, PenLine, Globe, UserCheck, MailPlus, LayoutGrid } from 'lucide-react';
 import { getLeads, updateLeadStatus } from '@/app/actions/leads';
 import { getCorretoresMap } from '@/app/actions/indicacoes-admin';
 import type { LeadStatus } from '@/lib/types/database';
@@ -40,10 +40,14 @@ const statusConfig: Record<LeadStatus, { label: string; color: string; icon: Rea
 // ============================================
 
 const ORIGEM_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<any> }> = {
-  calculadora_economia: { label: 'Calculadora', color: 'bg-emerald-500/20 text-emerald-400', icon: Calculator },
+  calculadora_economia: { label: 'Calculadora Economia', color: 'bg-emerald-500/20 text-emerald-400', icon: Calculator },
+  calculadora: { label: 'Simule seu plano', color: 'bg-emerald-600/20 text-emerald-300', icon: LayoutGrid },
+  email_form: { label: 'Completar cotação', color: 'bg-violet-500/20 text-violet-400', icon: MailPlus },
   scanner_pdf: { label: 'Scanner Inteligente', color: 'bg-cyan-500/20 text-cyan-400', icon: ScanLine },
   manual: { label: 'Manual', color: 'bg-amber-500/20 text-amber-400', icon: PenLine },
   site: { label: 'Site', color: 'bg-indigo-500/20 text-indigo-400', icon: Globe },
+  landing: { label: 'Landing', color: 'bg-slate-500/20 text-slate-400', icon: Globe },
+  hero_form: { label: 'Formulário hero', color: 'bg-blue-500/20 text-blue-400', icon: Globe },
 };
 
 const ORIGEM_FALLBACK = { label: 'Direto', color: 'bg-gray-500/20 text-gray-400', icon: Globe };
@@ -86,6 +90,13 @@ function makeColumns(
           {lead.email && <p className="text-xs text-gray-500">{lead.email}</p>}
         </div>
       ),
+    },
+    {
+      key: 'empresa',
+      header: 'Empresa',
+      hidden: 'lg',
+      sortable: true,
+      render: (lead) => <span className="text-gray-400">{lead.empresa || '—'}</span>,
     },
     {
       key: 'whatsapp',
@@ -236,14 +247,16 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     let result = leads;
 
-    // Filtro de busca por texto
+    // Filtro de busca por texto (nome, e-mail, WhatsApp, empresa, CNPJ)
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
         (l) =>
           l.nome?.toLowerCase().includes(q) ||
           l.whatsapp?.includes(search) ||
-          l.email?.toLowerCase().includes(q)
+          l.email?.toLowerCase().includes(q) ||
+          l.empresa?.toLowerCase().includes(q) ||
+          (l.cnpj && l.cnpj.replace(/\D/g, '').includes(search.replace(/\D/g, '')))
       );
     }
 
@@ -285,10 +298,14 @@ export default function LeadsPage() {
 
   const origemOptions = [
     { value: 'indicacao', label: '👤 Indicações (Corretor)' },
-    { value: 'calculadora_economia', label: '🧮 Calculadora' },
+    { value: 'calculadora_economia', label: '🧮 Calculadora Economia' },
+    { value: 'calculadora', label: '📋 Simule seu plano (Landing)' },
+    { value: 'email_form', label: '📧 Completar cotação' },
     { value: 'scanner_pdf', label: '📄 Scanner Inteligente' },
     { value: 'manual', label: '✏️ Manual' },
     { value: 'site', label: '🌐 Site' },
+    { value: 'landing', label: '🌐 Landing' },
+    { value: 'hero_form', label: '📝 Formulário hero' },
   ];
 
   if (loading && leads.length === 0) return <PageLoading text="Carregando leads..." />;
@@ -331,7 +348,7 @@ export default function LeadsPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Buscar por nome, WhatsApp ou e-mail..."
+          placeholder="Buscar por nome, e-mail, WhatsApp, empresa ou CNPJ..."
         />
         <FilterSelect
           value={filterStatus}

@@ -11,6 +11,7 @@ interface NovoLeadEmailProps {
   email: string;
   telefone: string;
   cnpj?: string;
+  empresa?: string;
   perfil?: string;
   intencao?: string;
   perfilCnpj?: string;
@@ -20,6 +21,8 @@ interface NovoLeadEmailProps {
   qtdVidas?: string;
   usaBypass?: boolean;
   origem: string;
+  /** Rótulo da página de origem (ex: "Completar cotação", "Simule seu plano (Landing)") */
+  origemLabel?: string;
   parcial?: boolean;
   dataCriacao: string;
 }
@@ -29,6 +32,7 @@ export default function NovoLeadEmail({
   email = '—',
   telefone = '—',
   cnpj = '—',
+  empresa = '—',
   perfil = '—',
   intencao = '—',
   perfilCnpj = '—',
@@ -38,10 +42,11 @@ export default function NovoLeadEmail({
   qtdVidas = '—',
   usaBypass = false,
   origem = 'landing',
+  origemLabel: origemLabelProp,
   parcial = false,
   dataCriacao = new Date().toISOString(),
 }: NovoLeadEmailProps) {
-  const origemLabel = origem === 'calculadora' ? 'Calculadora' : origem === 'hero_form' ? 'Formulário do topo' : origem === 'email_form' ? 'Formulário do e-mail' : 'Landing page';
+  const origemLabel = origemLabelProp ?? (origem === 'calculadora' ? 'Simule seu plano' : origem === 'hero_form' ? 'Formulário do topo' : origem === 'email_form' ? 'Completar cotação' : 'Landing');
   const intencaoLabel = intencao === 'reduzir' ? 'Reduzir custo atual' : intencao === 'contratar' ? 'Contratar 1º plano' : '—';
   const perfilLabel = perfilCnpj === 'mei' ? 'MEI' : perfilCnpj === 'pme' ? 'PME / Empresa' : '—';
 
@@ -82,6 +87,12 @@ export default function NovoLeadEmail({
           <Column style={labelCol}>CNPJ</Column>
           <Column style={valueCol}>{cnpj || '—'}</Column>
         </Row>
+        {empresa && empresa !== '—' && (
+          <Row style={detailRow}>
+            <Column style={labelCol}>Empresa</Column>
+            <Column style={valueCol}>{empresa}</Column>
+          </Row>
+        )}
       </Section>
 
       <Hr style={divider} />

@@ -56,7 +56,13 @@ function CompletarCotacaoContent() {
   useEffect(() => {
     const nome = searchParams.get('nome') || '';
     const email = searchParams.get('email') || '';
-    setForm((p) => ({ ...p, nome: decodeURIComponent(nome), email: decodeURIComponent(email) }));
+    const telefone = searchParams.get('telefone') || '';
+    setForm((p) => ({
+      ...p,
+      nome: decodeURIComponent(nome),
+      email: decodeURIComponent(email),
+      telefone: decodeURIComponent(telefone),
+    }));
   }, [searchParams]);
 
   const qtdNum = form.qtdVidas ? (form.qtdVidas.includes('-') || form.qtdVidas === '100+' ? 0 : parseInt(form.qtdVidas, 10)) : 0;
@@ -98,11 +104,12 @@ function CompletarCotacaoContent() {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const consultarCnpj = useCallback(async (digits: string) => {
-    if (digits.length !== 14 || !validarCNPJ(digits)) return;
+  const consultarCnpj = useCallback(async (cnpjInput: string) => {
+    const cleanCnpj = cnpjInput.replace(/\D/g, '').slice(0, 14);
+    if (cleanCnpj.length !== 14 || !validarCNPJ(cleanCnpj)) return;
     setCnpjLoading(true);
     try {
-      const res = await fetch(`/api/cnpj?cnpj=${encodeURIComponent(digits)}`);
+      const res = await fetch(`/api/cnpj?cnpj=${cleanCnpj}`);
       const data = await res.json();
       if (!res.ok) {
         setForm((p) => ({ ...p, empresa: '' }));
@@ -145,7 +152,7 @@ function CompletarCotacaoContent() {
       const payload = {
         nome: form.nome.trim(),
         email: form.email.trim(),
-        telefone: '',
+        telefone: form.telefone.trim() || undefined,
         cnpj: cnpjDigits.length === 14 ? cnpjDigits : undefined,
         empresa: form.empresa.trim() || undefined,
         perfil: 'Empresarial',
@@ -262,7 +269,7 @@ function CompletarCotacaoContent() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">Nome da empresa (opcional)</label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">Nome da empresa</label>
               <input
                 type="text"
                 autoComplete="organization"

@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -40,9 +41,10 @@ const nextConfig: NextConfig = {
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br';
     const isDev = process.env.NODE_ENV === 'development';
 
-    // ─── CSP: em dev mais permissivo (workers, HMR, assets) ───
+    // ─── DEV: sem CSP (evita bloqueio WebSocket HMR, scripts, assets 404) ───
+    // PROD: CSP restrito
     const cspValue = isDev
-      ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http: https: data: blob:; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:"
+      ? null // sem CSP em dev = zero bloqueio
       : [
           "default-src 'self'",
           "script-src 'self' 'unsafe-eval' 'unsafe-inline' *.google.com *.googleapis.com *.googletagmanager.com *.facebook.net *.google-analytics.com *.hotjar.com *.hotjar.io *.contentsquare.net *.heapanalytics.com cserror.com",
@@ -60,7 +62,6 @@ const nextConfig: NextConfig = {
           "upgrade-insecure-requests",
         ].join('; ');
 
-    // ─── Security Headers (todas as páginas) ─────────────
     const hstsHeader = { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' };
     const securityHeaders: { key: string; value: string }[] = [
       { key: 'X-DNS-Prefetch-Control', value: 'on' },
@@ -68,11 +69,8 @@ const nextConfig: NextConfig = {
       { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-      {
-        key: 'Permissions-Policy',
-        value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
-      },
-      { key: 'Content-Security-Policy', value: cspValue },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()' },
+      ...(cspValue ? [{ key: 'Content-Security-Policy', value: cspValue }] : []),
     ];
 
     return [
