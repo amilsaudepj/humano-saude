@@ -1,12 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import HeaderV2 from '../components/HeaderV2';
 import Footer from '../components/Footer';
-import { BAIRROS_RJ, OPERADORAS, FAIXAS_ETARIAS } from '@/lib/constants/cotacao';
-import { isValidBrazilianPhone } from '@/lib/validations';
+import { BAIRROS_POR_ZONA, OPERADORAS, FAIXAS_ETARIAS } from '@/lib/constants/cotacao';
+import { validarCNPJ } from '@/lib/validations';
+
+/** Formata 14 dígitos como CNPJ: 00.000.000/0000-00 */
+function formatCNPJDisplay(digits: string): string {
+  const d = digits.replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
 
 const QTD_VIDAS_OPCOES = [
   { value: '1', label: '1 vida' },
@@ -22,13 +32,6 @@ const QTD_VIDAS_OPCOES = [
   { value: '100+', label: '100+ vidas' },
 ];
 
-function formatWhatsApp(value: string): string {
-  const numbers = value.replace(/\D/g, '').slice(0, 11);
-  if (numbers.length <= 2) return numbers.length > 0 ? `(${numbers}` : '';
-  if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-  return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
-}
-
 function CompletarCotacaoContent() {
   const searchParams = useSearchParams();
   const [success, setSuccess] = useState(false);
@@ -39,12 +42,16 @@ function CompletarCotacaoContent() {
     nome: '',
     email: '',
     telefone: '',
+    cnpj: '',
+    empresa: '',
     qtdVidas: '',
     idades: ['', ''] as string[],
     bairro: '',
     possuiPlanoAtivo: '' as '' | 'sim' | 'nao',
     operadoraAtual: '',
   });
+  const successRef = useRef<HTMLDivElement>(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
 
   useEffect(() => {
     const nome = searchParams.get('nome') || '';
@@ -85,13 +92,39 @@ function CompletarCotacaoContent() {
     });
   };
 
+  const bairroRef = useRef<HTMLSelectElement>(null);
+  const operadoraRef = useRef<HTMLSelectElement>(null);
+  const scrollSelectIntoView = (ref: React.RefObject<HTMLSelectElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const consultarCnpj = useCallback(async (digits: string) => {
+    if (digits.length !== 14 || !validarCNPJ(digits)) return;
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`/api/cnpj?cnpj=${encodeURIComponent(digits)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setForm((p) => ({ ...p, empresa: '' }));
+        return;
+      }
+      const nomeEmpresa = data.empresa || data.razao_social || data.nome_fantasia || '';
+      setForm((p) => ({ ...p, empresa: nomeEmpresa }));
+    } catch {
+      setForm((p) => ({ ...p, empresa: '' }));
+    } finally {
+      setCnpjLoading(false);
+    }
+  }, []);
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!form.nome.trim() || form.nome.trim().length < 2) e.nome = 'Nome é obrigatório (mín. 2 caracteres)';
-    if (!form.email.trim()) e.email = 'E-mail é obrigatório';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'E-mail inválido';
-    if (!form.telefone.trim()) e.telefone = 'Telefone é obrigatório';
-    else if (!isValidBrazilianPhone(form.telefone.trim())) e.telefone = 'Telefone inválido. Ex: (21) 98888-7777';
+    if (!form.nome.trim() || form.nome.trim().length < 2) e.submit = 'Acesse pelo link enviado no seu e-mail para preencher seus dados.';
+    else if (!form.email.trim()) e.submit = 'Acesse pelo link enviado no seu e-mail.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.submit = 'Link inválido. Use o link do e-mail que enviamos.';
+    const cnpjDigits = form.cnpj.replace(/\D/g, '');
+    if (!cnpjDigits || cnpjDigits.length !== 14) e.cnpj = 'Informe o CNPJ da empresa (14 dígitos)';
+    else if (!validarCNPJ(form.cnpj)) e.cnpj = 'CNPJ inválido';
     if (!form.qtdVidas) e.qtdVidas = 'Informe quantas vidas no plano';
     if (!usaBypass && form.idades.slice(0, idadesCount).some((i) => !i)) e.idades = 'Selecione a faixa etária de todos os beneficiários';
     if (!form.bairro) e.bairro = 'Selecione o bairro de atendimento';
@@ -108,10 +141,13 @@ function CompletarCotacaoContent() {
     setErrors({});
     try {
       const idadesBeneficiarios = usaBypass ? [] : form.idades.slice(0, idadesCount).filter(Boolean);
+      const cnpjDigits = form.cnpj.replace(/\D/g, '');
       const payload = {
         nome: form.nome.trim(),
         email: form.email.trim(),
-        telefone: form.telefone.trim(),
+        telefone: '',
+        cnpj: cnpjDigits.length === 14 ? cnpjDigits : undefined,
+        empresa: form.empresa.trim() || undefined,
         perfil: 'Empresarial',
         tipo_contratacao: 'PME',
         origem: 'email_form' as const,
@@ -139,12 +175,20 @@ function CompletarCotacaoContent() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => {
+      successRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [success]);
+
   if (success) {
     return (
       <>
-        <HeaderV2 />
-        <main className="min-h-screen bg-gray-50 py-16 px-4">
-          <div className="max-w-lg mx-auto text-center bg-white rounded-3xl shadow-xl p-8">
+        <HeaderV2 minimal />
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-16">
+          <div ref={successRef} className="max-w-lg w-full text-center bg-white rounded-3xl shadow-xl p-8 scroll-mt-32">
             <div className="w-16 h-16 rounded-full bg-[#B8941F]/20 flex items-center justify-center mx-auto mb-6">
               <span className="text-3xl text-[#B8941F]">✓</span>
             </div>
@@ -160,24 +204,27 @@ function CompletarCotacaoContent() {
             </Link>
           </div>
         </main>
-        <Footer />
+        <Footer hideLinksRapidos />
       </>
     );
   }
 
   return (
     <>
-      <HeaderV2 />
-      <main className="min-h-screen bg-gray-50 py-12 sm:py-16 px-4">
+      <HeaderV2 minimal />
+      <main className="min-h-screen bg-gray-50 pt-32 sm:pt-32 md:pt-36 lg:pt-40 pb-12 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 sm:mb-12 px-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Complete seus dados para a <span className="text-[#B8941F]">cotação</span>
             </h1>
-            <p className="text-gray-600">Preencha as informações abaixo. Em até 10 minutos nossa equipe enviará sua proposta.</p>
+            <p className="text-gray-600">
+              Preencha as informações abaixo.<br />
+              Em até 10 minutos nossa equipe enviará sua proposta.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-6 sm:p-10 space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10 space-y-6 sm:space-y-7 scroll-mt-32" id="form-completar-cotacao">
             {errors.submit && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                 {errors.submit}
@@ -185,39 +232,45 @@ function CompletarCotacaoContent() {
             )}
 
             <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">Nome completo <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">CNPJ da empresa <span className="text-red-500">*</span></label>
               <input
                 type="text"
-                value={form.nome}
-                onChange={(e) => setFormField('nome', e.target.value)}
-                placeholder="Seu nome"
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${errors.nome ? 'border-red-400' : 'border-gray-300'}`}
+                inputMode="numeric"
+                autoComplete="off"
+                value={formatCNPJDisplay(form.cnpj)}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '').slice(0, 14);
+                  setForm((p) => ({ ...p, cnpj: v, empresa: v.length !== 14 ? '' : p.empresa }));
+                  if (errors.cnpj) setErrors((prev) => ({ ...prev, cnpj: '' }));
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 14);
+                  setForm((p) => ({ ...p, cnpj: pasted, empresa: pasted.length !== 14 ? '' : p.empresa }));
+                  if (errors.cnpj) setErrors((prev) => ({ ...prev, cnpj: '' }));
+                }}
+                onBlur={() => {
+                  const d = form.cnpj.replace(/\D/g, '');
+                  if (d.length === 14 && validarCNPJ(form.cnpj)) consultarCnpj(d);
+                }}
+                placeholder="00.000.000/0000-00"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${errors.cnpj ? 'border-red-400' : 'border-gray-300'}`}
               />
-              {errors.nome && <p className="text-red-500 text-xs mt-1">{errors.nome}</p>}
+              {cnpjLoading && <p className="text-gray-500 text-xs mt-1">Buscando razão social...</p>}
+              {form.empresa && !cnpjLoading && <p className="text-green-700 text-sm mt-1 font-medium">Empresa: {form.empresa}</p>}
+              {errors.cnpj && <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">E-mail <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">Nome da empresa (opcional)</label>
               <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setFormField('email', e.target.value)}
-                placeholder="seu@email.com"
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${errors.email ? 'border-red-400' : 'border-gray-300'}`}
+                type="text"
+                autoComplete="organization"
+                value={form.empresa}
+                onChange={(e) => setFormField('empresa', e.target.value)}
+                placeholder="Preenchido automaticamente pelo CNPJ ou digite manualmente"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent"
               />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">WhatsApp <span className="text-red-500">*</span></label>
-              <input
-                type="tel"
-                value={form.telefone}
-                onChange={(e) => setFormField('telefone', formatWhatsApp(e.target.value))}
-                placeholder="(21) 99999-9999"
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${errors.telefone ? 'border-red-400' : 'border-gray-300'}`}
-              />
-              {errors.telefone && <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>}
             </div>
 
             <div>
@@ -259,16 +312,23 @@ function CompletarCotacaoContent() {
               </div>
             )}
 
-            <div>
+            <div className="scroll-mt-32" id="campo-bairro">
               <label className="block text-sm font-bold text-gray-900 mb-2">Qual bairro de atendimento? <span className="text-red-500">*</span></label>
               <select
+                ref={bairroRef}
                 value={form.bairro}
                 onChange={(e) => setFormField('bairro', e.target.value)}
+                onFocus={() => scrollSelectIntoView(bairroRef)}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] ${errors.bairro ? 'border-red-400' : 'border-gray-300'}`}
+                aria-label="Bairro de atendimento por zona"
               >
-                <option value="">Selecione</option>
-                {BAIRROS_RJ.map((b) => (
-                  <option key={b} value={b}>{b}</option>
+                <option value="">Selecione o bairro</option>
+                {BAIRROS_POR_ZONA.map((z) => (
+                  <optgroup key={z.zona} label={z.zona}>
+                    {z.bairros.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               {errors.bairro && <p className="text-red-500 text-xs mt-1">{errors.bairro}</p>}
@@ -302,11 +362,13 @@ function CompletarCotacaoContent() {
             </div>
 
             {form.possuiPlanoAtivo === 'sim' && (
-              <div>
+              <div className="scroll-mt-32" id="campo-operadora">
                 <label className="block text-sm font-bold text-gray-900 mb-2">Qual operadora? <span className="text-red-500">*</span></label>
                 <select
+                  ref={operadoraRef}
                   value={form.operadoraAtual}
                   onChange={(e) => setFormField('operadoraAtual', e.target.value)}
+                  onFocus={() => scrollSelectIntoView(operadoraRef)}
                   className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] ${errors.operadoraAtual ? 'border-red-400' : 'border-gray-300'}`}
                 >
                   <option value="">Selecione</option>
@@ -318,23 +380,32 @@ function CompletarCotacaoContent() {
               </div>
             )}
 
-            <div className="pt-4">
+            <div className="pt-6 sm:pt-8">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-[#B8941F] hover:bg-[#A07E18] text-white font-bold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-4 px-6 bg-[#B8941F] hover:bg-[#A07E18] text-white font-bold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                {loading ? 'Enviando...' : 'Enviar e receber minha proposta'}
+                {loading ? (
+                  'Enviando...'
+                ) : (
+                  <>
+                    Enviar e receber minha proposta
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </>
+                )}
               </button>
             </div>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-500 mt-6 sm:mt-8 px-2">
             Seus dados estão protegidos pela LGPD. Utilizamos apenas para gerar sua cotação.
           </p>
         </div>
       </main>
-      <Footer />
+      <Footer hideLinksRapidos />
     </>
   );
 }
