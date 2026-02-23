@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { OG_IMAGE } from '@/lib/og-image';
 import { LPAmilPJForm } from './LPAmilPJForm';
 import type { Tenant } from '@/lib/types/tenant';
 
@@ -43,6 +44,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title,
       description,
       type: 'website',
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [OG_IMAGE.url],
     },
     // Pixel/GTM é carregado dinamicamente via TenantPixel no client
     other: {

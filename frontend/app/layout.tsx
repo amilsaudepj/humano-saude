@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import { OG_IMAGE } from "@/lib/og-image";
 import MetaPixel from "./components/MetaPixel";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import GoogleTagManager, { GoogleTagManagerNoScript } from "./components/GoogleTagManager";
@@ -9,6 +10,7 @@ import GoogleTagManager, { GoogleTagManagerNoScript } from "./components/GoogleT
 // Fallback para serif se não estiver instalada no sistema
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br'),
   title: {
     default: "Humano Saúde",
     template: "%s | Humano Saúde",
@@ -39,6 +41,11 @@ export const metadata: Metadata = {
     title: "Humano Saúde - Broker OS",
     description: "Sistema completo de gestão e cotações para corretores de saúde com IA",
     siteName: "Humano Saúde",
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [OG_IMAGE.url],
   },
 };
 

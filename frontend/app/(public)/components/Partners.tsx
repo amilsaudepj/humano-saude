@@ -47,9 +47,9 @@ export default function Partners() {
                   <Image
                     src={logo.url}
                     alt={logo.name}
-                    width={92}
-                    height={28}
-                    className="max-w-[92px] h-7 w-auto object-contain"
+                    width={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 130 : 92}
+                    height={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 40 : 28}
+                    className={`w-auto object-contain ${(logo.name === 'Unimed' || logo.name === 'Porto Saúde') ? 'max-w-[130px] h-10' : 'max-w-[92px] h-7'}`}
                   />
                 </div>
               ))}
@@ -65,9 +65,9 @@ export default function Partners() {
                 key={logo.name}
                 src={logo.url}
                 alt={logo.name}
-                width={110}
-                height={40}
-                className="max-w-[110px] h-auto opacity-80 hover:opacity-100 transition-opacity"
+                width={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 160 : 110}
+                height={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 56 : 40}
+                className={`h-auto opacity-80 hover:opacity-100 transition-opacity ${(logo.name === 'Unimed' || logo.name === 'Porto Saúde') ? 'max-w-[160px]' : 'max-w-[110px]'}`}
               />
             ))}
           </div>
@@ -78,9 +78,9 @@ export default function Partners() {
                 key={logo.name}
                 src={logo.url}
                 alt={logo.name}
-                width={110}
-                height={40}
-                className="max-w-[110px] h-auto opacity-80 hover:opacity-100 transition-opacity"
+                width={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 160 : 110}
+                height={logo.name === 'Unimed' || logo.name === 'Porto Saúde' ? 56 : 40}
+                className={`h-auto opacity-80 hover:opacity-100 transition-opacity ${(logo.name === 'Unimed' || logo.name === 'Porto Saúde') ? 'max-w-[160px]' : 'max-w-[110px]'}`}
               />
             ))}
           </div>

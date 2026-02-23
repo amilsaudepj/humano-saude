@@ -5,7 +5,7 @@ import Image from 'next/image';
 export default function CaseStudies() {
   const cases = [
     {
-      perfil: 'Plano Empresarial',
+      perfil: 'Plano PME',
       vidas: '4 vidas',
       fromName: 'Unimed',
       fromLogo: '/images/operadoras/unimed-logo.png',
@@ -31,7 +31,7 @@ export default function CaseStudies() {
       extra: 'Upgrade de rede com melhor custo final',
     },
     {
-      perfil: 'Plano Empresarial',
+      perfil: 'Plano PME',
       vidas: '18 vidas',
       fromName: 'Amil',
       fromLogo: '/images/operadoras/amil-logo.png',
@@ -74,34 +74,34 @@ export default function CaseStudies() {
               </div>
 
               <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                <div className="rounded-xl border border-[#E9E9E9] bg-white px-3 py-4">
+                <div className="rounded-xl border border-[#E9E9E9] bg-white px-3 py-4 sm:px-4 sm:py-5">
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-[2px] text-[#707070]">De</p>
-                  <div className="flex h-12 items-center justify-center">
+                  <div className={`flex items-center justify-center ${(item.fromName === 'Unimed' || item.fromName === 'Porto Saúde') ? 'h-24 sm:h-28' : 'h-16 sm:h-20'}`}>
                     <Image
                       src={item.fromLogo}
                       alt={item.fromName}
-                      width={item.fromName === 'Porto Saúde' || item.fromName === 'Unimed' ? 180 : 110}
-                      height={36}
-                      className={`${item.fromName === 'Porto Saúde' || item.fromName === 'Unimed' ? 'h-12' : 'h-9'} w-auto object-contain`}
+                      width={280}
+                      height={72}
+                      className={`w-auto object-contain ${(item.fromName === 'Unimed' || item.fromName === 'Porto Saúde') ? 'h-20 max-h-24 sm:h-24 sm:max-h-28' : 'h-12 max-h-16 sm:h-14 sm:max-h-20'}`}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-full border border-[#B8941F]/20 bg-[#B8941F]/10 p-2 text-[#8A6812]">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                <div className="rounded-full border border-[#B8941F]/20 bg-[#B8941F]/10 p-2 text-[#8A6812] sm:p-2.5">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </div>
 
-                <div className="rounded-xl border border-[#DCCB9A]/45 bg-[#FBF7EC] px-3 py-4">
+                <div className="rounded-xl border border-[#DCCB9A]/45 bg-[#FBF7EC] px-3 py-4 sm:px-4 sm:py-5">
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-[2px] text-[#876512]">Para</p>
-                  <div className="flex h-12 items-center justify-center">
+                  <div className={`flex items-center justify-center ${(item.toName === 'Unimed' || item.toName === 'Porto Saúde') ? 'h-24 sm:h-28' : 'h-16 sm:h-20'}`}>
                     <Image
                       src={item.toLogo}
                       alt={item.toName}
-                      width={120}
-                      height={36}
-                      className="h-9 w-auto object-contain"
+                      width={280}
+                      height={72}
+                      className={`w-auto object-contain ${(item.toName === 'Unimed' || item.toName === 'Porto Saúde') ? 'h-20 max-h-24 sm:h-24 sm:max-h-28' : 'h-12 max-h-16 sm:h-14 sm:max-h-20'}`}
                     />
                   </div>
                 </div>

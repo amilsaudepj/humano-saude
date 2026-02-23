@@ -8,34 +8,34 @@ export default function Testimonials() {
 
   const testimonials = [
     {
-      name: 'Carlos Mendes',
-      company: 'CEO — Distribuidora CM, 18 funcionários',
-      text: 'Reduzi R$2.700 por mês sem perder nenhum hospital da rede. A Humano encontrou uma brecha contratual que nem meu contador conhecia. Em 12 meses já economizamos mais de R$32 mil.',
-      stars: 5,
+      name: 'Patrícia Oliveira',
+      company: 'Gerente Financeira, 67 vidas',
+      text: 'Veio reajuste de 28% e a gente desesperou. Trouxeram três opções com a mesma rede. Conseguimos manter o que gastávamos. O acompanhamento depois da adesão é muito bom, qualquer dúvida eles respondem.',
     },
     {
       name: 'Fernanda Lima',
-      company: 'Diretora de RH — Agência Digital, 42 colaboradores',
-      text: 'Nunca imaginei que estávamos pagando por coberturas que ninguém usava. A análise técnica revelou R$4.200 de desperdício mensal. Migramos sem carência e com upgrade de rede.',
-      stars: 5,
+      company: 'Diretora de RH, 42 vidas',
+      text: 'Queríamos melhorar a rede e sair do que pagávamos. Fizeram a análise e a migração sem carência. Hoje economizamos R$ 4.200 por mês e a rede credenciada ficou melhor.',
     },
     {
       name: 'Roberto Santos',
-      company: 'Sócio — Santos & Advogados Associados',
-      text: 'Como advogado, eu sei ler contrato. Mas eles encontraram cláusulas abusivas que só quem vive o mercado de saúde conhece. Saímos de R$1.100 para R$680 por vida. Impressionante.',
-      stars: 5,
-    },
-    {
-      name: 'Patrícia Oliveira',
-      company: 'Gerente Financeira — Construtora PO, 67 vidas',
-      text: 'O reajuste veio 28% acima e achei que não tinha saída. A Humano mapeou 3 opções com a mesma rede credenciada e conseguimos manter o custo anterior. Acompanhamento mensal impecável.',
-      stars: 5,
+      company: 'MEI, 2 vidas',
+      text: 'Eu e minha esposa pagávamos R$ 1.100 cada no plano de pessoa física. Com o CNPJ ativo entramos em plano nacional na tabela coletiva. R$ 680 por vida, mesma rede, menos custo.',
     },
     {
       name: 'Marcos Almeida',
-      company: 'Proprietário — Clínica OdontoPrime, 12 funcionários',
-      text: 'Estava prestes a cancelar o plano dos meus funcionários por causa do custo. A Humano encontrou um plano PME com 39% de economia e ainda incluiu cobertura odontológica.',
-      stars: 5,
+      company: 'Proprietário, 12 vidas',
+      text: 'Quase cancelei o plano da clínica por causa do preço. Acharam um plano com coparticipação que deu 39% de economia e ainda entrou odonto. Depois que fechamos, a equipe resolveu tudo rápido.',
+    },
+    {
+      name: 'Carlos Mendes',
+      company: 'CEO, 18 vidas',
+      text: 'Estava pagando R$ 14.000 e caiu para R$ 8.400. Mantivemos os mesmos hospitais. Acharam um detalhe no contrato que nem o contador tinha visto. Em um ano foram R$ 32.000 a menos na despesa.',
+    },
+    {
+      name: 'Luana Costa',
+      company: 'Sócia, 24 vidas',
+      text: 'Cansamos de pagar caro e não ter cobertura para usar fora do estado. Migramos para plano nacional com seguro de vida incluso. Mesmo custo que tínhamos, cobertura maior e menos burocracia.',
     },
   ];
 
@@ -44,36 +44,25 @@ export default function Testimonials() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-20">
           <span className="inline-block px-5 py-1.5 bg-[#B8941F]/10 text-[#B8941F] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-[#B8941F]/20">
-            Relatos reais
+            Depoimentos
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-black">
-            Quem contratou, aprova
+            Empresas que <span className="text-[#B8941F]">reduziram custo</span>
           </h2>
+          <p className="mt-3 text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
+            Quem contratou, aprova. Veja resultados reais de MEI, PME e empresariais.
+          </p>
         </div>
 
-        {/* Mobile & Desktop Carousel — gap e margem nos cards para não ficarem colados */}
+        {/* Carousel — mesmo espaçamento em TODOS os cards (margin-right no card = gap igual inclusive no loop) */}
         <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex items-stretch gap-6 md:gap-10 lg:gap-12">
+          <div className="flex items-stretch min-w-0">
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
-                className="flex-[0_0_calc(100%-1.5rem)] md:flex-[0_0_calc((100%-5rem)/3)] min-w-0 shrink-0 flex"
+                className="flex-[0_0_calc(100%-1.5rem)] sm:flex-[0_0_calc(100%-2rem)] md:flex-[0_0_calc((100%-4rem)/3)] lg:flex-[0_0_calc((100%-5rem)/3)] min-w-0 shrink-0 flex pr-0"
               >
-                <div className="bg-white p-10 rounded-2xl border border-gray-200 w-full flex flex-col hover:shadow-md transition-all duration-300 shadow-sm mx-2 md:mx-3 min-h-0">
-                  {/* Stars */}
-                  <div className="flex gap-1 mb-6 flex-shrink-0">
-                    {Array.from({ length: testimonial.stars }).map((_, i) => (
-                      <svg
-                        key={i}
-                        className="w-5 h-5 text-[#B8941F]"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-
+                <div className="bg-white p-10 rounded-2xl border border-gray-200 w-full flex flex-col hover:shadow-md transition-all duration-300 shadow-sm min-h-0 flex-1 min-w-0 mr-6 md:mr-8 lg:mr-10">
                   {/* Quote — flex-1 + min-h-0 para o rodapé ficar sempre alinhado entre os cards */}
                   <p className="text-gray-600 text-lg leading-relaxed mb-8 flex-1 min-h-0">
                     "{testimonial.text}"

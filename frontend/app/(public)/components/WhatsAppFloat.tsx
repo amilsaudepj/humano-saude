@@ -36,7 +36,7 @@ export default function WhatsAppFloat() {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 transition-all duration-500 ${
+      className={`fixed left-[auto] right-4 bottom-4 sm:right-6 sm:bottom-6 z-50 transition-all duration-500 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
       }`}
     >

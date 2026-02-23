@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { OG_IMAGE } from '@/lib/og-image';
 
 export const metadata: Metadata = {
   title: 'Humano Saúde | Reduza até 40% no Plano de Saúde',
@@ -16,14 +17,7 @@ export const metadata: Metadata = {
     description: 'Reduza até 40% mantendo sua rede hospitalar. Atendimento especializado.',
     url: 'https://humanosaude.com.br',
     siteName: 'Humano Saúde',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Humano Saúde - Corretora Especializada',
-      },
-    ],
+    images: [OG_IMAGE],
     locale: 'pt_BR',
     type: 'website',
   },
@@ -31,7 +25,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Humano Saúde | Reduza até 40% no Plano de Saúde',
     description: 'Análise com IA em 10 minutos. Sem burocracia.',
-    images: ['/og-image.png'],
+    images: [OG_IMAGE.url],
   },
   robots: {
     index: true,

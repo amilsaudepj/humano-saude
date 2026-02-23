@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import type { Metadata } from 'next';
+import { OG_IMAGE } from '@/lib/og-image';
 import CalculadoraClient from './CalculadoraClient';
 
 // =============================================
@@ -40,6 +41,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `https://humanosaude.com.br/economizar/${slug}`,
       siteName: 'Humano Saúde',
       type: 'website',
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Economize até 40% no Plano de Saúde | ${nome}`,
+      description: 'Envie sua fatura e descubra em segundos quanto pode reduzir. 100% gratuito.',
+      images: [OG_IMAGE.url],
     },
   };
 }

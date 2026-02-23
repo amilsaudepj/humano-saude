@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import CalculadoraEconomia from './components/CalculadoraEconomia';
+import { OG_IMAGE } from '@/lib/og-image';
 
 // =============================================
 // PÁGINA PÚBLICA — CALCULADORA SEM INDICAÇÃO
@@ -18,6 +19,13 @@ export const metadata: Metadata = {
     url: 'https://humanosaude.com.br/economizar',
     siteName: 'Humano Saúde',
     type: 'website',
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Economize até 40% no Plano de Saúde | Humano Saúde',
+    description: 'Envie sua fatura e descubra em segundos quanto pode reduzir. Análise gratuita com IA.',
+    images: [OG_IMAGE.url],
   },
   keywords: [
     'plano de saúde barato',

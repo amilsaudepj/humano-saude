@@ -54,7 +54,7 @@ function InfiniteCarousel() {
               alt={insurer.name}
               width={160}
               height={60}
-              className={`w-auto object-contain ${insurer.name === 'Porto Saúde' ? 'h-20' : 'h-14'}`}
+              className={`w-auto object-contain ${insurer.name === 'Porto Saúde' ? 'h-24' : 'h-14'}`}
             />
           </div>
         ))}
@@ -86,7 +86,7 @@ export default function TrustBar() {
                 alt={insurer.name}
                 width={150}
                 height={55}
-                className="h-14 lg:h-16 w-auto object-contain transition-all duration-500"
+                className={`w-auto object-contain transition-all duration-500 ${insurer.name === 'Porto Saúde' ? 'h-20 lg:h-24' : 'h-14 lg:h-16'}`}
               />
             </div>
           ))}
