@@ -4,8 +4,17 @@ import { z } from 'zod';
 // HELPERS
 // ============================================
 
-/** Remove todos os caracteres não-numéricos */
+/** Remove todos os caracteres não-numéricos de string (ex.: telefone, CPF, CNPJ). */
 const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
+
+/** Retorna a primeira mensagem de erro de um ZodError (útil para toasts). */
+export function getFirstErrorMessage(error: unknown): string {
+  if (error instanceof z.ZodError && error.issues.length > 0) {
+    return error.issues[0].message;
+  }
+  if (error instanceof Error) return error.message;
+  return 'Erro de validação';
+}
 
 /** Valida telefone brasileiro (10-11 dígitos, DDD 11-99, não repetido) */
 export const isValidBrazilianPhone = (phone: string): boolean => {
@@ -227,9 +236,10 @@ export const apiLeadSchema = z
 export type ApiLeadInput = z.infer<typeof apiLeadSchema>;
 
 // ============================================
-// HELPER: Extrair primeira mensagem de erro Zod
+// HELPERS: Erros Zod
 // ============================================
 
+/** Mapeia erros Zod por campo (path.join('.')) para exibição em formulários. */
 export function getZodErrors(error: z.ZodError): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const issue of error.issues) {
