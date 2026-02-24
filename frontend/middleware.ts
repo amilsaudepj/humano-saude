@@ -409,7 +409,7 @@ export async function middleware(request: NextRequest) {
   // ============================================
   // PROTEÇÃO: API routes internas (exceto leads, calculadora, auth, e corretor APIs)
   // ============================================
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente') && !pathname.startsWith('/api/design-system')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/email-check') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente') && !pathname.startsWith('/api/design-system')) {
     const token = request.cookies.get('admin_token')?.value ||
                   request.headers.get('authorization')?.replace('Bearer ', '');
 

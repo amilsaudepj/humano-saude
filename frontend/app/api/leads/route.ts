@@ -4,7 +4,7 @@ import { apiLeadSchema } from '@/lib/validations';
 import { checkRateLimit, leadsLimiter } from '@/lib/rate-limit';
 import { createServiceClient } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
-import { enviarEmailNovoLead, enviarEmailConfirmacaoLeadCliente, enviarEmailDadosRecebidosCompletarCotacao } from '@/lib/email';
+import { enviarEmailNovoLead, enviarEmailConfirmacaoLeadCliente, enviarEmailConfirmacaoSimuladorCliente, enviarEmailDadosRecebidosCompletarCotacao } from '@/lib/email';
 
 function parseValidIp(ip: string): string | null {
   const raw = (ip || '').trim().split(',')[0].trim();
@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
 
     const origem = validatedData.origem || validatedData.source || 'landing';
     const isParcial = validatedData.parcial === true;
+    const cotacoesSimulador = validatedData.cotacoes_simulador && validatedData.cotacoes_simulador.length > 0
+      ? validatedData.cotacoes_simulador
+      : undefined;
 
     const whatsappNormalized = normalizeWhatsapp(validatedData.telefone);
     // Se não tem telefone (ex.: completar cotação por e-mail), usar placeholder para não falhar se whatsapp for NOT NULL no banco
@@ -75,16 +78,26 @@ export async function POST(request: NextRequest) {
       utm_source: validatedData.utm_source || null,
       utm_medium: validatedData.utm_medium || null,
       utm_campaign: validatedData.utm_campaign || null,
-      historico: [
-        {
-          timestamp: new Date().toISOString(),
-          evento: isParcial ? 'lead_parcial' : 'lead_criado',
-          origem,
-          detalhes: isParcial
-            ? 'Lead parcial salvo (usuário abandonou o formulário)'
-            : `Lead criado via ${origem}`,
-        },
-      ],
+      historico: (() => {
+        const entries: Array<{ timestamp: string; evento: string; origem?: string; detalhes?: string }> = [
+          {
+            timestamp: new Date().toISOString(),
+            evento: isParcial ? 'lead_parcial' : 'lead_criado',
+            origem,
+            detalhes: isParcial
+              ? 'Lead parcial salvo (usuário abandonou o formulário)'
+              : `Lead criado via ${origem}`,
+          },
+        ];
+        if (cotacoesSimulador?.length) {
+          entries.push({
+            timestamp: new Date().toISOString(),
+            evento: 'cotacoes_simulador',
+            detalhes: JSON.stringify(cotacoesSimulador),
+          });
+        }
+        return entries;
+      })(),
       arquivado: false,
     };
 
@@ -112,7 +125,8 @@ export async function POST(request: NextRequest) {
     
     logger.info('Lead criado com sucesso', { lead_id: data.id, origem, parcial: isParcial });
 
-    enviarEmailNovoLead({
+    // Email comercial (equipe): aguardamos e logamos resultado para aparecer nos logs da Vercel
+    const resultadoComercial = await enviarEmailNovoLead({
       nome: validatedData.nome || '',
       email: validatedData.email || '',
       telefone: validatedData.telefone || '',
@@ -128,26 +142,55 @@ export async function POST(request: NextRequest) {
       usaBypass: validatedData.usa_bypass || false,
       origem,
       parcial: isParcial,
+      top3Planos: top_3_planos || undefined,
+      cotacoesSimulador: cotacoesSimulador || undefined,
     }).catch((err: unknown) => {
       logger.error('Erro ao enviar email de novo lead', err as Error, { lead_id: data.id });
+      return { success: false as const, error: err instanceof Error ? err.message : String(err) };
     });
+    if (resultadoComercial && !resultadoComercial.success) {
+      logger.warn('Email comercial (novo lead) não enviado', {
+        lead_id: data.id,
+        reason: resultadoComercial.error,
+        hint: resultadoComercial.error?.includes('API key') ? 'Configure RESEND_API_KEY na Vercel → Settings → Environment Variables e faça Redeploy' : undefined,
+      });
+    } else if (resultadoComercial?.success) {
+      logger.info('Email comercial enviado', { lead_id: data.id });
+    }
 
-    if (!isParcial && validatedData.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedData.email.trim())) {
-      if (origem === 'email_form') {
-        enviarEmailDadosRecebidosCompletarCotacao({
-          nome: (validatedData.nome || '').trim() || 'Cliente',
-          email: validatedData.email.trim(),
-        }).catch((err: unknown) => {
-          logger.error('Erro ao enviar email dados recebidos (completar cotação)', err as Error, { lead_id: data.id });
-        });
-      } else {
-        enviarEmailConfirmacaoLeadCliente({
-          nome: (validatedData.nome || '').trim() || 'Cliente',
-          email: validatedData.email.trim(),
-          telefone: validatedData.telefone?.trim() || undefined,
-        }).catch((err: unknown) => {
-          logger.error('Erro ao enviar email de confirmação ao cliente', err as Error, { lead_id: data.id });
-        });
+    const emailClienteValido = validatedData.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedData.email.trim());
+    if (!emailClienteValido) {
+      logger.info('Lead criado sem email de confirmação ao cliente (sem email válido)', { lead_id: data.id });
+    } else if (isParcial) {
+      logger.info('Lead parcial: confirmação ao cliente não enviada (lead abandonado)', { lead_id: data.id });
+    }
+
+    if (!isParcial && emailClienteValido) {
+      const enviarCliente = origem === 'email_form'
+        ? enviarEmailDadosRecebidosCompletarCotacao({
+            nome: (validatedData.nome || '').trim() || 'Cliente',
+            email: validatedData.email.trim(),
+          })
+        : origem === 'calculadora' && cotacoesSimulador?.length
+          ? enviarEmailConfirmacaoSimuladorCliente({
+              nome: (validatedData.nome || '').trim() || 'Cliente',
+              email: validatedData.email.trim(),
+              telefone: validatedData.telefone?.trim() || undefined,
+              cotacoes: cotacoesSimulador,
+            })
+          : enviarEmailConfirmacaoLeadCliente({
+              nome: (validatedData.nome || '').trim() || 'Cliente',
+              email: validatedData.email.trim(),
+              telefone: validatedData.telefone?.trim() || undefined,
+            });
+      const resultadoCliente = await enviarCliente.catch((err: unknown) => {
+        logger.error('Erro ao enviar email ao cliente', err as Error, { lead_id: data.id });
+        return { success: false as const, error: err instanceof Error ? err.message : String(err) };
+      });
+      if (resultadoCliente && !resultadoCliente.success) {
+        logger.warn('Email ao cliente não enviado', { lead_id: data.id, reason: resultadoCliente.error });
+      } else if (resultadoCliente?.success) {
+        logger.info('Email ao cliente enviado', { lead_id: data.id });
       }
     }
 

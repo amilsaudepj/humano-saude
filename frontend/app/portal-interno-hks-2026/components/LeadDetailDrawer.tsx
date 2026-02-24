@@ -70,9 +70,13 @@ function formatDate(d: string | null | undefined): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
+}
+
+function formatDateTime(d: string | null | undefined): string {
+  if (!d) return '—';
+  const date = new Date(d);
+  return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
@@ -262,6 +266,16 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
   const corretor = dadosPdf.corretor || null;
   const faturaUrl = dadosOcr.fatura_url || null;
   const historico: any[] = Array.isArray(lead.historico) ? lead.historico : [];
+  const cotacoesSimuladorEntry = historico.find((h: any) => h.evento === 'cotacoes_simulador');
+  let cotacoesSimulador: Array<{ nome: string; operadora: string; valorTotal: number; coparticipacao?: string; abrangencia?: string; reembolso?: string }> = [];
+  if (cotacoesSimuladorEntry?.detalhes) {
+    try {
+      const parsed = JSON.parse(cotacoesSimuladorEntry.detalhes);
+      cotacoesSimulador = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      cotacoesSimulador = [];
+    }
+  }
 
   const openPreview = (url: string, title: string) => {
     setPreviewUrl(url);
@@ -337,6 +351,36 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
               />
             )}
           </Section>
+
+          {/* ═══ COTAÇÕES DO SIMULADOR (landing) ═══ */}
+          {cotacoesSimulador.length > 0 && (
+            <Section title={`Cotações do simulador (${cotacoesSimulador.length})`} icon={BadgeDollarSign}>
+              <div className="space-y-3">
+                {cotacoesSimulador.map((c: any, i: number) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      'rounded-lg border p-3 space-y-1',
+                      i === 0
+                        ? 'border-[#D4AF37]/20 bg-[#D4AF37]/5'
+                        : 'border-white/[0.06] bg-white/[0.01]'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-white">{c.nome}</span>
+                      <span className="text-sm font-bold text-[#D4AF37]">{formatCurrency(c.valorTotal)}/mês</span>
+                    </div>
+                    {c.operadora && <p className="text-[11px] text-white/40">{c.operadora}</p>}
+                    {(c.abrangencia || c.coparticipacao || c.reembolso) && (
+                      <p className="text-[10px] text-white/30">
+                        {[c.abrangencia, c.coparticipacao, c.reembolso].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           {/* ═══ FATURA ORIGINAL ═══ */}
           {faturaUrl && (
@@ -561,8 +605,8 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
             <InfoRow label="ID" value={<span className="font-mono text-[11px]">{lead.id}</span>} />
             <InfoRow label="Origem" value={lead.origem} />
             <InfoRow label="Prioridade" value={lead.prioridade} />
-            <InfoRow label="Criado em" value={formatDate(lead.created_at)} />
-            <InfoRow label="Atualizado" value={formatDate(lead.updated_at)} />
+            <InfoRow label="Criado em" value={formatDateTime(lead.created_at)} />
+            <InfoRow label="Atualizado" value={formatDateTime(lead.updated_at)} />
             {dadosPdf.timestamp && <InfoRow label="Simulação em" value={formatDate(dadosPdf.timestamp)} />}
           </Section>
 

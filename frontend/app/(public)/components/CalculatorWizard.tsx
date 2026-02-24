@@ -5,6 +5,7 @@ import { trackGTMCalculation, trackGTMLeadSubmission } from '@/app/components/Go
 import { trackCalculation, trackLeadSubmission } from '@/app/components/GoogleAnalytics';
 import { trackLeadGeneration, trackQuoteStart } from '@/app/lib/metaPixel';
 import { calculatorLeadSchema, getZodErrors } from '@/lib/validations';
+import { BAIRROS_POR_ZONA } from '@/lib/constants/cotacao';
 import type { CalculadoraState, PlanoResultado } from './Calculator.types';
 
 const TOTAL_STEPS = 6;
@@ -47,6 +48,7 @@ export default function CalculatorWizard() {
   });
   const [cErr, setCErr] = useState<Record<string, string>>({});
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const stepContainerRef = useRef<HTMLDivElement>(null);
 
   const consultarCnpj = useCallback(async (cnpjInput: string) => {
     const cleanCnpj = cnpjInput.replace(/\D/g, '').slice(0, 14);
@@ -113,6 +115,23 @@ export default function CalculatorWizard() {
     };
   }, [salvarParcial]);
 
+  // Scroll para o bloco de preenchimento só quando o usuário muda de step (nunca na carga)
+  const prevStepRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevStepRef.current;
+    prevStepRef.current = state.step;
+    if (prev === null) return;
+    if (prev === state.step) return;
+    stepContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [state.step]);
+
+  // Scroll suave para o próximo campo ao preencher/escolher (mantém o step atual centralizado)
+  const scrollToNextInStep = useCallback(() => {
+    requestAnimationFrame(() => {
+      stepContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, []);
+
   const calcular = async () => {
     const v = calculatorLeadSchema.safeParse({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato });
     if (!v.success) { setCErr(getZodErrors(v.error)); return; }
@@ -120,31 +139,30 @@ export default function CalculatorWizard() {
     setState(p => ({ ...p, isLoading: true }));
     trackQuoteStart({ tipoContratacao: state.tipoContrato, idades: state.usaBypass ? [] : state.beneficiarios.map(b => parseInt(b.idade) || 0) });
     const ids = state.usaBypass ? [] : state.beneficiarios.map(b => b.idade).filter(Boolean);
+    const start = Date.now();
+    const MIN_LOADING_MS = 5000;
     try {
       const r = await fetch('/api/calculadora', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo_contratacao: state.tipoContrato, acomodacao: state.acomodacao, idades: ids, cnpj: state.cnpj || undefined, qtd_vidas: state.usaBypass ? parseInt(state.qtdVidasEstimada) || 2 : undefined }) });
       const d = await r.json();
+      const elapsed = Date.now() - start;
+      const wait = Math.max(0, MIN_LOADING_MS - elapsed);
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
       if (d.success) {
         const adj = d.resultados.map((p: PlanoResultado) => ({ ...p, valorTotal: p.valorTotal * 1.25 }));
         setState(p => ({ ...p, resultados: adj, isLoading: false, step: TOTAL_STEPS }));
         trackGTMCalculation({ tipo: state.tipoContrato, acomodacao: state.acomodacao, totalPlanos: d.total, valorMaisBarato: adj[0]?.valorTotal });
         trackCalculation({ tipo: state.tipoContrato, acomodacao: state.acomodacao, totalPlanos: d.total });
+        // Enviar cotação por e-mail automaticamente ao cliente (lead + e-mail personalizado)
+        savedRef.current = true;
+        const ids = state.usaBypass ? [] : state.beneficiarios.map(b => b.idade).filter(Boolean);
+        const cotacoesSimulador = adj.map((p: PlanoResultado) => ({ nome: p.nome, operadora: p.operadora, valorTotal: p.valorTotal, coparticipacao: p.coparticipacao, abrangencia: p.abrangencia, reembolso: p.reembolso }));
+        fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato, tipo_contratacao: state.tipoContrato, cnpj: state.cnpj || null, empresa: state.empresa || undefined, acomodacao: state.acomodacao, idades_beneficiarios: ids, bairro: state.bairro, intencao: state.intencao, perfil_cnpj: state.perfilCnpj, usa_bypass: state.usaBypass, qtd_vidas_estimada: state.qtdVidasEstimada, top_3_planos: adj.slice(0, 3).map((p: PlanoResultado) => p.nome), cotacoes_simulador: cotacoesSimulador, origem: 'calculadora' }) })
+          .then(() => { trackLeadGeneration({ leadId: `calc-${Date.now()}`, nome: state.nome, operadora: adj[0]?.operadora || 'N/A', valorProposto: adj[0]?.valorTotal || 0, economiaEstimada: 0 }); trackGTMLeadSubmission({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato }); trackLeadSubmission({ nome: state.nome, perfil: state.tipoContrato, source: 'calculator_wizard' }); })
+          .catch(() => {});
       } else { alert('Erro ao calcular.'); setState(p => ({ ...p, isLoading: false })); }
     } catch (e) { console.error(e); setState(p => ({ ...p, isLoading: false })); }
-  };
-
-  const finalizar = async () => {
-    savedRef.current = true; // Evitar auto-save duplicado
-    const ids = state.usaBypass ? [] : state.beneficiarios.map(b => b.idade).filter(Boolean);
-    try {
-      await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato, tipo_contratacao: state.tipoContrato, cnpj: state.cnpj || null, empresa: state.empresa || undefined, acomodacao: state.acomodacao, idades_beneficiarios: ids, bairro: state.bairro, intencao: state.intencao, perfil_cnpj: state.perfilCnpj, usa_bypass: state.usaBypass, qtd_vidas_estimada: state.qtdVidasEstimada, top_3_planos: state.resultados.slice(0, 3).map(p => p.nome), origem: 'calculadora' }) });
-      trackLeadGeneration({ leadId: `calc-${Date.now()}`, nome: state.nome, operadora: state.resultados[0]?.operadora || 'N/A', valorProposto: state.resultados[0]?.valorTotal || 0, economiaEstimada: 0 });
-      trackGTMLeadSubmission({ nome: state.nome, email: state.email, telefone: state.telefone, perfil: state.tipoContrato });
-      trackLeadSubmission({ nome: state.nome, perfil: state.tipoContrato, source: 'calculator_wizard' });
-      document.cookie = 'hs_ok=1; path=/; max-age=120; SameSite=Lax';
-      window.location.href = '/obrigado';
-    } catch (e) { console.error(e); }
   };
 
   return (
@@ -171,7 +189,7 @@ export default function CalculatorWizard() {
         )}
 
         {state.step === 1 && (
-          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+          <div ref={stepContainerRef} className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl scroll-mt-24">
             <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2 text-center leading-[1.1]">Qual é o seu objetivo hoje?</h2>
             <p className="text-gray-500 text-center mb-8">Selecione a opção que melhor descreve sua necessidade</p>
             <div className="grid md:grid-cols-2 gap-6">
@@ -190,7 +208,7 @@ export default function CalculatorWizard() {
         )}
 
         {state.step === 2 && (
-          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+          <div ref={stepContainerRef} className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl scroll-mt-24">
             <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2 text-center leading-[1.1]">Qual é o perfil do seu CNPJ?</h2>
             <p className="text-gray-500 text-center mb-8">Isso nos ajuda a encontrar tabelas específicas para sua empresa</p>
             <div className="grid md:grid-cols-2 gap-6">
@@ -210,7 +228,7 @@ export default function CalculatorWizard() {
         )}
 
         {state.step === 3 && (
-          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+          <div ref={stepContainerRef} className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl scroll-mt-24">
             <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2 text-center leading-[1.1]">Detalhes do Plano</h2>
             <p className="text-gray-500 text-center mb-8">Configure a acomodação e os beneficiários</p>
             <div className="mb-8">
@@ -218,12 +236,13 @@ export default function CalculatorWizard() {
               <input
                 type="text"
                 value={state.cnpj}
+                onFocus={scrollToNextInStep}
                 onChange={e => {
                   const formatted = formatCNPJ(e.target.value);
                   const digits = formatted.replace(/\D/g, '').slice(0, 14);
                   setState(p => ({ ...p, cnpj: formatted, empresa: digits.length !== 14 ? '' : p.empresa }));
                   setCErr(p => ({ ...p, cnpj: '' }));
-                  if (digits.length === 14 && validarCNPJ(formatted)) consultarCnpj(digits);
+                  if (digits.length === 14 && validarCNPJ(formatted)) { consultarCnpj(digits); scrollToNextInStep(); }
                 }}
                 onBlur={() => {
                   if (state.cnpj && !validarCNPJ(state.cnpj)) setCErr(p => ({ ...p, cnpj: 'CNPJ inválido. Verifique os dígitos.' }));
@@ -254,6 +273,7 @@ export default function CalculatorWizard() {
                 type="text"
                 autoComplete="organization"
                 value={state.empresa}
+                onFocus={scrollToNextInStep}
                 onChange={e => setState(p => ({ ...p, empresa: e.target.value }))}
                 placeholder="Preenchido automaticamente pelo CNPJ ou digite manualmente"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] focus:border-transparent"
@@ -262,8 +282,8 @@ export default function CalculatorWizard() {
             <div className="mb-8">
               <label className="block text-sm font-bold text-gray-900 mb-4">Tipo de Acomodação</label>
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setState(p => ({ ...p, acomodacao: 'Enfermaria' }))} className={`p-5 border-2 rounded-xl hover:border-[#B8941F] transition-all ${sc(state.acomodacao === 'Enfermaria')}`}><h4 className="font-bold text-gray-900 text-lg mb-1">Enfermaria</h4><p className="text-sm text-gray-500">Quarto compartilhado</p></button>
-                <button onClick={() => setState(p => ({ ...p, acomodacao: 'Apartamento' }))} className={`p-5 border-2 rounded-xl hover:border-[#B8941F] transition-all ${sc(state.acomodacao === 'Apartamento')}`}><h4 className="font-bold text-gray-900 text-lg mb-1">Apartamento</h4><p className="text-sm text-gray-500">Quarto individual</p></button>
+                <button onClick={() => { setState(p => ({ ...p, acomodacao: 'Enfermaria' })); scrollToNextInStep(); }} className={`p-5 border-2 rounded-xl hover:border-[#B8941F] transition-all ${sc(state.acomodacao === 'Enfermaria')}`}><h4 className="font-bold text-gray-900 text-lg mb-1">Enfermaria</h4><p className="text-sm text-gray-500">Quarto compartilhado</p></button>
+                <button onClick={() => { setState(p => ({ ...p, acomodacao: 'Apartamento' })); scrollToNextInStep(); }} className={`p-5 border-2 rounded-xl hover:border-[#B8941F] transition-all ${sc(state.acomodacao === 'Apartamento')}`}><h4 className="font-bold text-gray-900 text-lg mb-1">Apartamento</h4><p className="text-sm text-gray-500">Quarto individual</p></button>
               </div>
             </div>
             {!state.usaBypass ? (
@@ -274,7 +294,7 @@ export default function CalculatorWizard() {
                   {state.beneficiarios.map((b, i) => (
                     <div key={b.id} className="flex gap-3 items-center">
                       <span className="text-gray-500 font-bold w-8 text-sm">{i + 1}.</span>
-                      <select value={b.idade} onChange={e => updB(b.id, e.target.value)} className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F]">
+                      <select value={b.idade} onChange={e => { updB(b.id, e.target.value); scrollToNextInStep(); }} onFocus={scrollToNextInStep} className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F]">
                         <option value="">Selecione a faixa etária</option>
                         {faixas.map(f => <option key={f} value={f}>{f} anos</option>)}
                       </select>
@@ -282,20 +302,20 @@ export default function CalculatorWizard() {
                     </div>
                   ))}
                 </div>
-                <button onClick={addB} className="mt-4 px-5 py-2.5 border-2 border-[#B8941F] text-[#B8941F] rounded-xl hover:bg-[#B8941F] hover:text-white transition-all font-bold text-sm">+ Adicionar beneficiário</button>
-                <button onClick={() => setState(p => ({ ...p, usaBypass: true }))} className="block mt-4 text-sm text-gray-400 hover:text-[#B8941F] underline underline-offset-2 transition-colors">Não tenho todas as idades agora →</button>
+                <button onClick={() => { addB(); scrollToNextInStep(); }} className="mt-4 px-5 py-2.5 border-2 border-[#B8941F] text-[#B8941F] rounded-xl hover:bg-[#B8941F] hover:text-white transition-all font-bold text-sm">+ Adicionar beneficiário</button>
+                <button onClick={() => { setState(p => ({ ...p, usaBypass: true })); scrollToNextInStep(); }} className="block mt-4 text-sm text-gray-400 hover:text-[#B8941F] underline underline-offset-2 transition-colors">Não tenho todas as idades agora →</button>
               </div>
             ) : (
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-900 mb-4">Quantas vidas deseja incluir?</label>
-                <select value={state.qtdVidasEstimada} onChange={e => setState(p => ({ ...p, qtdVidasEstimada: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F]">
+                <select value={state.qtdVidasEstimada} onChange={e => { setState(p => ({ ...p, qtdVidasEstimada: e.target.value })); scrollToNextInStep(); }} onFocus={scrollToNextInStep} className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-[#B8941F]">
                   <option value="">Selecione</option>
                   <option value="2">2 vidas</option><option value="3">3 vidas</option><option value="4">4 vidas</option><option value="5">5 vidas</option>
                   <option value="6-10">6 a 10 vidas</option><option value="11-20">11 a 20 vidas</option><option value="21-29">21 a 29 vidas</option>
                   <option value="30-49">30 a 49 vidas</option><option value="50-99">50 a 99 vidas</option><option value="100+">100+ vidas</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-2">A simulação usará faixas etárias médias. Nosso consultor ajustará com dados reais.</p>
-                <button onClick={() => setState(p => ({ ...p, usaBypass: false }))} className="block mt-4 text-sm text-gray-400 hover:text-[#B8941F] underline underline-offset-2 transition-colors">← Prefiro informar as idades</button>
+                <button onClick={() => { setState(p => ({ ...p, usaBypass: false })); scrollToNextInStep(); }} className="block mt-4 text-sm text-gray-400 hover:text-[#B8941F] underline underline-offset-2 transition-colors">← Prefiro informar as idades</button>
               </div>
             )}
             {(() => {
@@ -330,38 +350,52 @@ export default function CalculatorWizard() {
         )}
 
         {state.step === 4 && (
-          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+          <div ref={stepContainerRef} className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl scroll-mt-24">
             <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2 text-center leading-[1.1]">Onde sua empresa está localizada?</h2>
             <p className="text-gray-500 text-center mb-8">Isso garante rede credenciada próxima à sua equipe</p>
             <div className="mb-8">
               <label className="block text-sm font-bold text-gray-900 mb-4">Localização</label>
-              <input type="text" value={state.bairro} onChange={e => setState(p => ({ ...p, bairro: e.target.value }))} placeholder="Cidade / Bairro" className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent text-base" />
+              <select
+                value={state.bairro}
+                onChange={e => { setState(p => ({ ...p, bairro: e.target.value })); scrollToNextInStep(); }}
+                onFocus={scrollToNextInStep}
+                className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent text-base"
+              >
+                <option value="">Selecione o bairro</option>
+                {BAIRROS_POR_ZONA.map((z) => (
+                  <optgroup key={z.zona} label={z.zona}>
+                    {z.bairros.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div className="flex gap-4">
-              <button onClick={bck} className="flex-1 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all">← Voltar</button>
-              <button onClick={nxt} disabled={!state.bairro} className="flex-1 py-4 bg-black hover:bg-gray-900 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all">Continuar →</button>
+              <button type="button" onClick={bck} className="flex-1 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all">← Voltar</button>
+              <button type="button" onClick={nxt} disabled={!state.bairro} className="flex-1 py-4 bg-black hover:bg-gray-900 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all">Continuar →</button>
             </div>
           </div>
         )}
 
         {state.step === 5 && (
-          <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl">
+          <div ref={stepContainerRef} className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl scroll-mt-24">
             <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2 text-center leading-[1.1]">Para onde enviamos a cotação?</h2>
             <p className="text-gray-500 text-center mb-8">Falta pouco! Preencha seus dados para ver os resultados</p>
             <div className="space-y-5 mb-8">
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">Nome Completo</label>
-                <input type="text" value={state.nome} onChange={e => { setState(p => ({ ...p, nome: e.target.value })); setCErr(p => ({ ...p, nome: '' })); }} placeholder="Digite seu nome" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.nome ? 'border-red-400' : 'border-gray-300'}`} />
+                <input type="text" value={state.nome} onFocus={scrollToNextInStep} onChange={e => { setState(p => ({ ...p, nome: e.target.value })); setCErr(p => ({ ...p, nome: '' })); scrollToNextInStep(); }} placeholder="Digite seu nome" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.nome ? 'border-red-400' : 'border-gray-300'}`} />
                 {cErr.nome && <p className="text-red-500 text-xs mt-1">{cErr.nome}</p>}
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">E-mail Corporativo</label>
-                <input type="email" value={state.email} onChange={e => { setState(p => ({ ...p, email: e.target.value })); setCErr(p => ({ ...p, email: '' })); }} placeholder="contato@suaempresa.com.br" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.email ? 'border-red-400' : 'border-gray-300'}`} />
+                <input type="email" value={state.email} onFocus={scrollToNextInStep} onChange={e => { setState(p => ({ ...p, email: e.target.value })); setCErr(p => ({ ...p, email: '' })); scrollToNextInStep(); }} placeholder="contato@suaempresa.com.br" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.email ? 'border-red-400' : 'border-gray-300'}`} />
                 {cErr.email && <p className="text-red-500 text-xs mt-1">{cErr.email}</p>}
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">WhatsApp</label>
-                <input type="tel" value={state.telefone} onChange={e => { setState(p => ({ ...p, telefone: e.target.value })); setCErr(p => ({ ...p, telefone: '' })); }} placeholder="(21) 99999-9999" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.telefone ? 'border-red-400' : 'border-gray-300'}`} />
+                <input type="tel" value={state.telefone} onFocus={scrollToNextInStep} onChange={e => { setState(p => ({ ...p, telefone: e.target.value })); setCErr(p => ({ ...p, telefone: '' })); scrollToNextInStep(); }} placeholder="(21) 99999-9999" className={`w-full px-4 py-3 border rounded-xl text-base focus:ring-2 focus:ring-[#B8941F] ${cErr.telefone ? 'border-red-400' : 'border-gray-300'}`} />
                 {cErr.telefone && <p className="text-red-500 text-xs mt-1">{cErr.telefone}</p>}
               </div>
             </div>
@@ -370,16 +404,16 @@ export default function CalculatorWizard() {
               <p className="text-xs text-gray-500 leading-relaxed">Seus dados estão protegidos conforme a <strong>LGPD</strong> (Lei Geral de Proteção de Dados). Utilizamos suas informações exclusivamente para gerar a cotação personalizada.</p>
             </div>
             <div className="flex gap-4">
-              <button onClick={bck} className="flex-1 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all">← Voltar</button>
-              <button onClick={calcular} disabled={!state.nome || !state.email || !state.telefone || state.isLoading} className="flex-1 py-4 bg-[#B8941F] hover:bg-[#A07E18] text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                {state.isLoading ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Calculando...</span> : 'Ver resultados →'}
+              <button type="button" onClick={bck} className="flex-1 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all">← Voltar</button>
+              <button type="button" onClick={calcular} disabled={!state.nome || !state.email || !state.telefone || state.isLoading} className="flex-1 py-4 bg-[#B8941F] hover:bg-[#A07E18] text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                {state.isLoading ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Buscando opções e analisando CNPJ...</span> : 'Ver resultados →'}
               </button>
             </div>
           </div>
         )}
 
         {state.step === TOTAL_STEPS && (
-          <div className="space-y-6">
+          <div ref={stepContainerRef} className="space-y-6 scroll-mt-24">
             <div className="bg-black text-white py-3 px-6 rounded-2xl text-center">
               <p className="text-sm font-bold flex items-center justify-center gap-2">
                 <svg className="w-4 h-4 text-[#B8941F]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
@@ -412,13 +446,9 @@ export default function CalculatorWizard() {
                   <p className="text-3xl sm:text-4xl font-black text-black">R$ {plano.valorTotal.toFixed(2).replace('.', ',')}</p>
                   <p className="text-[10px] text-gray-400 mt-1">*Por vida — sujeito a alteração</p>
                 </div>
-                <a href={`https://wa.me/5521988179407?text=Olá!%20Tenho%20interesse%20no%20plano%20${encodeURIComponent(plano.nome)}%20-%20${plano.operadora}%20para%20minha%20empresa`} className="flex items-center justify-center gap-2 py-4 bg-[#25D366] text-white rounded-xl font-bold hover:bg-[#20BD5A] transition-all"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Falar com especialista</a>
+                <a href={`https://wa.me/5521988179407?text=Olá!%20Tenho%20interesse%20no%20plano%20${encodeURIComponent(plano.nome)}%20-%20${plano.operadora}%20para%20minha%20empresa`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 py-4 bg-[#25D366] text-white rounded-xl font-bold hover:bg-[#20BD5A] transition-all"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Falar com especialista</a>
               </div>
             ))}
-            <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl shadow-xl text-center">
-              <p className="text-gray-500 mb-4 text-sm">Prefere receber todos os detalhes por e-mail?</p>
-              <button onClick={finalizar} className="px-8 py-4 bg-[#B8941F] hover:bg-[#A07E18] text-white rounded-xl font-bold transition-all">Receber cotação completa por e-mail</button>
-            </div>
           </div>
         )}
 

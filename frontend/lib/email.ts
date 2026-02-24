@@ -40,8 +40,13 @@ function getResend(): Resend {
 }
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Humano Saúde <noreply@humanosaude.com.br>';
-const ADMIN_EMAILS = ['comercial@humanosaude.com.br'];
-const CC_EMAILS = ['contato@helciomattos.com.br'];
+// Destinatários do email "novo lead" (comercial): use RESEND_ADMIN_EMAILS e RESEND_CC_EMAILS (vírgula) para sobrescrever
+const ADMIN_EMAILS = process.env.RESEND_ADMIN_EMAILS
+  ? process.env.RESEND_ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
+  : ['comercial@humanosaude.com.br'];
+const CC_EMAILS = process.env.RESEND_CC_EMAILS
+  ? process.env.RESEND_CC_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
+  : ['contato@helciomattos.com.br'];
 
 const log = logger.child({ module: 'email' });
 
@@ -777,6 +782,50 @@ export async function enviarEmailConfirmacaoLeadCliente(dados: {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 14c. CONFIRMAÇÃO SIMULADOR — E-mail para quem pediu cotação por e-mail (tela de resultados do simulador)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailConfirmacaoSimuladorCliente(dados: {
+  nome: string;
+  email: string;
+  telefone?: string;
+  cotacoes: Array<{ nome: string; operadora: string; valorTotal: number; coparticipacao?: string; abrangencia?: string; reembolso?: string }>;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const ConfirmacaoSimuladorClienteEmail = (await import('@/emails/ConfirmacaoSimuladorClienteEmail')).default;
+    const html = await render(
+      ConfirmacaoSimuladorClienteEmail({
+        nome: dados.nome,
+        email: dados.email,
+        telefone: dados.telefone,
+        cotacoes: dados.cotacoes,
+      })
+    );
+
+    const result = await sendViaResend({
+      to: dados.email,
+      subject: 'Sua cotação do simulador — Humano Saúde',
+      html,
+      templateName: 'confirmacao_simulador_cliente',
+      category: 'leads',
+      tags: ['lead', 'simulador', 'cotacao'],
+      triggeredBy: 'system',
+      metadata: { lead_email: dados.email },
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailConfirmacaoSimuladorCliente', err);
+    return { success: false, error: 'Erro ao enviar e-mail de confirmação do simulador' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // 14b. DADOS RECEBIDOS (completar cotação) — E-mail simples para quem já preencheu o link do e-mail
 // ─────────────────────────────────────────────────────────────
 export async function enviarEmailDadosRecebidosCompletarCotacao(dados: {
@@ -846,6 +895,10 @@ export async function enviarEmailNovoLead(dados: {
   usaBypass?: boolean;
   origem: string;
   parcial?: boolean;
+  /** Top 3 planos (nomes) — ex.: "AMIL S380, SulAmérica..." */
+  top3Planos?: string;
+  /** Cotações completas geradas pelo simulador (para exibir no e-mail comercial) */
+  cotacoesSimulador?: Array<{ nome: string; operadora: string; valorTotal: number; coparticipacao?: string; abrangencia?: string; reembolso?: string }>;
 }) {
   try {
     const guard = guardApiKey();
@@ -873,6 +926,8 @@ export async function enviarEmailNovoLead(dados: {
         origemLabel,
         parcial: dados.parcial || false,
         dataCriacao: new Date().toISOString(),
+        top3Planos: dados.top3Planos,
+        cotacoesSimulador: dados.cotacoesSimulador,
       })
     );
     const prefix = dados.parcial ? '⚠️ Lead parcial' : '🔥 Novo lead';

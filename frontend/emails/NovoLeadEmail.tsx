@@ -6,6 +6,15 @@ import { Heading, Text, Section, Hr, Row, Column } from '@react-email/components
 import * as React from 'react';
 import { EmailLayout } from './_components/EmailLayout';
 
+interface CotacaoSimuladorItem {
+  nome: string;
+  operadora: string;
+  valorTotal: number;
+  coparticipacao?: string;
+  abrangencia?: string;
+  reembolso?: string;
+}
+
 interface NovoLeadEmailProps {
   nome: string;
   email: string;
@@ -25,6 +34,10 @@ interface NovoLeadEmailProps {
   origemLabel?: string;
   parcial?: boolean;
   dataCriacao: string;
+  /** Top 3 planos (nomes) — ex.: "AMIL S380, SulAmérica..." */
+  top3Planos?: string;
+  /** Cotações completas geradas pelo simulador */
+  cotacoesSimulador?: CotacaoSimuladorItem[];
 }
 
 export default function NovoLeadEmail({
@@ -45,7 +58,10 @@ export default function NovoLeadEmail({
   origemLabel: origemLabelProp,
   parcial = false,
   dataCriacao = new Date().toISOString(),
+  top3Planos,
+  cotacoesSimulador,
 }: NovoLeadEmailProps) {
+  const formatValor = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
   const origemLabel = origemLabelProp ?? (origem === 'calculadora' ? 'Simule seu plano' : origem === 'hero_form' ? 'Formulário do topo' : origem === 'email_form' ? 'Completar cotação' : 'Landing');
   const intencaoLabel = intencao === 'reduzir' ? 'Reduzir custo atual' : intencao === 'contratar' ? 'Contratar 1º plano' : '—';
   const perfilLabel = perfilCnpj === 'mei' ? 'MEI' : perfilCnpj === 'pme' ? 'PME / Empresa' : '—';
@@ -132,6 +148,37 @@ export default function NovoLeadEmail({
           <Column style={valueCol}>{perfil || '—'}</Column>
         </Row>
       </Section>
+
+      {((cotacoesSimulador?.length ?? 0) > 0 || top3Planos) && (
+        <>
+          <Hr style={divider} />
+          <Section style={detailsBox}>
+            <Text style={sectionTitle}>Cotações geradas (simulador)</Text>
+            {top3Planos && (
+              <Row style={detailRow}>
+                <Column style={labelCol}>Top 3 planos</Column>
+                <Column style={valueCol}>{top3Planos}</Column>
+              </Row>
+            )}
+            {cotacoesSimulador && cotacoesSimulador.length > 0 && (
+              <div style={{ marginTop: '12px' }}>
+                {cotacoesSimulador.map((c: CotacaoSimuladorItem, i: number) => (
+                  <div key={i} style={cotacaoRow}>
+                    <span style={cotacaoNome}>{c.nome} — </span>
+                    <span style={cotacaoValor}>{formatValor(c.valorTotal)}/mês</span>
+                    <span style={cotacaoOperadora}>{c.operadora}</span>
+                    {(c.abrangencia || c.coparticipacao || c.reembolso) && (
+                      <span style={cotacaoDetalhes}>
+                        {[c.abrangencia, c.coparticipacao, c.reembolso].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </>
+      )}
 
       <Hr style={divider} />
 
@@ -222,6 +269,39 @@ const valueColGold: React.CSSProperties = {
   ...valueCol,
   color: '#B8941F',
   fontWeight: '700',
+};
+
+const cotacaoRow: React.CSSProperties = {
+  border: '1px solid #E5E7EB',
+  borderRadius: '8px',
+  padding: '10px 12px',
+  marginBottom: '8px',
+  backgroundColor: '#fff',
+};
+const cotacaoNome: React.CSSProperties = {
+  fontSize: '13px',
+  fontWeight: '700',
+  color: '#111827',
+  display: 'block',
+};
+const cotacaoOperadora: React.CSSProperties = {
+  fontSize: '12px',
+  color: '#6B7280',
+  display: 'block',
+  marginTop: '2px',
+};
+const cotacaoValor: React.CSSProperties = {
+  fontSize: '13px',
+  fontWeight: '700',
+  color: '#B8941F',
+  display: 'block',
+  marginTop: '4px',
+};
+const cotacaoDetalhes: React.CSSProperties = {
+  fontSize: '11px',
+  color: '#9CA3AF',
+  display: 'block',
+  marginTop: '2px',
 };
 
 const divider: React.CSSProperties = {

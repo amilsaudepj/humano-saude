@@ -169,7 +169,9 @@ function makeColumns(
       sortable: true,
       render: (lead) => (
         <span className="text-gray-500">
-          {lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '—'}
+          {lead.created_at
+            ? `${new Date(lead.created_at).toLocaleDateString('pt-BR')} ${new Date(lead.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+            : '—'}
         </span>
       ),
     },

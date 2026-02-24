@@ -213,6 +213,15 @@ export const apiLeadSchema = z
     bairro: z.string().optional(),
     operadora_atual: z.string().optional().nullable(),
     top_3_planos: z.union([z.string(), z.array(z.string())]).optional(),
+    /** Cotações geradas pelo simulador (landing): nome, operadora, valorTotal, etc. */
+    cotacoes_simulador: z.array(z.object({
+      nome: z.string(),
+      operadora: z.string(),
+      valorTotal: z.number(),
+      coparticipacao: z.string().optional(),
+      abrangencia: z.string().optional(),
+      reembolso: z.string().optional(),
+    })).optional(),
     origem: z.enum(['calculadora', 'hero_form', 'landing', 'email_form']).optional(),
     parcial: z.boolean().optional(),
     source: z.string().optional(),

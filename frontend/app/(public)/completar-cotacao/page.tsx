@@ -19,7 +19,6 @@ function formatCNPJDisplay(digits: string): string {
 }
 
 const QTD_VIDAS_OPCOES = [
-  { value: '1', label: '1 vida' },
   { value: '2', label: '2 vidas' },
   { value: '3', label: '3 vidas' },
   { value: '4', label: '4 vidas' },
@@ -124,26 +123,38 @@ function CompletarCotacaoContent() {
     }
   }, []);
 
-  const validate = (): boolean => {
-    const e: Record<string, string> = {};
-    if (!form.nome.trim() || form.nome.trim().length < 2) e.submit = 'Acesse pelo link enviado no seu e-mail para preencher seus dados.';
-    else if (!form.email.trim()) e.submit = 'Acesse pelo link enviado no seu e-mail.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.submit = 'Link inválido. Use o link do e-mail que enviamos.';
+  const ORDER_OF_FIELDS = ['submit', 'cnpj', 'qtdVidas', 'idades', 'bairro', 'possuiPlanoAtivo', 'operadoraAtual'] as const;
+
+  const validate = (): Record<string, string> | null => {
+    const err: Record<string, string> = {};
+    if (!form.nome.trim() || form.nome.trim().length < 2) err.submit = 'Acesse pelo link enviado no seu e-mail para preencher seus dados.';
+    else if (!form.email.trim()) err.submit = 'Acesse pelo link enviado no seu e-mail.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) err.submit = 'Link inválido. Use o link do e-mail que enviamos.';
     const cnpjDigits = form.cnpj.replace(/\D/g, '');
-    if (!cnpjDigits || cnpjDigits.length !== 14) e.cnpj = 'Informe o CNPJ da empresa (14 dígitos)';
-    else if (!validarCNPJ(form.cnpj)) e.cnpj = 'CNPJ inválido';
-    if (!form.qtdVidas) e.qtdVidas = 'Informe quantas vidas no plano';
-    if (!usaBypass && form.idades.slice(0, idadesCount).some((i) => !i)) e.idades = 'Selecione a faixa etária de todos os beneficiários';
-    if (!form.bairro) e.bairro = 'Selecione o bairro de atendimento';
-    if (!form.possuiPlanoAtivo) e.possuiPlanoAtivo = 'Informe se possui plano ativo';
-    if (form.possuiPlanoAtivo === 'sim' && !form.operadoraAtual) e.operadoraAtual = 'Selecione a operadora atual';
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    if (!cnpjDigits || cnpjDigits.length !== 14) err.cnpj = 'Informe o CNPJ da empresa (14 dígitos)';
+    else if (!validarCNPJ(form.cnpj)) err.cnpj = 'CNPJ inválido';
+    if (!form.qtdVidas) err.qtdVidas = 'Informe quantas vidas no plano';
+    if (!usaBypass && form.idades.slice(0, idadesCount).some((i) => !i)) err.idades = 'Selecione a faixa etária de todos os beneficiários';
+    if (!form.bairro) err.bairro = 'Selecione o bairro de atendimento';
+    if (!form.possuiPlanoAtivo) err.possuiPlanoAtivo = 'Informe se possui plano ativo';
+    if (form.possuiPlanoAtivo === 'sim' && !form.operadoraAtual) err.operadoraAtual = 'Selecione a operadora atual';
+    setErrors(err);
+    if (Object.keys(err).length === 0) return null;
+    const first = ORDER_OF_FIELDS.find((k) => err[k]);
+    if (first) {
+      setTimeout(() => {
+        const el = first === 'submit' ? document.getElementById('form-completar-cotacao') : document.getElementById(`field-${first}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const input = el?.querySelector('input, select') as HTMLInputElement | HTMLSelectElement | null;
+        if (input && first !== 'submit') input.focus();
+      }, 100);
+    }
+    return err;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (validate() !== null) return;
     setLoading(true);
     setErrors({});
     try {
@@ -238,7 +249,7 @@ function CompletarCotacaoContent() {
               </div>
             )}
 
-            <div>
+            <div id="field-cnpj">
               <label className="block text-sm font-bold text-gray-900 mb-2">CNPJ da empresa <span className="text-red-500">*</span></label>
               <input
                 type="text"
@@ -248,17 +259,38 @@ function CompletarCotacaoContent() {
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, '').slice(0, 14);
                   setForm((p) => ({ ...p, cnpj: v, empresa: v.length !== 14 ? '' : p.empresa }));
-                  if (errors.cnpj) setErrors((prev) => ({ ...prev, cnpj: '' }));
+                  if (v.length < 14) {
+                    setErrors((prev) => (prev.cnpj ? { ...prev, cnpj: '' } : prev));
+                  } else if (v.length === 14) {
+                    if (validarCNPJ(v)) {
+                      setErrors((prev) => (prev.cnpj ? { ...prev, cnpj: '' } : prev));
+                      consultarCnpj(v);
+                    } else {
+                      setErrors((prev) => ({ ...prev, cnpj: 'CNPJ inválido' }));
+                    }
+                  }
                 }}
                 onPaste={(e) => {
                   e.preventDefault();
                   const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 14);
                   setForm((p) => ({ ...p, cnpj: pasted, empresa: pasted.length !== 14 ? '' : p.empresa }));
-                  if (errors.cnpj) setErrors((prev) => ({ ...prev, cnpj: '' }));
+                  if (pasted.length < 14) {
+                    setErrors((prev) => (prev.cnpj ? { ...prev, cnpj: '' } : prev));
+                  } else if (pasted.length === 14) {
+                    if (validarCNPJ(pasted)) {
+                      setErrors((prev) => (prev.cnpj ? { ...prev, cnpj: '' } : prev));
+                      consultarCnpj(pasted);
+                    } else {
+                      setErrors((prev) => ({ ...prev, cnpj: 'CNPJ inválido' }));
+                    }
+                  }
                 }}
                 onBlur={() => {
                   const d = form.cnpj.replace(/\D/g, '');
-                  if (d.length === 14 && validarCNPJ(form.cnpj)) consultarCnpj(d);
+                  if (d.length === 14) {
+                    if (validarCNPJ(form.cnpj)) consultarCnpj(d);
+                    else setErrors((prev) => ({ ...prev, cnpj: 'CNPJ inválido' }));
+                  }
                 }}
                 placeholder="00.000.000/0000-00"
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#B8941F] focus:border-transparent ${errors.cnpj ? 'border-red-400' : 'border-gray-300'}`}
@@ -280,8 +312,8 @@ function CompletarCotacaoContent() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">Quantas vidas no plano? <span className="text-red-500">*</span></label>
+            <div id="field-qtdVidas">
+              <label className="block text-sm font-bold text-gray-900 mb-2">Quantas vidas no plano? (mín. 2) <span className="text-red-500">*</span></label>
               <select
                 value={form.qtdVidas}
                 onChange={(e) => setFormField('qtdVidas', e.target.value)}
@@ -296,7 +328,7 @@ function CompletarCotacaoContent() {
             </div>
 
             {!usaBypass && form.qtdVidas && qtdNum >= 1 && qtdNum <= 5 && (
-              <div>
+              <div id="field-idades">
                 <label className="block text-sm font-bold text-gray-900 mb-2">Quais as idades (faixa etária)? <span className="text-red-500">*</span></label>
                 <div className="space-y-3">
                   {form.idades.slice(0, idadesCount).map((idade, i) => (
@@ -319,7 +351,7 @@ function CompletarCotacaoContent() {
               </div>
             )}
 
-            <div className="scroll-mt-32" id="campo-bairro">
+            <div className="scroll-mt-32" id="field-bairro">
               <label className="block text-sm font-bold text-gray-900 mb-2">Qual bairro de atendimento? <span className="text-red-500">*</span></label>
               <select
                 ref={bairroRef}
@@ -341,7 +373,7 @@ function CompletarCotacaoContent() {
               {errors.bairro && <p className="text-red-500 text-xs mt-1">{errors.bairro}</p>}
             </div>
 
-            <div>
+            <div id="field-possuiPlanoAtivo">
               <label className="block text-sm font-bold text-gray-900 mb-2">Possui plano de saúde ativo? <span className="text-red-500">*</span></label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -369,7 +401,7 @@ function CompletarCotacaoContent() {
             </div>
 
             {form.possuiPlanoAtivo === 'sim' && (
-              <div className="scroll-mt-32" id="campo-operadora">
+              <div className="scroll-mt-32" id="field-operadoraAtual">
                 <label className="block text-sm font-bold text-gray-900 mb-2">Qual operadora? <span className="text-red-500">*</span></label>
                 <select
                   ref={operadoraRef}

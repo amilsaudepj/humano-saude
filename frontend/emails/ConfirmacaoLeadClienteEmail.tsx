@@ -44,6 +44,8 @@ export default function ConfirmacaoLeadClienteEmail({
         <Text style={infoItem}>• Geraremos sua proposta personalizada em até 10 minutos</Text>
       </Section>
 
+      <Text style={ctaTitle}>Quer acelerar sua redução? Clique no botão abaixo.</Text>
+
       <Section style={buttonWrap}>
         <Link href={completarUrl} style={primaryButton} className="email-cta-whatsapp">
           <span style={primaryButtonText} className="email-cta-text">Realizar redução agora →</span>
@@ -110,6 +112,14 @@ const infoSubItem: React.CSSProperties = {
   margin: '0 0 4px 0',
   lineHeight: '1.5',
   paddingLeft: '12px',
+};
+const ctaTitle: React.CSSProperties = {
+  fontSize: '16px',
+  fontWeight: '600',
+  color: '#111827',
+  textAlign: 'center' as const,
+  margin: '0 0 12px 0',
+  lineHeight: '1.5',
 };
 const buttonWrap: React.CSSProperties = { textAlign: 'center' as const, margin: '24px 0' };
 const primaryButton: React.CSSProperties = {

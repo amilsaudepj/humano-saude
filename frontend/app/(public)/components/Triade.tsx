@@ -243,6 +243,8 @@ export default function Triade() {
             </div>
             <a
               href="https://wa.me/5521988179407?text=Olá!%20Quero%20implementar%20a%20Tríade%20Humana."
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex self-start items-center justify-center gap-3 whitespace-nowrap rounded-xl bg-[#B8941F] px-6 py-3 text-[11px] font-bold uppercase tracking-[2.2px] text-white transition-all hover:-translate-y-0.5 hover:bg-[#A07E18] hover:shadow-lg hover:shadow-[#B8941F]/25 sm:px-7 sm:text-sm sm:tracking-[2.6px]"
             >
               <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">

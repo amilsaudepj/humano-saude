@@ -47,7 +47,8 @@ export default function Header() {
             ✦ REDUZA 40% DO CUSTO DO SEU PLANO INDIVIDUAL OU EMPRESARIAL
           </span>
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
-            ✦ CONSULTORIA ESPECIALIZADA BRASIL: (21) 98817-9407
+            ✦ CONSULTORIA ESPECIALIZADA BRASIL:{' '}
+            <a href="https://wa.me/5521988179407?text=Olá!%20Gostaria%20de%20uma%20cotação%20empresarial%20pelo%20site." target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">(21) 98817-9407</a>
           </span>
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
             ✦ HUMANO SAÚDE: ANALISAR, ASSESSORAR E ACOMPANHAR
@@ -96,7 +97,7 @@ export default function Header() {
           {/* CTA + Hamburger */}
           <div className="flex items-center gap-3">
             <a
-              href="https://wa.me/5521988179407?text=Olá!"
+              href="https://wa.me/5521988179407?text=Olá!%20Gostaria%20de%20uma%20cotação%20empresarial%20pelo%20site."
               target="_blank"
               rel="noopener noreferrer"
               className="hidden lg:inline-flex items-center px-6 py-3 bg-gold-400 text-white rounded text-xs uppercase font-black tracking-widest shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"

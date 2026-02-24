@@ -5,6 +5,7 @@ import { OG_IMAGE } from "@/lib/og-image";
 import MetaPixel from "./components/MetaPixel";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import GoogleTagManager, { GoogleTagManagerNoScript } from "./components/GoogleTagManager";
+import { Analytics } from "@vercel/analytics/next";
 
 // Fontes via link (evita module-not-found de next/font em build/dev)
 // Fallback para serif se não estiver instalada no sistema
@@ -79,6 +80,7 @@ export default function RootLayout({
         <GoogleTagManagerNoScript />
         <GoogleAnalytics />
         {children}
+        <Analytics />
       </body>
     </html>
   );

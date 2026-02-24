@@ -47,30 +47,9 @@ export async function GET() {
     };
   }
 
-  // 3. Resend (Email)
-  const resendKey = process.env.RESEND_API_KEY;
-  if (resendKey) {
-    const resendStart = Date.now();
-    try {
-      const resp = await fetch('https://api.resend.com/domains', {
-        headers: { Authorization: `Bearer ${resendKey}` },
-        signal: AbortSignal.timeout(5000),
-      });
-      checks.resend = {
-        status: resp.ok ? 'healthy' : 'degraded',
-        latency: Date.now() - resendStart,
-        ...(!resp.ok ? { error: `HTTP ${resp.status}` } : {}),
-      };
-    } catch (err) {
-      checks.resend = {
-        status: 'down',
-        latency: Date.now() - resendStart,
-        error: err instanceof Error ? err.message : 'Unreachable',
-      };
-    }
-  } else {
-    checks.resend = { status: 'unconfigured' };
-  }
+  // 3. Resend (Email) — não fazemos chamada à API aqui para não consumir rate limit (2 req/s no Free).
+  // Use GET /api/email-check quando precisar validar Resend. O envio de emails segue normal nas rotas (leads, etc.).
+  checks.resend = process.env.RESEND_API_KEY ? { status: 'configured' } : { status: 'unconfigured' };
 
   // 4. Meta Ads API
   const metaToken = process.env.META_ACCESS_TOKEN;
@@ -100,14 +79,14 @@ export async function GET() {
   // 5. Next.js (always healthy if we got here)
   checks.nextjs = { status: 'healthy', latency: 0 };
 
-  // Overall status (unconfigured services don't affect overall)
+  // Overall status: só serviços com status real (healthy/degraded/down) entram; configured/unconfigured não afetam
   const configuredChecks = Object.values(checks).filter(
-    (c) => c.status !== 'unconfigured',
+    (c) => ['healthy', 'degraded', 'down'].includes(c.status),
   );
   const allHealthy = configuredChecks.every((c) => c.status === 'healthy');
   const anyDown = configuredChecks.some((c) => c.status === 'down');
 
-  const overall = allHealthy ? 'healthy' : anyDown ? 'degraded' : 'partial';
+  const overall = configuredChecks.length === 0 ? 'healthy' : allHealthy ? 'healthy' : anyDown ? 'degraded' : 'partial';
 
   return NextResponse.json({
     status: overall,

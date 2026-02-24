@@ -90,6 +90,8 @@ export default function FAQ() {
         <div className="text-center mt-16">
           <a
             href="https://wa.me/5521988179407?text=Tenho%20mais%20dúvidas%20sobre%20a%20redução"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-black hover:bg-gray-900 px-10 py-4 rounded-xl text-xs uppercase tracking-widest font-black text-white transition-all"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

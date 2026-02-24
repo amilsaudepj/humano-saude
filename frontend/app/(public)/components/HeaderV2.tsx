@@ -57,7 +57,8 @@ export default function HeaderV2({ minimal = false }: HeaderV2Props) {
             ✦ REDUZA 40% DO CUSTO DO SEU PLANO DE SAÚDE COM SEU CNPJ
           </span>
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
-            ✦ CONSULTORIA ESPECIALIZADA BRASIL: (21) 98817-9407
+            ✦ CONSULTORIA ESPECIALIZADA BRASIL:{' '}
+            <a href="https://wa.me/5521988179407?text=Olá!%20Gostaria%20de%20uma%20cotação%20empresarial%20pelo%20site." target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">(21) 98817-9407</a>
           </span>
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
             ✦ HUMANO SAÚDE: ANALISAR, ASSESSORAR E ACOMPANHAR
@@ -66,7 +67,8 @@ export default function HeaderV2({ minimal = false }: HeaderV2Props) {
             ✦ REDUZA 40% DO CUSTO DO SEU PLANO DE SAÚDE COM SEU CNPJ
           </span>
           <span className="inline-block text-xs font-bold text-white tracking-widest px-8">
-            ✦ CONSULTORIA ESPECIALIZADA BRASIL: (21) 98817-9407
+            ✦ CONSULTORIA ESPECIALIZADA BRASIL:{' '}
+            <a href="https://wa.me/5521988179407?text=Olá!%20Gostaria%20de%20uma%20cotação%20empresarial%20pelo%20site." target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">(21) 98817-9407</a>
           </span>
         </div>
       </div>

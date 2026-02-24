@@ -27,7 +27,7 @@ export default function Footer({ hideLinksRapidos = false }: FooterProps) {
             </p>
             <div className="flex gap-4 mt-6">
               <a
-                href="https://instagram.com/humanosaude"
+                href="https://instagram.com/humanosauderj"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold-400 transition-colors"
@@ -50,7 +50,7 @@ export default function Footer({ hideLinksRapidos = false }: FooterProps) {
                 <svg className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <a href="https://wa.me/5521988179407" className="text-gray-400 hover:text-gold-400 transition-colors">
+                <a href="https://wa.me/5521988179407?text=Olá!%20Gostaria%20de%20informações%20sobre%20a%20Humano%20Saúde." target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gold-400 transition-colors">
                   (21) 98817-9407
                 </a>
               </li>
@@ -82,18 +82,28 @@ export default function Footer({ hideLinksRapidos = false }: FooterProps) {
               </h3>
               <ul className="space-y-4 text-sm">
                 <li>
+                  <Link href="#hero" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Início
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#pratica" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Comparativo
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#metodo" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Método
+                  </Link>
+                </li>
+                <li>
                   <Link href="#ia" className="text-gray-400 hover:text-gold-400 transition-colors">
                     Tecnologia IA
                   </Link>
                 </li>
                 <li>
-                  <Link href="#pratica" className="text-gray-400 hover:text-gold-400 transition-colors">
-                    Resultados Reais
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#metodo" className="text-gray-400 hover:text-gold-400 transition-colors">
-                    Método Tríade
+                  <Link href="#calculadora" className="text-gray-400 hover:text-gold-400 transition-colors">
+                    Calculadora
                   </Link>
                 </li>
                 <li>
