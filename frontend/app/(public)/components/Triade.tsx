@@ -177,7 +177,7 @@ export default function Triade() {
                         className={`relative flex h-10 w-10 items-center justify-center rounded-full border text-white transition-all duration-500 sm:h-12 sm:w-12 ${
                           isActive
                             ? 'border-[#D9B651]/60 bg-gradient-to-br from-[#E3C56A] via-[#B8941F] to-[#8D6D1A] shadow-[0_8px_20px_rgba(184,148,31,0.35)]'
-                            : 'border-white/20 bg-[#0e0e0e] text-white/40'
+                            : 'border-white/20 bg-[#0e0e0e] text-white/60'
                         }`}
                       >
                         {step.icon}
@@ -196,14 +196,14 @@ export default function Triade() {
                       </div>
 
                       <div className="relative flex flex-wrap items-center gap-2">
-                        <span className={`text-xs font-bold tracking-[3px] ${isActive ? 'text-[#E7CA74]' : 'text-white/35'}`}>
+                        <span className={`text-xs font-bold tracking-[3px] ${isActive ? 'text-[#E7CA74]' : 'text-white/50'}`}>
                           PASSO {step.num}
                         </span>
                         <span
                           className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[2px] ${
                             isActive
                               ? 'border-[#D9B651]/35 bg-[#D9B651]/15 text-[#F1D783]'
-                              : 'border-white/15 bg-white/[0.04] text-white/45'
+                              : 'border-white/15 bg-white/[0.04] text-white/60'
                           }`}
                         >
                           {step.tag}

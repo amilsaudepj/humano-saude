@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
@@ -44,6 +44,12 @@ import {
   Star,
   Send,
   Headphones,
+  Palette,
+  Wand2,
+  Receipt,
+  FileText,
+  CreditCard,
+  Award,
 } from 'lucide-react';
 
 // --- Animacoes ---
@@ -61,87 +67,169 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: 'easeOut' as const } },
 };
 
-// --- PRODUTOS que trabalhamos ---
-const PRODUTOS = [
-  { icon: Heart, title: 'Plano de saude', desc: 'Amil, Bradesco, SulAmerica, Unimed, NotreDame e mais' },
-  { icon: ShieldCheck, title: 'Seguro de vida', desc: 'Individual, familiar e empresarial com as maiores seguradoras' },
-  { icon: Car, title: 'Seguro automotivo', desc: 'Carro, moto e frotas com cotacao comparativa automatica' },
-  { icon: Shield, title: 'Outros seguros', desc: 'Residencial, viagem, odontologico e previdencia privada' },
+// --- Operadoras/parceiros (size: medium | large; noFilter = cores originais; mobileLarger = um pouco maior no mobile) ---
+const OPERADORAS_LOGOS: Array<{ name: string; url: string; size?: 'medium' | 'large'; noFilter?: boolean; mobileLarger?: boolean }> = [
+  { name: 'Amil', url: '/images/operadoras/amil-logo.png' },
+  { name: 'Bradesco', url: '/images/operadoras/bradesco-logo.png' },
+  { name: 'SulAmérica', url: '/images/operadoras/sulamerica-logo.png' },
+  { name: 'Unimed', url: '/images/operadoras/unimed-logo.png' },
+  { name: 'Porto Saúde', url: '/images/operadoras/portosaude-logo.png', size: 'large' },
+  { name: 'Assim Saúde', url: '/images/operadoras/assimsaude-logo.png' },
+  { name: 'Leve Saúde', url: '/images/operadoras/levesaude-logo.png' },
+  { name: 'MedSênior', url: '/images/operadoras/medsenior-logo.png' },
+  { name: 'Prevent Senior', url: '/images/operadoras/preventsenior-logo.png' },
+  { name: 'Klini', url: '/images/logos/logo-klini.png' },
+  { name: 'Ampla', url: '/images/logos/logo-ampla.png', size: 'large' },
+  { name: 'AZOS', url: '/images/logos/logo-azos.png' },
+  { name: 'Porto Seguro', url: '/images/logos/logo-porto-seguro2.png', size: 'large', noFilter: true },
+  { name: 'Hapvida', url: '/images/logos/logo-hapvida.png' },
+  { name: 'Select', url: '/images/logos/logo-select.png' },
+  { name: 'Qualicorp', url: '/images/logos/logo-qualicorp.png' },
+  { name: 'Supermed', url: '/images/logos/logo-supermed.png', size: 'large' },
+  { name: 'Odontoprev', url: '/images/logos/logo-odontoprev.png', size: 'medium', mobileLarger: true },
+  { name: 'HDI Seguros', url: '/images/logos/logo-HDI.png' },
+  { name: 'Allianz', url: '/images/logos/logo-allianz.png', mobileLarger: true },
+  { name: 'Suhai Seguradora', url: '/images/logos/logo-suhai.png' },
+  { name: 'Liberty Seguros', url: '/images/logos/logo-liberty.png', size: 'medium', noFilter: true, mobileLarger: true },
+  { name: 'Tokio Marine', url: '/images/logos/logo-tokiomarine.png', size: 'medium', mobileLarger: true },
+  { name: 'Nova Saúde', url: '/images/logos/logo-nova-saude.png', size: 'medium' },
 ];
 
-// --- DIFERENCIAIS ---
-const DIFERENCIAIS = [
+const PRODUTOS = [
+  { icon: Heart, title: 'Plano de saúde', desc: 'Planos individuais, familiares e empresariais. Ampla rede, cobertura nacional e flexibilidade de carências e reembolso.' },
+  { icon: ShieldCheck, title: 'Seguro de vida', desc: 'Proteção para você e sua família. Coberturas para vida, invalidez e doenças graves, sob medida para cada perfil.' },
+  { icon: Car, title: 'Seguro automotivo', desc: 'Proteção para carro, moto e frotas. Cotação comparativa automática e apólice digital à mão.' },
+  { icon: Shield, title: 'Outros seguros', desc: 'Casa, viagens, saúde bucal e previdência. Múltiplas coberturas para você e seu patrimônio.' },
+];
+
+// --- DIFERENCIAIS (por seção: Comercial, Ensino, Marketing, Financeiro) ---
+type CategoriaDiferencial = 'comercial' | 'ensino' | 'marketing' | 'financeiro';
+
+const DIFERENCIAIS: Array<{
+  icon: typeof FolderOpen;
+  title: string;
+  desc: string;
+  highlight: string;
+  categoria: CategoriaDiferencial;
+}> = [
   {
     icon: FolderOpen,
     title: 'Materiais organizados',
-    desc: 'Todos os materiais das operadoras em um so lugar. Tabelas, laminas, manuais e guias comerciais. Acesse de qualquer lugar, a qualquer hora.',
+    desc: 'Todos os materiais das operadoras em um só lugar. Tabelas, lâminas, manuais e guias comerciais. Acesse de qualquer lugar, a qualquer hora.',
     highlight: 'Exclusivo',
+    categoria: 'comercial',
   },
   {
     icon: Calculator,
-    title: 'Multicalculo inteligente',
-    desc: 'Compare planos de todas as operadoras simultaneamente. Gere cotacoes profissionais em segundos, com valores por faixa etaria e tipo de contratacao.',
-    highlight: 'Multicotacao',
+    title: 'Multicálculo inteligente',
+    desc: 'Compare planos de todas as operadoras simultaneamente. Gere cotações profissionais em segundos, com valores por faixa etária e tipo de contratação.',
+    highlight: 'Multicotação',
+    categoria: 'comercial',
   },
   {
     icon: FileUp,
     title: 'Envio de documentos facilitado',
-    desc: 'Seu cliente arrasta e solta os documentos na plataforma. Nossa IA preenche automaticamente os dados. Sem digitacao manual, sem erro.',
+    desc: 'Seu cliente arrasta e solta os documentos na plataforma. Nossa IA preenche automaticamente os dados. Sem digitação manual, sem erro.',
     highlight: 'Drag & Drop',
+    categoria: 'comercial',
   },
   {
     icon: Brain,
-    title: 'IA para analise de desempenho',
-    desc: 'Inteligencia artificial que analisa sua performance, identifica padroes de sucesso e sugere acoes para voce vender mais e melhor.',
+    title: 'IA para análise de desempenho',
+    desc: 'Inteligência artificial que analisa sua performance, identifica padrões de sucesso e sugere ações para você vender mais e melhor.',
     highlight: 'AI Powered',
+    categoria: 'comercial',
   },
   {
     icon: Send,
     title: 'Propostas + assistente 24h',
-    desc: 'Gere e envie propostas direto pela plataforma. Nosso assistente funciona 24h para encaminhar tudo as operadoras. Voce nao precisa esperar.',
+    desc: 'Gere e envie propostas direto pela plataforma. Nosso assistente funciona 24h para encaminhar tudo às operadoras. Você não precisa esperar.',
     highlight: '24/7',
-  },
-  {
-    icon: Trophy,
-    title: 'Metas e bonificacoes',
-    desc: 'Campanhas de metas com premios e bonificacoes para quem se destaca. Quanto mais voce vende, mais voce ganha alem das comissoes.',
-    highlight: 'Premios',
-  },
-  {
-    icon: BookOpen,
-    title: 'Blog e dicas de marketing',
-    desc: 'Conteudo exclusivo sobre marketing digital para corretores. Como atrair clientes nas redes sociais, criar autoridade e gerar leads.',
-    highlight: 'Academy',
-  },
-  {
-    icon: Share2,
-    title: 'Ferramentas de divulgacao',
-    desc: 'Materiais prontos para redes sociais: banners, carrosséis, stories. Personalize com sua marca e divulgue no Instagram, WhatsApp e mais.',
-    highlight: 'Marketing',
+    categoria: 'comercial',
   },
   {
     icon: BarChart3,
     title: 'Dashboard em tempo real',
-    desc: 'Acompanhe leads, propostas, vendas, comissoes e performance. Tudo visual, intuitivo e atualizado em tempo real no seu painel.',
+    desc: 'Acompanhe leads, propostas, vendas, comissões e performance. Tudo visual, intuitivo e atualizado em tempo real no seu painel.',
     highlight: 'Real-time',
+    categoria: 'comercial',
   },
   {
     icon: Shield,
     title: 'Suporte de gestor dedicado',
-    desc: 'Voce nao estara sozinho. Tera o apoio direto de um gestor para tirar duvidas, orientar negociacoes e te ajudar a fechar mais vendas.',
+    desc: 'Você não estará sozinho. Terá o apoio direto de um gestor para tirar dúvidas, orientar negociações e te ajudar a fechar mais vendas.',
     highlight: 'Dedicado',
-  },
-  {
-    icon: GraduationCap,
-    title: 'Treinamentos continuos',
-    desc: 'Receba treinamentos praticos, atualizacoes de mercado, dicas de vendas exclusivas e novidades sobre produtos. Evolua constantemente.',
-    highlight: 'Capacitacao',
+    categoria: 'comercial',
   },
   {
     icon: Laptop,
     title: 'Plataforma completa (CRM)',
-    desc: 'CRM profissional, gerador de cotacoes, propostas automatizadas. Tudo integrado em um painel moderno. De qualquer dispositivo.',
+    desc: 'CRM profissional, gerador de cotações, propostas automatizadas. Tudo integrado em um painel moderno. De qualquer dispositivo.',
     highlight: 'All-in-One',
+    categoria: 'comercial',
+  },
+  {
+    icon: BookOpen,
+    title: 'Blog e dicas de marketing',
+    desc: 'Conteúdo exclusivo sobre marketing digital para corretores. Como atrair clientes nas redes sociais, criar autoridade e gerar leads.',
+    highlight: 'Academy',
+    categoria: 'ensino',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Treinamentos contínuos',
+    desc: 'Receba treinamentos práticos, atualizações de mercado, dicas de vendas exclusivas e novidades sobre produtos. Evolua constantemente.',
+    highlight: 'Capacitação',
+    categoria: 'ensino',
+  },
+  {
+    icon: Share2,
+    title: 'Ferramentas de divulgação',
+    desc: 'Materiais prontos para redes sociais: banners, carrosséis, stories. Personalize com sua marca e divulgue no Instagram, WhatsApp e mais.',
+    highlight: 'Redes sociais',
+    categoria: 'marketing',
+  },
+  {
+    icon: Palette,
+    title: 'CriativoPRO',
+    desc: 'Nosso criador de criativos profissionais. Gere banners, stories e artes para feed com operadora, plano, preço e sua marca. Templates prontos e IA para personalizar em segundos.',
+    highlight: 'PRO',
+    categoria: 'marketing',
+  },
+  {
+    icon: Wand2,
+    title: 'IA Clone',
+    desc: 'Gere criativos e banners com inteligência artificial. Descreva o que precisa, escolha operadora e formato, e a IA gera a arte pronta para divulgar.',
+    highlight: 'IA',
+    categoria: 'marketing',
+  },
+  {
+    icon: Award,
+    title: 'Produção e parcelas',
+    desc: 'Acompanhe sua produção por operadora e as parcelas de comissão. Veja o status de cada parcela (paga, pendente, atrasada) e previsão de pagamento.',
+    highlight: 'Produção',
+    categoria: 'financeiro',
+  },
+  {
+    icon: FileText,
+    title: 'Extrato e faturamento',
+    desc: 'Extrato completo das movimentações financeiras e faturamento. Histórico organizado para sua gestão e declaração.',
+    highlight: 'Extrato',
+    categoria: 'financeiro',
+  },
+  {
+    icon: BarChart3,
+    title: 'Grade de comissões',
+    desc: 'Visualize seus percentuais de comissão por produto: saúde PF e PJ, odonto, vida, empresarial e renovação. Transparência total na sua grade.',
+    highlight: 'Transparência',
+    categoria: 'financeiro',
+  },
+  {
+    icon: Trophy,
+    title: 'Metas e bonificações',
+    desc: 'Campanhas de metas com prêmios e bonificações para quem se destaca. Quanto mais você vende, mais você ganha além das comissões.',
+    highlight: 'Prêmios',
+    categoria: 'financeiro',
   },
 ];
 
@@ -150,22 +238,22 @@ const OPORTUNIDADES = [
   {
     icon: Home,
     title: 'Trabalhe de onde quiser',
-    desc: 'Toda a operacao e digital. Trabalhe de casa, de um cafe ou de onde preferir. Basta ter internet e vontade de vender.',
+    desc: 'Toda a operação é digital. Trabalhe de casa, de um café ou de onde preferir. Basta ter internet e vontade de vender.',
   },
   {
     icon: DollarSign,
     title: 'Oportunidade real de renda',
-    desc: 'O mercado de saude e seguros nao para de crescer. Aqui voce tem a estrutura certa para transformar isso em ganho financeiro concreto.',
+    desc: 'O mercado de saúde e seguros não para de crescer. Aqui você tem a estrutura certa para transformar isso em ganho financeiro concreto.',
   },
   {
     icon: Eye,
     title: 'Acompanhe suas vendas',
-    desc: 'Veja em tempo real o status de cada proposta, cada lead e cada comissao. Transparencia total sobre tudo que e seu.',
+    desc: 'Veja em tempo real o status de cada proposta, cada lead e cada comissão. Transparência total sobre tudo que é seu.',
   },
   {
     icon: UserPlus,
     title: 'Indique e ganhe',
-    desc: 'Indique clientes diretamente pela plataforma e acompanhe cada indicacao ate a conversao. Mais uma fonte de receita para voce.',
+    desc: 'Indique clientes diretamente pela plataforma e acompanhe cada indicação até a conversão. Mais uma fonte de receita para você.',
   },
 ];
 
@@ -174,19 +262,19 @@ const COMO_FUNCIONA = [
   {
     step: '01',
     title: 'Cadastre-se',
-    desc: 'Preencha o formulario com seus dados profissionais. O processo e rapido, gratuito e sem burocracia nenhuma.',
+    desc: 'Preencha o formulário com seus dados profissionais. O processo é rápido, gratuito e sem burocracia nenhuma.',
     icon: Target,
   },
   {
     step: '02',
     title: 'Onboarding',
-    desc: 'Nosso time valida seu perfil e libera seu acesso ao painel completo em ate 24 horas. Voce recebe tudo pronto para comecar.',
+    desc: 'Nosso time valida seu perfil e libera seu acesso ao painel completo em até 24 horas. Você recebe tudo pronto para começar.',
     icon: CheckCircle,
   },
   {
     step: '03',
     title: 'Comece a vender',
-    desc: 'Acesse os materiais, use o multicalculo, envie propostas e acompanhe tudo pelo dashboard. Simples assim.',
+    desc: 'Acesse os materiais, use o multicálculo, envie propostas e acompanhe tudo pelo dashboard. Simples assim.',
     icon: Rocket,
   },
 ];
@@ -194,52 +282,104 @@ const COMO_FUNCIONA = [
 // --- FAQ ---
 const FAQ_ITEMS = [
   {
-    q: 'Preciso ter SUSEP para me cadastrar?',
-    a: 'Sim, e necessario ter registro ativo na SUSEP para atuar como corretor de planos de saude. Se voce esta em processo de obtencao, pode se cadastrar e informar quando obtiver.',
+    q: 'Preciso pagar alguma coisa para começar?',
+    a: 'Absolutamente nada. Não cobramos taxa de adesão, mensalidade ou licença. Todo o investimento em plataforma, tecnologia e marketing é por nossa conta.',
   },
   {
-    q: 'Preciso pagar alguma coisa para comecar?',
-    a: 'Absolutamente nada. Nao cobramos taxa de adesao, mensalidade ou licenca. Todo o investimento em plataforma, tecnologia e marketing e por nossa conta.',
-  },
-  {
-    q: 'Preciso trabalhar em horario fixo?',
-    a: 'Nao. Voce define seus horarios e sua rotina. A plataforma esta disponivel 24h para que voce trabalhe quando e de onde preferir.',
+    q: 'Preciso trabalhar em horário fixo?',
+    a: 'Não. Você define seus horários e sua rotina. A plataforma está disponível 24h para que você trabalhe quando e de onde preferir.',
   },
   {
     q: 'Posso trabalhar com outras corretoras ao mesmo tempo?',
-    a: 'Sim, nao exigimos exclusividade. Porem, nossa estrutura e diferenciais fazem com que a maioria dos corretores prefiram concentrar suas operacoes conosco.',
+    a: 'Sim, não exigimos exclusividade. Porém, nossa estrutura e diferenciais fazem com que a maioria dos corretores prefira concentrar suas operações conosco.',
   },
   {
     q: 'Quais produtos posso vender?',
-    a: 'Planos de saude, seguro de vida, seguro automotivo, odontologico, residencial e outros seguros. Todas as principais operadoras e seguradoras do Brasil.',
+    a: 'Planos de saúde, seguro de vida, seguro automotivo, odontológico, residencial e outros seguros. Todas as principais operadoras e seguradoras do Brasil.',
   },
   {
     q: 'Vou ter algum suporte ou fico sozinho?',
-    a: 'Voce tera um gestor dedicado, treinamentos continuos, dicas de marketing e uma equipe de suporte para questoes operacionais. Ninguem fica sozinho aqui.',
+    a: 'Você terá um gestor dedicado, treinamentos contínuos, dicas de marketing e uma equipe de suporte para questões operacionais. Ninguém fica sozinho aqui.',
   },
   {
-    q: 'Como funciona o multicalculo?',
-    a: 'Voce insere as idades dos beneficiarios, seleciona o tipo de plano e a plataforma compara automaticamente dezenas de opcoes de diferentes operadoras, gerando uma cotacao profissional.',
+    q: 'Como funciona o multicálculo?',
+    a: 'Você insere as idades dos beneficiários, seleciona o tipo de plano e a plataforma compara automaticamente dezenas de opções de diferentes operadoras, gerando uma cotação profissional.',
   },
   {
     q: 'A IA realmente preenche os documentos sozinha?',
-    a: 'Sim. Quando o cliente faz upload de um documento (carteirinha, apolice, etc.), nossa IA extrai automaticamente os dados como nomes, idades, operadora e valores, e preenche tudo. Sem digitacao.',
+    a: 'Sim. Quando o cliente faz upload de um documento (carteirinha, apólice, etc.), nossa IA extrai automaticamente os dados como nomes, idades, operadora e valores, e preenche tudo. Sem digitação.',
   },
 ];
+
+// --- Logo de parceiro (size: medium | large; noFilter = sem filtro; mobileLarger = um pouco maior no mobile) ---
+function PartnerLogo({ name, url, size, noFilter, mobileLarger }: { name: string; url: string; size?: 'medium' | 'large'; noFilter?: boolean; mobileLarger?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const sizeClass =
+    size === 'large'
+      ? 'h-16 md:h-20 lg:h-24 w-auto max-w-[200px] md:max-w-[240px]'
+      : size === 'medium'
+        ? mobileLarger
+          ? 'h-14 md:h-14 lg:h-16 w-auto max-w-[165px] md:max-w-[180px]'
+          : 'h-12 md:h-14 lg:h-16 w-auto max-w-[150px] md:max-w-[180px]'
+        : mobileLarger
+          ? 'h-11 md:h-12 w-auto max-w-[130px] md:max-w-[120px]'
+          : 'h-10 md:h-12 w-auto max-w-[120px]';
+  const minSize =
+    size === 'large' ? 'min-w-[140px] md:min-w-[180px]' : size === 'medium' ? (mobileLarger ? 'min-w-[130px] md:min-w-[150px]' : 'min-w-[120px] md:min-w-[150px]') : mobileLarger ? 'min-w-[110px] md:min-w-[100px]' : 'min-w-[100px]';
+  const minHeight = size === 'large' ? 'min-h-[80px] md:min-h-[96px]' : size === 'medium' ? (mobileLarger ? 'min-h-[60px] md:min-h-[64px]' : 'min-h-[56px] md:min-h-[64px]') : mobileLarger ? 'min-h-[52px] md:min-h-[48px]' : 'min-h-[48px]';
+  const filterClass = noFilter ? 'opacity-90 hover:opacity-100' : 'brightness-0 invert opacity-90 hover:opacity-100';
+  if (failed) {
+    return (
+      <div className={`flex flex-col items-center justify-center ${minSize} ${minHeight}`}>
+        <span className={`font-semibold text-white/90 ${size === 'large' ? 'text-base md:text-lg' : size === 'medium' ? 'text-sm md:text-base' : 'text-sm'}`}>{name}</span>
+      </div>
+    );
+  }
+  return (
+    <div className={`flex flex-col items-center gap-2 ${minSize}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={name}
+        className={`${sizeClass} object-contain ${filterClass} transition-opacity`}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+// --- Variantes do Section (propagam para filhos diretos) ---
+const sectionVariants = {
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } },
+  hidden: { transition: { staggerChildren: 0.02 } },
+};
 
 // --- Componente de Secao ---
 function Section({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+
+  const child = Array.isArray(children) ? children[0] : children;
+  const isDiv = typeof child === 'object' && child !== null && React.isValidElement(child) && (child as React.ReactElement).type === 'div';
+  const childProps = isDiv && child !== null && typeof child === 'object' && 'props' in child ? (child as React.ReactElement<{ className?: string; style?: React.CSSProperties; children?: React.ReactNode }>).props : null;
 
   return (
     <section ref={ref} id={id} className={`relative py-20 lg:py-28 ${className}`}>
       <motion.div
         initial="hidden"
         animate={isInView ? 'visible' : 'hidden'}
-        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+        variants={{
+          visible: { transition: { staggerChildren: 0.1, delayChildren: 0 } },
+          hidden: { transition: { staggerChildren: 0.02 } },
+        }}
       >
-        {children}
+        {childProps && childProps.className ? (
+          <motion.div variants={sectionVariants} className={childProps.className} style={childProps.style}>
+            {childProps.children}
+          </motion.div>
+        ) : (
+          children
+        )}
       </motion.div>
     </section>
   );
@@ -254,7 +394,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between py-5 lg:py-6 text-left cursor-pointer"
       >
-        <span className="text-base sm:text-lg lg:text-xl font-semibold text-white pr-4">{q}</span>
+        <span className="text-base sm:text-lg lg:text-xl font-semibold text-white pr-4 text-balance">{q}</span>
         <ChevronDown className={`h-5 w-5 text-[#D4AF37] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       <motion.div
@@ -263,7 +403,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         transition={{ duration: 0.3 }}
         className="overflow-hidden"
       >
-        <p className="text-base sm:text-lg text-white/60 pb-5 leading-relaxed">{a}</p>
+        <p className="text-base sm:text-lg text-white/75 pb-5 leading-relaxed text-pretty">{a}</p>
       </motion.div>
     </div>
   );
@@ -298,9 +438,10 @@ export default function SejaCorretorPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/dashboard/corretor/cadastro"
-              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-sm sm:text-base tracking-wider hover:bg-[#F6E05E] transition-all"
+              className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-sm sm:text-base tracking-wider hover:bg-[#F6E05E] transition-all"
             >
               Quero ser corretor
+              <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
             </Link>
           </div>
         </div>
@@ -336,7 +477,7 @@ export default function SejaCorretorPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6 font-cinzel"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6 font-cinzel text-balance"
           >
             <span className="text-white">Seja especialista</span>
             <br />
@@ -349,13 +490,22 @@ export default function SejaCorretorPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
-            className="text-lg sm:text-xl md:text-2xl lg:text-2xl text-white/60 max-w-3xl mx-auto mb-10 leading-relaxed"
+            className="text-lg sm:text-xl md:text-2xl lg:text-2xl text-white max-w-3xl mx-auto mb-6 leading-relaxed text-pretty"
           >
-            Venda <strong className="text-white">planos de saude, seguros de vida e automotivos</strong> com{' '}
-            <strong className="text-white">multicalculo inteligente</strong>, propostas automaticas,{' '}
-            <strong className="text-white">IA que preenche documentos</strong> e um assistente{' '}
-            <strong className="text-white">24 horas</strong>. Tudo sem investir nada.
+            Venda <strong>planos de saúde, seguros de vida e automotivos</strong> com{' '}
+            <strong>multicálculo inteligente</strong>, propostas automáticas,{' '}
+            <strong>IA que preenche documentos</strong> e um assistente{' '}
+            <strong>24 horas</strong>.
           </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37] font-black text-base sm:text-lg tracking-wide mb-10 shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+          >
+            <Gift className="h-5 w-5" />
+            Tudo sem investir nada
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -371,7 +521,7 @@ export default function SejaCorretorPage() {
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
             <a
-              href="#produtos"
+              href="#como-funciona"
               className="flex items-center gap-2 px-8 py-4 rounded-2xl border border-white/10 text-white/80 text-base font-semibold hover:bg-white/5 transition-all"
             >
               Como funciona
@@ -392,110 +542,205 @@ export default function SejaCorretorPage() {
         </motion.div>
       </section>
 
-      {/* ══════════════ PRODUTOS QUE TRABALHAMOS ══════════════ */}
-      <Section id="produtos" className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
+      {/* ══════════════ GANHE DINHEIRO COM LIBERDADE (oportunidade logo após o hero) ══════════════ */}
+      <Section id="oportunidades" className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
+        <motion.div variants={sectionVariants} className="max-w-6xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
-            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Produtos</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
-              O que voce pode{' '}
-              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">vender</span>
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Sua oportunidade</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-5 text-balance">
+              Ganhe dinheiro{' '}
+              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">com liberdade</span>
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Nao se limite a um produto so. Aqui voce tem acesso a um portfolio completo para atender qualquer necessidade do seu cliente.
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              O mercado de planos de saúde e seguros cresce a cada ano. Com a Humano Saúde,
+              você tem tudo o que precisa para transformar essa oportunidade em renda real.
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {PRODUTOS.map((p, i) => {
-              const Icon = p.icon;
+          <motion.div variants={sectionVariants} className="grid sm:grid-cols-2 gap-6">
+            {OPORTUNIDADES.map((item, i) => {
+              const ItemIcon = item.icon;
               return (
                 <motion.div
-                  key={p.title}
+                  key={item.title}
                   variants={fadeUp}
                   custom={i + 1}
-                  className="text-center bg-white/[0.02] border border-white/5 rounded-2xl p-6 lg:p-8 hover:border-[#D4AF37]/20 transition-all"
+                  className="flex gap-5 bg-white/[0.02] border border-white/5 rounded-2xl p-6 lg:p-8 hover:border-[#D4AF37]/15 transition-all"
                 >
-                  <div className="h-16 w-16 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-5">
-                    <Icon className="h-8 w-8 text-[#D4AF37]" />
+                  <div className="h-14 w-14 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+                    <ItemIcon className="h-7 w-7 text-[#D4AF37]" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{p.title}</h3>
-                  <p className="text-base text-white/50 leading-relaxed">{p.desc}</p>
+                  <div>
+                    <h3 className="text-xl lg:text-2xl font-bold text-white mb-2 text-balance">{item.title}</h3>
+                    <p className="text-base lg:text-lg text-white/70 leading-relaxed text-pretty">{item.desc}</p>
+                  </div>
                 </motion.div>
               );
             })}
-          </div>
-        </div>
+          </motion.div>
+
+          <motion.div variants={fadeUp} custom={5} className="text-center mt-12">
+            <Link
+              href="/dashboard/corretor/cadastro"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-[#D4AF37] text-black font-bold text-base tracking-wider hover:bg-[#F6E05E] transition-all"
+            >
+              Quero essa oportunidade
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+        </motion.div>
+      </Section>
+
+      {/* ══════════════ PRODUTOS QUE TRABALHAMOS ══════════════ */}
+      <Section id="produtos" className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
+        <motion.div
+          variants={sectionVariants}
+          className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+        >
+          <motion.div variants={fadeUp} custom={0} className="text-center mb-16 sm:col-span-2 lg:col-span-4">
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Produtos</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
+              O que você pode{' '}
+              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">vender</span>
+            </h2>
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              Não se limite a um produto só. Aqui você tem acesso a um portfólio completo para atender qualquer necessidade do seu cliente.
+            </p>
+          </motion.div>
+          {PRODUTOS.map((p, i) => {
+            const Icon = p.icon;
+            return (
+              <motion.div
+                key={p.title}
+                variants={fadeUp}
+                custom={i + 1}
+                className="flex flex-col text-center bg-white/[0.02] border border-white/5 rounded-2xl p-6 lg:p-8 hover:border-[#D4AF37]/20 transition-all min-h-[280px] min-w-0 lg:min-w-[240px]"
+              >
+                <div className="h-16 w-16 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-5 shrink-0">
+                  <Icon className="h-8 w-8 text-[#D4AF37]" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 whitespace-nowrap">{p.title}</h3>
+                <p className="text-base text-white/70 leading-relaxed flex-1 break-words text-pretty">{p.desc}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </Section>
+
+      {/* ══════════════ NOSSOS PARCEIROS ══════════════ */}
+      <Section id="parceiros" className="bg-gradient-to-b from-[#0a0804] via-[#050505] to-[#050505]">
+        <motion.div variants={sectionVariants} className="max-w-5xl mx-auto px-4 md:px-8">
+          <motion.div variants={fadeUp} custom={0} className="text-center mb-12">
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Parceiros</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-cinzel mb-4 text-balance">
+              Nossos parceiros
+            </h2>
+            <p className="text-lg text-white/70 max-w-xl mx-auto leading-relaxed text-pretty">
+              Operadoras e redes com as quais trabalhamos para oferecer as melhores opções ao seu cliente.
+            </p>
+          </motion.div>
+          <motion.div
+            variants={fadeUp}
+            custom={1}
+            className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 lg:gap-x-12 lg:gap-y-10 py-8 px-6 rounded-2xl bg-white/[0.02] border border-white/5 place-items-center"
+          >
+            {OPERADORAS_LOGOS.map((op) => (
+              <PartnerLogo key={op.name} name={op.name} url={op.url} size={op.size} noFilter={op.noFilter} mobileLarger={op.mobileLarger} />
+            ))}
+            <span className="col-span-full w-full text-center text-sm text-white/70 font-medium">
+              e muito mais…
+            </span>
+          </motion.div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ DIFERENCIAIS ══════════════ */}
       <Section id="diferenciais" className="bg-[#050505]">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <motion.div
+          variants={{ visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } }, hidden: {} }}
+          className="max-w-7xl mx-auto px-4 md:px-8"
+        >
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
             <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Nossos diferenciais</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
-              Tudo que voce{' '}
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
+              Tudo que você{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">recebe aqui</span>
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Mais do que uma corretora. Uma estrutura completa com tecnologia, IA e suporte para voce construir sua carreira com as melhores ferramentas do mercado.
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              Mais do que uma corretora. Uma estrutura completa com tecnologia, IA e suporte para você construir sua carreira com as melhores ferramentas do mercado.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {DIFERENCIAIS.map((d, i) => {
-              const Icon = d.icon;
-              return (
-                <motion.div
-                  key={d.title}
-                  variants={fadeUp}
-                  custom={i + 1}
-                  className="group relative bg-white/[0.02] border border-white/5 rounded-2xl p-5 lg:p-6 hover:border-[#D4AF37]/20 hover:bg-[#D4AF37]/[0.02] transition-all duration-500"
-                >
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] text-[9px] font-bold tracking-wider">
-                      {d.highlight}
-                    </span>
-                  </div>
+          {(['comercial', 'ensino', 'marketing', 'financeiro'] as const).map((categoria, idxSec) => {
+            const itens = DIFERENCIAIS.filter((d) => d.categoria === categoria);
+            const titulos: Record<typeof categoria, string> = {
+              comercial: 'Comercial',
+              ensino: 'Ensino',
+              marketing: 'Marketing',
+              financeiro: 'Financeiro',
+            };
+            return (
+              <motion.div key={categoria} variants={fadeUp} custom={idxSec + 1} className="mb-14 last:mb-0">
+                <h3 className="text-lg font-bold text-[#D4AF37] tracking-wider mb-6 border-b border-white/10 pb-2 text-balance">
+                  {titulos[categoria]}
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {itens.map((d, i) => {
+                    const Icon = d.icon;
+                    return (
+                      <motion.div
+                        key={d.title}
+                        variants={fadeUp}
+                        custom={i + 1}
+                        className="group relative bg-white/[0.02] border border-white/5 rounded-2xl p-5 lg:p-6 hover:border-[#D4AF37]/20 hover:bg-[#D4AF37]/[0.02] transition-all duration-500"
+                      >
+                        <div className="absolute top-3 right-3">
+                          <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] text-[9px] font-bold tracking-wider">
+                            {d.highlight}
+                          </span>
+                        </div>
 
-                  <div className="h-11 w-11 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center mb-4 group-hover:bg-[#D4AF37]/20 transition-colors">
-                    <Icon className="h-5 w-5 text-[#D4AF37]" />
-                  </div>
+                        <div className="h-11 w-11 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center mb-4 group-hover:bg-[#D4AF37]/20 transition-colors">
+                          <Icon className="h-5 w-5 text-[#D4AF37]" />
+                        </div>
 
-                  <h3 className="text-lg lg:text-xl font-bold text-white mb-2">{d.title}</h3>
-                  <p className="text-sm lg:text-base text-white/50 leading-relaxed">{d.desc}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
+                        <h3 className="text-lg lg:text-xl font-bold text-white mb-2 text-balance">{d.title}</h3>
+                        <p className="text-sm lg:text-base text-white/70 leading-relaxed text-pretty">{d.desc}</p>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </Section>
 
       {/* ══════════════ MOCKUP MULTICALCULO ══════════════ */}
       <Section className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
+        <motion.div variants={sectionVariants} className="max-w-6xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
-            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Multicalculo</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Multicálculo</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
               Compare{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">dezenas de planos</span>
               {' '}em segundos
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Insira as idades, escolha o tipo e nossa plataforma compara automaticamente todas as operadoras. Cotacao profissional pronta para enviar ao cliente.
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              Insira as idades, escolha o tipo e nossa plataforma compara automaticamente todas as operadoras. Cotação profissional pronta para enviar ao cliente.
             </p>
           </motion.div>
 
           <motion.div variants={scaleIn} className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0a]">
             <div className="p-5 lg:p-8">
-              {/* Header do multicalculo */}
+              {/* Header do multicálculo */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-10 w-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
                   <Calculator className="h-5 w-5 text-[#D4AF37]" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Multicalculo inteligente</p>
-                  <p className="text-sm text-white/40">Compare operadoras lado a lado</p>
+                  <p className="text-sm font-bold text-white">Multicálculo inteligente</p>
+                  <p className="text-sm text-white/75">Compare operadoras lado a lado</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
@@ -503,22 +748,22 @@ export default function SejaCorretorPage() {
                 </div>
               </div>
 
-              {/* Input area */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[10px] text-white/30 mb-1">Beneficiarios</p>
-                  <div className="flex gap-1.5">
+              {/* Input area: no mobile 1 coluna para não invadir PME; a partir de sm 3 colunas */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 min-w-0">
+                  <p className="text-[10px] text-white/50 mb-1">Beneficiários</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {['32', '28', '5'].map((age, i) => (
-                      <span key={i} className="px-2 py-1 bg-[#D4AF37]/10 text-[#D4AF37] rounded text-xs font-bold">{age} anos</span>
+                      <span key={i} className="px-2 py-1 bg-[#D4AF37]/10 text-[#D4AF37] rounded text-xs font-bold shrink-0">{age} anos</span>
                     ))}
                   </div>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[10px] text-white/30 mb-1">Tipo</p>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 min-w-0">
+                  <p className="text-[10px] text-white/50 mb-1">Tipo</p>
                   <p className="text-sm text-white font-semibold">PME</p>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[10px] text-white/30 mb-1">Acomodacao</p>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 min-w-0">
+                  <p className="text-[10px] text-white/50 mb-1">Acomodação</p>
                   <p className="text-sm text-white font-semibold">Apartamento</p>
                 </div>
               </div>
@@ -536,12 +781,12 @@ export default function SejaCorretorPage() {
                       {plano.dest && <Star className="h-4 w-4 text-[#D4AF37]" />}
                       <div>
                         <p className="text-sm font-semibold text-white">{plano.plano}</p>
-                        <p className="text-sm text-white/40">{plano.op}</p>
+                        <p className="text-sm text-white/75">{plano.op}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-white">{plano.valor}</p>
-                      <p className="text-[10px] text-white/30">/mes</p>
+                      <p className="text-[10px] text-white/50">/mês</p>
                     </div>
                   </div>
                 ))}
@@ -551,22 +796,22 @@ export default function SejaCorretorPage() {
           </motion.div>
 
           <motion.div variants={fadeUp} custom={2} className="text-center mt-8">
-            <p className="text-sm sm:text-base text-white/40">Amil · Bradesco · SulAmerica · Unimed · NotreDame · Porto · Hapvida e mais</p>
+            <p className="text-sm sm:text-base text-white/75">Amil · Bradesco · SulAmerica · Unimed · NotreDame · Porto · Hapvida e mais</p>
           </motion.div>
-        </div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ MOCKUP UPLOAD DOCUMENTOS (Drag & Drop + IA) ══════════════ */}
       <Section className="bg-[#050505]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
+        <motion.div variants={sectionVariants} className="max-w-6xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
-            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Documentacao inteligente</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Documentação inteligente</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
               Arraste, solte e{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">a IA faz o resto</span>
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Seu cliente arrasta o documento para a plataforma. Nossa inteligencia artificial extrai todos os dados automaticamente. Sem digitacao, sem erro, sem perda de tempo.
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              Seu cliente arrasta o documento para a plataforma. Nossa inteligência artificial extrai todos os dados automaticamente. Sem digitação, sem erro, sem perda de tempo.
             </p>
           </motion.div>
 
@@ -582,11 +827,11 @@ export default function SejaCorretorPage() {
                     >
                       <Upload className="h-12 w-12 lg:h-16 lg:w-16 text-[#D4AF37]/50 mx-auto mb-4" />
                     </motion.div>
-                    <p className="text-base lg:text-lg font-bold text-white mb-2">Arraste seus documentos aqui</p>
-                    <p className="text-xs lg:text-sm text-white/40 mb-4">ou clique para selecionar</p>
+                    <p className="text-base lg:text-lg font-bold text-white mb-2 text-balance">Arraste seus documentos aqui</p>
+                    <p className="text-xs lg:text-sm text-white/75 mb-4 text-pretty">ou clique para selecionar</p>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {['PDF', 'JPG', 'PNG', 'Carteirinha', 'Apolice'].map((t) => (
-                        <span key={t} className="px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-white/40 font-medium">{t}</span>
+                      {['PDF', 'JPG', 'PNG', 'Carteirinha', 'Apólice'].map((t) => (
+                        <span key={t} className="px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-white/75 font-medium">{t}</span>
                       ))}
                     </div>
                   </div>
@@ -624,14 +869,14 @@ export default function SejaCorretorPage() {
                     {[
                       { label: 'Titular', value: 'Maria Silva Santos', conf: '99%' },
                       { label: 'Operadora', value: 'AMIL', conf: '100%' },
-                      { label: 'Beneficiarios', value: '3 (32, 28, 5 anos)', conf: '98%' },
+                      { label: 'Beneficiários', value: '3 (32, 28, 5 anos)', conf: '98%' },
                       { label: 'Plano atual', value: 'Amil 400 QC Nacional', conf: '97%' },
                       { label: 'Valor mensal', value: 'R$ 1.890,50', conf: '95%' },
                       { label: 'Tipo', value: 'PME - Empresarial', conf: '99%' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                         <div>
-                          <p className="text-[10px] text-white/30">{item.label}</p>
+                          <p className="text-[10px] text-white/50">{item.label}</p>
                           <p className="text-sm font-semibold text-white">{item.value}</p>
                         </div>
                         <span className="text-[10px] text-green-400 font-bold">{item.conf}</span>
@@ -642,7 +887,7 @@ export default function SejaCorretorPage() {
                   <div className="mt-4 p-3 bg-[#D4AF37]/[0.05] border border-[#D4AF37]/20 rounded-xl">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-[#D4AF37]" />
-                      <p className="text-xs text-[#D4AF37] font-semibold">Pronto para gerar cotacao automatica</p>
+                      <p className="text-xs text-[#D4AF37] font-semibold">Pronto para gerar cotação automática</p>
                     </div>
                   </div>
                 </div>
@@ -650,20 +895,20 @@ export default function SejaCorretorPage() {
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/50 via-transparent to-transparent pointer-events-none" />
           </motion.div>
-        </div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ MOCKUP DASHBOARD + PIPELINE ══════════════ */}
       <Section className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
+        <motion.div variants={sectionVariants} className="max-w-6xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
             <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Seu painel</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
               Dashboard{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">profissional</span>
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              CRM completo, financeiro, IA e tudo que voce precisa . Acessivel de qualquer dispositivo.
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
+              CRM completo, financeiro, IA e tudo que você precisa. Acessível de qualquer dispositivo.
             </p>
           </motion.div>
 
@@ -682,7 +927,7 @@ export default function SejaCorretorPage() {
                     <div key={card.label} className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
                       <div className="flex items-center gap-2 mb-1.5">
                         <CardIcon className={`h-4 w-4 ${card.color}`} />
-                        <span className="text-[10px] sm:text-sm text-white/40">{card.label}</span>
+                        <span className="text-[10px] sm:text-sm text-white/75">{card.label}</span>
                       </div>
                       <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{card.value}</p>
                     </div>
@@ -693,7 +938,7 @@ export default function SejaCorretorPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 {/* CRM */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 h-44">
-                  <p className="text-xs text-white/40 mb-3 font-semibold">CRM</p>
+                  <p className="text-xs text-white/75 mb-3 font-semibold">CRM</p>
                   <div className="flex gap-2 h-28">
                     {[
                       { name: 'Novo', count: 12, color: 'bg-blue-500/20' },
@@ -703,7 +948,7 @@ export default function SejaCorretorPage() {
                       { name: 'Fechado', count: 15, color: 'bg-green-500/20' },
                     ].map((col) => (
                       <div key={col.name} className={`flex-1 ${col.color} border border-white/5 rounded-lg p-1.5`}>
-                        <p className="text-[9px] text-white/40 mb-1">{col.name}</p>
+                        <p className="text-[9px] text-white/75 mb-1">{col.name}</p>
                         <p className="text-xs font-bold text-white">{col.count}</p>
                         {Array.from({ length: Math.min(col.count, 3) }).map((_, j) => (
                           <div key={j} className="h-3 rounded bg-white/5 mb-1 mt-1" />
@@ -715,7 +960,7 @@ export default function SejaCorretorPage() {
 
                 {/* Grafico de producao */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 h-44">
-                  <p className="text-xs text-white/40 mb-3 font-semibold">Sua producao</p>
+                  <p className="text-xs text-white/75 mb-3 font-semibold">Sua producao</p>
                   <div className="flex items-end gap-1.5 h-28 pb-2">
                     {[40, 65, 45, 80, 55, 90, 70, 85, 95, 60, 75, 100].map((h, i) => (
                       <div
@@ -731,40 +976,40 @@ export default function SejaCorretorPage() {
               {/* IA Insights bar */}
               <div className="mt-4 flex items-center gap-3 p-3 bg-[#D4AF37]/[0.03] border border-[#D4AF37]/10 rounded-xl">
                 <Brain className="h-5 w-5 text-[#D4AF37] flex-shrink-0" />
-                <p className="text-xs text-white/60"><strong className="text-[#D4AF37]">IA Insight:</strong> Sua taxa de conversao subiu 12% esta semana. Continue priorizando leads de PME, seu ticket medio e 3x maior.</p>
+                <p className="text-xs text-white/75"><strong className="text-[#D4AF37]">IA Insight:</strong> Sua taxa de conversao subiu 12% esta semana. Continue priorizando leads de PME, seu ticket medio e 3x maior.</p>
               </div>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent pointer-events-none" />
           </motion.div>
 
           <motion.div variants={fadeUp} custom={2} className="text-center mt-8">
-            <p className="text-sm sm:text-base text-white/40">CRM · Multicalculo · Financeiro · IA · Marketing. Tudo em um so lugar</p>
+            <p className="text-sm sm:text-base text-white/75">CRM · Multicálculo · Financeiro · IA · Marketing. Tudo em um só lugar</p>
           </motion.div>
-        </div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ MOCKUP FUNIL DE VENDAS ══════════════ */}
       <Section className="bg-[#050505]">
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
+        <motion.div variants={sectionVariants} className="max-w-5xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
             <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Funil visual</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
               Veja seu{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">funil de vendas</span>
             </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed text-pretty">
               Visualize cada etapa do seu processo comercial. Do lead novo ao contrato fechado.
             </p>
           </motion.div>
 
           <motion.div variants={scaleIn} className="relative">
-            <div className="space-y-2">
+            <motion.div variants={sectionVariants} className="space-y-2">
               {[
                 { stage: 'Novos leads', count: 47, pct: 100, color: 'from-blue-500/40 to-blue-600/20' },
                 { stage: 'Qualificados', count: 32, pct: 68, color: 'from-purple-500/40 to-purple-600/20' },
-                { stage: 'Cotacao enviada', count: 23, pct: 49, color: 'from-orange-500/40 to-orange-600/20' },
+                { stage: 'Cotação enviada', count: 23, pct: 49, color: 'from-orange-500/40 to-orange-600/20' },
                 { stage: 'Proposta', count: 15, pct: 32, color: 'from-yellow-500/40 to-yellow-600/20' },
-                { stage: 'Documentacao', count: 10, pct: 21, color: 'from-cyan-500/40 to-cyan-600/20' },
+                { stage: 'Documentação', count: 10, pct: 21, color: 'from-cyan-500/40 to-cyan-600/20' },
                 { stage: 'Fechado', count: 8, pct: 17, color: 'from-green-500/40 to-green-600/20' },
               ].map((s, i) => (
                 <motion.div key={s.stage} variants={fadeUp} custom={i + 1} className="relative">
@@ -776,78 +1021,29 @@ export default function SejaCorretorPage() {
                       <span className="text-xs sm:text-sm font-bold text-white truncate">{s.stage}</span>
                       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <span className="text-base sm:text-lg font-black text-white">{s.count}</span>
-                        <span className="text-[10px] text-white/50">{s.pct}%</span>
+                        <span className="text-[10px] text-white/70">{s.pct}%</span>
                       </div>
                     </div>
                   </div>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           </motion.div>
-        </div>
-      </Section>
-
-      {/* ══════════════ OPORTUNIDADES ══════════════ */}
-      <Section className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
-          <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
-            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Sua oportunidade</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-5">
-              Ganhe dinheiro{' '}
-              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">com liberdade</span>
-            </h2>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              O mercado de planos de saude e seguros cresce a cada ano. Com a Humano Saude,
-              voce tem tudo o que precisa para transformar essa oportunidade em renda real.
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 gap-6">
-            {OPORTUNIDADES.map((item, i) => {
-              const ItemIcon = item.icon;
-              return (
-                <motion.div
-                  key={item.title}
-                  variants={fadeUp}
-                  custom={i + 1}
-                  className="flex gap-5 bg-white/[0.02] border border-white/5 rounded-2xl p-6 lg:p-8 hover:border-[#D4AF37]/15 transition-all"
-                >
-                  <div className="h-14 w-14 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
-                    <ItemIcon className="h-7 w-7 text-[#D4AF37]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{item.title}</h3>
-                    <p className="text-base lg:text-lg text-white/50 leading-relaxed">{item.desc}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <motion.div variants={fadeUp} custom={5} className="text-center mt-12">
-            <Link
-              href="/dashboard/corretor/cadastro"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-[#D4AF37] text-black font-bold text-base tracking-wider hover:bg-[#F6E05E] transition-all"
-            >
-              Quero essa oportunidade
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </motion.div>
-        </div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ Como funciona ══════════════ */}
-      <Section className="bg-[#050505]">
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
+      <Section id="como-funciona" className="bg-[#050505]">
+        <motion.div variants={sectionVariants} className="max-w-5xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-16">
             <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Processo simples</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel text-balance">
               Como{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">funciona</span>
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <motion.div variants={sectionVariants} className="grid md:grid-cols-3 gap-8">
             {COMO_FUNCIONA.map((item, i) => {
               const StepIcon = item.icon;
               return (
@@ -860,21 +1056,21 @@ export default function SejaCorretorPage() {
                       {item.step}
                     </span>
                   </div>
-                  <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">{item.title}</h3>
-                  <p className="text-base lg:text-lg text-white/50 leading-relaxed">{item.desc}</p>
+                  <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 text-balance">{item.title}</h3>
+                  <p className="text-base lg:text-lg text-white/70 leading-relaxed text-pretty">{item.desc}</p>
                 </motion.div>
               );
             })}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ FAQ ══════════════ */}
       <Section id="faq" className="bg-gradient-to-b from-[#050505] via-[#0a0804] to-[#050505]">
-        <div className="max-w-3xl mx-auto px-4 md:px-8">
+        <motion.div variants={sectionVariants} className="max-w-3xl mx-auto px-4 md:px-8">
           <motion.div variants={fadeUp} custom={0} className="text-center mb-12">
-            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Duvidas</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-cinzel">
+            <span className="text-[#D4AF37] text-sm font-bold tracking-[4px] mb-4 block">Dúvidas</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-cinzel text-balance">
               Perguntas{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">frequentes</span>
             </h2>
@@ -885,7 +1081,7 @@ export default function SejaCorretorPage() {
               <FAQItem key={item.q} q={item.q} a={item.a} />
             ))}
           </motion.div>
-        </div>
+        </motion.div>
       </Section>
 
       {/* ══════════════ CTA FINAL ══════════════ */}
@@ -902,13 +1098,13 @@ export default function SejaCorretorPage() {
             transition={{ duration: 0.6 }}
           >
             <Sparkles className="h-12 w-12 text-[#D4AF37] mx-auto mb-6" />
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black font-cinzel mb-4 text-balance">
               Pronto para{' '}
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F6E05E] bg-clip-text text-transparent">
                 Comecar?
               </span>
             </h2>
-            <p className="text-white/50 text-lg md:text-xl lg:text-2xl mb-8 max-w-xl mx-auto leading-relaxed">
+            <p className="text-white/70 text-lg md:text-xl lg:text-2xl mb-8 max-w-xl mx-auto leading-relaxed text-pretty">
               Cadastre-se gratuitamente, receba acesso a plataforma completa
               e comece a construir sua renda no mercado de saude e seguros.
             </p>
@@ -948,10 +1144,10 @@ export default function SejaCorretorPage() {
                 className="h-10 w-auto"
               />
               <div className="h-6 w-px bg-white/10" />
-              <span className="text-sm text-white/30">Programa de corretores 2026</span>
+              <span className="text-sm text-white/50">Programa de corretores 2026</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-white/40">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-white/75">
               <a href="mailto:comercial@humanosaude.com.br" className="hover:text-[#D4AF37] transition-colors flex items-center gap-1">
                 <Mail className="h-3.5 w-3.5" /> comercial@humanosaude.com.br
               </a>
@@ -962,7 +1158,7 @@ export default function SejaCorretorPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center">
-            <p className="text-sm text-white/20">
+            <p className="text-sm text-white/40">
               &copy; {new Date().getFullYear()} Humano Saude. Todos os direitos reservados. CNPJ: 50.216.907/0001-60 | SUSEP: 251174847
             </p>
           </div>

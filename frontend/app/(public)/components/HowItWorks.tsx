@@ -94,7 +94,7 @@ export default function HowItWorks() {
               Pronto para <span className="text-[#B8941F]">economizar?</span>
             </h3>
             
-            <p className="text-white/60 mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
+            <p className="text-white/75 mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
               Descubra como reduzir até <strong className="text-[#B8941F]">40%</strong> no valor do seu plano de saúde.
               Atendimento gratuito, análise em 10 minutos e suporte completo.
             </p>
