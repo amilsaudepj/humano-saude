@@ -28,7 +28,7 @@ import type {
   ListEmailsResponse,
 } from '@/lib/types/email';
 
-// ─── Status Badge ────────────────────────────────────────────
+// ─── Status Badge (valores alinhados ao last_event da Resend) ──
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     queued: 'bg-gray-500/20 text-gray-400',
@@ -39,10 +39,15 @@ function StatusBadge({ status }: { status: string }) {
     bounced: 'bg-red-500/20 text-red-400',
     complained: 'bg-orange-500/20 text-orange-400',
     failed: 'bg-red-500/20 text-red-400',
+    scheduled: 'bg-amber-500/20 text-amber-400',
+    delivery_delayed: 'bg-yellow-500/20 text-yellow-400',
+    suppressed: 'bg-slate-500/20 text-slate-400',
+    canceled: 'bg-gray-500/20 text-gray-500',
   };
+  const label = status === 'delivery_delayed' ? 'delivery delayed' : status;
   return (
     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${colors[status] || colors.queued}`}>
-      {status}
+      {label}
     </span>
   );
 }
@@ -90,11 +95,16 @@ export default function EmailAdminPage() {
   const [emailEvents, setEmailEvents] = useState<EmailEvent[]>([]);
   const [modalTab, setModalTab] = useState<'info' | 'preview' | 'timeline'>('info');
   const [resending, setResending] = useState(false);
+  const [listFromResend, setListFromResend] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
+  const [resendPreviewHtml, setResendPreviewHtml] = useState<string | null>(null);
+  const [resendPreviewEmailId, setResendPreviewEmailId] = useState<string | null>(null);
+  const [loadingResendPreview, setLoadingResendPreview] = useState(false);
 
   // ─── Fetch stats ───────────────────────────────────────────
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/emails?action=stats', { cache: 'no-store' });
+      const res = await fetch('/api/admin/emails?action=stats', { cache: 'no-store', credentials: 'include' });
       if (!res.ok) {
         throw new Error(`Falha ao buscar estatísticas (${res.status})`);
       }
@@ -121,19 +131,23 @@ export default function EmailAdminPage() {
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
 
-      const res = await fetch(`/api/admin/emails?${params}`, { cache: 'no-store' });
+      const res = await fetch(`/api/admin/emails?${params}`, { cache: 'no-store', credentials: 'include' });
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(`Falha ao buscar emails (${res.status})`);
+        const msg =
+          res.status === 401
+            ? 'Faça login novamente.'
+            : (json?.error as string) || `Falha ao buscar emails (${res.status})`;
+        throw new Error(msg);
       }
-      const json = await res.json();
       if (json.success) {
         const data = json.data as ListEmailsResponse;
-        setEmails(data.emails);
-        setTotalPages(data.totalPages);
-        setTotal(data.total);
+        setEmails(data.emails ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
       } else {
         setEmails([]);
-        setErrorMessage(json.error || 'Não foi possível carregar os emails de tracking.');
+        setErrorMessage((json.error as string) || 'Não foi possível carregar os emails de tracking.');
       }
     } catch (err) {
       console.error('Failed to fetch emails:', err);
@@ -144,10 +158,60 @@ export default function EmailAdminPage() {
     }
   }, [page, limit, search, statusFilter]);
 
+  // ─── Carregar histórico da API Resend ───────────────────────
+  const fetchFromResend = useCallback(async () => {
+    setLoadingResend(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/admin/emails/resend-list', { cache: 'no-store', credentials: 'include' });
+      const json = await res.json();
+      if (json.success && json.data?.emails) {
+        setEmails(json.data.emails as EmailLog[]);
+        setTotal(json.data.total ?? 0);
+        setTotalPages(1);
+        setListFromResend(true);
+      } else {
+        setEmails([]);
+        setErrorMessage(json.error || 'Não foi possível carregar o histórico da Resend.');
+        setListFromResend(false);
+      }
+    } catch (err) {
+      setEmails([]);
+      setErrorMessage(err instanceof Error ? err.message : 'Erro ao carregar histórico Resend.');
+      setListFromResend(false);
+    } finally {
+      setLoadingResend(false);
+    }
+  }, []);
+
+  // ─── Fetch HTML do email na Resend (para preview) ───────────
+  const fetchResendPreview = useCallback(async (resendEmailId: string) => {
+    setLoadingResendPreview(true);
+    setResendPreviewHtml(null);
+    try {
+      const res = await fetch(
+        `/api/admin/emails/resend-detail?emailId=${encodeURIComponent(resendEmailId)}`,
+        { cache: 'no-store', credentials: 'include' }
+      );
+      const json = await res.json();
+      setResendPreviewEmailId(resendEmailId);
+      if (json.success && json.data?.html != null) {
+        setResendPreviewHtml(json.data.html);
+      } else {
+        setResendPreviewHtml('');
+      }
+    } catch {
+      setResendPreviewEmailId(resendEmailId);
+      setResendPreviewHtml('');
+    } finally {
+      setLoadingResendPreview(false);
+    }
+  }, []);
+
   // ─── Fetch events for modal ────────────────────────────────
   const fetchEvents = useCallback(async (emailId: string) => {
     try {
-      const res = await fetch(`/api/admin/emails/${emailId}/events`, { cache: 'no-store' });
+      const res = await fetch(`/api/admin/emails/${emailId}/events`, { cache: 'no-store', credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         setEmailEvents(json.data);
@@ -164,11 +228,24 @@ export default function EmailAdminPage() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchEmails(); }, [fetchEmails]);
 
+  // ─── Ao abrir aba Preview para email da Resend, buscar HTML ──
+  useEffect(() => {
+    if (
+      modalTab !== 'preview' ||
+      !selectedEmail ||
+      (selectedEmail as { source?: string }).source !== 'resend'
+    ) return;
+    if (resendPreviewEmailId === selectedEmail.id) return;
+    fetchResendPreview(selectedEmail.id);
+  }, [modalTab, selectedEmail, resendPreviewEmailId, fetchResendPreview]);
+
   // ─── Open detail modal ─────────────────────────────────────
   const openDetail = async (email: EmailLog) => {
     setSelectedEmail(email);
     setModalTab('info');
     setEmailEvents([]);
+    setResendPreviewHtml(null);
+    setResendPreviewEmailId(null);
     await fetchEvents(email.id);
   };
 
@@ -213,14 +290,28 @@ export default function EmailAdminPage() {
           <h1 className="text-4xl font-bold text-[#D4AF37]" style={{ fontFamily: 'Perpetua Titling MT, serif' }}>
             EMAIL TRACKING
           </h1>
-          <p className="mt-2 text-gray-400">Todos os emails disparados pelo sistema, sem exceção — Resend + Tracking</p>
+          <p className="mt-2 text-gray-400">
+            Todos os emails disparados pelo sistema — Resend + Tracking
+            {listFromResend && <span className="ml-2 rounded bg-[#D4AF37]/20 px-2 py-0.5 text-xs text-[#D4AF37]">Fonte: Resend</span>}
+          </p>
         </div>
-        <button
-          onClick={() => { fetchEmails(); fetchStats(); }}
-          className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-400 hover:text-white hover:border-white/30 transition-colors"
-        >
-          <RefreshCw className="h-4 w-4" /> Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchFromResend}
+            disabled={loadingResend}
+            className="flex items-center gap-2 rounded-lg border border-[#D4AF37]/40 px-4 py-2 text-sm text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors disabled:opacity-50"
+            title="Trazer lista de emails enviados direto da Resend (quando o banco está vazio)"
+          >
+            {loadingResend ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Inbox className="h-4 w-4" />}
+            {loadingResend ? 'Carregando…' : 'Carregar do Resend'}
+          </button>
+          <button
+            onClick={() => { setListFromResend(false); fetchEmails(); fetchStats(); }}
+            className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -265,11 +356,16 @@ export default function EmailAdminPage() {
             <option value="">Todos os status</option>
             <option value="queued">Queued</option>
             <option value="sent">Sent</option>
+            <option value="scheduled">Scheduled</option>
             <option value="delivered">Delivered</option>
+            <option value="delivery_delayed">Delivery delayed</option>
             <option value="opened">Opened</option>
+            <option value="clicked">Clicked</option>
             <option value="bounced">Bounced</option>
             <option value="complained">Complained</option>
             <option value="failed">Failed</option>
+            <option value="suppressed">Suppressed</option>
+            <option value="canceled">Canceled</option>
           </select>
         </div>
 
@@ -430,6 +526,11 @@ export default function EmailAdminPage() {
               {/* Info Tab */}
               {modalTab === 'info' && (
                 <div className="space-y-4">
+                  {(selectedEmail as { source?: string }).source === 'resend' && (
+                    <p className="rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-sm text-[#D4AF37]">
+                      Dados vindos do histórico Resend. Preview e timeline só existem para emails registrados no nosso banco.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { label: 'De', value: selectedEmail.from_email },
@@ -499,7 +600,32 @@ export default function EmailAdminPage() {
               {/* Preview Tab */}
               {modalTab === 'preview' && (
                 <div>
-                  {selectedEmail.html_content ? (
+                  {(selectedEmail as { source?: string }).source === 'resend' ? (
+                    <>
+                      {loadingResendPreview ? (
+                        <div className="flex items-center justify-center gap-2 py-12 text-gray-400">
+                          <RefreshCw className="h-5 w-5 animate-spin" />
+                          <span>Carregando HTML da Resend...</span>
+                        </div>
+                      ) : resendPreviewHtml ? (
+                        <div className="rounded-lg border border-white/10 overflow-hidden">
+                          <div className="bg-white">
+                            <iframe
+                              srcDoc={resendPreviewHtml}
+                              className="w-full min-h-[500px] border-0"
+                              title="Email Preview (Resend)"
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 text-gray-500">
+                          <Mail className="h-8 w-8 mx-auto mb-2 text-gray-600" />
+                          <p>Preview não disponível — Resend não retornou HTML para este email</p>
+                        </div>
+                      )}
+                    </>
+                  ) : selectedEmail.html_content ? (
                     <div className="rounded-lg border border-white/10 overflow-hidden">
                       <div className="bg-white">
                         <iframe
@@ -584,6 +710,7 @@ export default function EmailAdminPage() {
                 >
                   Fechar
                 </button>
+                {(selectedEmail as { source?: string }).source !== 'resend' && (
                 <button
                   onClick={handleResend}
                   disabled={resending}
@@ -595,6 +722,7 @@ export default function EmailAdminPage() {
                     <><RotateCcw className="h-4 w-4" /> Reenviar</>
                   )}
                 </button>
+                )}
               </div>
             </div>
           </div>

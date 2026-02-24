@@ -18,6 +18,16 @@
   color: #ffffff !important;
 }
 
+/* CTA do header: texto sempre branco (não sobrescrever pelo lightTheme) */
+.darkHeader .headerCta,
+.lightTheme .darkHeader .headerCta {
+  color: #ffffff !important;
+}
+.darkHeader .headerCta svg,
+.lightTheme .darkHeader .headerCta svg {
+  color: #ffffff !important;
+}
+
 .darkHeader :global([class*='border-white']),
 .darkFooter :global([class*='border-white']) {
   border-color: rgba(255, 255, 255, 0.2) !important;

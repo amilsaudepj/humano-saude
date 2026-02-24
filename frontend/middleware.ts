@@ -77,6 +77,7 @@ const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/treinamento': 'nav_ops_treinamento',
   '/portal-interno-hks-2026/whatsapp': 'nav_com_whatsapp',
   '/portal-interno-hks-2026/chat': 'nav_com_chat',
+  '/portal-interno-hks-2026/chat/permissoes': 'nav_com_chat_permissoes',
   '/portal-interno-hks-2026/email': 'nav_com_email',
   '/portal-interno-hks-2026/notificacoes': 'nav_com_notificacoes',
   '/portal-interno-hks-2026/analytics': 'mkt_view_analytics',

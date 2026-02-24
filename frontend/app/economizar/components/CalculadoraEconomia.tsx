@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Shield,
   Sparkles,
-  Bot,
+  Search,
   Camera,
   AlertCircle,
   Building2,
@@ -177,6 +177,180 @@ const DOCUMENTOS_INICIAIS: DocumentoUpload[] = [
 ];
 
 // =============================================
+// CARD 2 — Sequência animada: lupa na fatura → empresas → redução encontrada
+// =============================================
+
+function Card2Animacao({ active }: { active: boolean }) {
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setPhase((p) => (p + 1) % 3), 2600);
+    return () => clearInterval(t);
+  }, [active]);
+  useEffect(() => {
+    if (active) setPhase(0);
+  }, [active]);
+
+  return (
+    <motion.div
+      className="relative w-28 h-36 sm:w-28 sm:h-36 md:w-32 md:h-40 lg:w-36 lg:h-44 rounded-xl bg-gradient-to-br from-[#9b7316]/15 to-[#9b7316]/5 border border-[#9b7316]/30 shadow-xl shadow-[#9b7316]/10 flex flex-col items-center justify-center overflow-hidden"
+    >
+      <div className="absolute inset-0 bg-gradient-to-t from-[#9b7316]/12 to-transparent" />
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2">
+        <AnimatePresence mode="wait">
+          {/* Fase 1: Lupa escaneando a fatura */}
+          {phase === 0 && (
+            <motion.div
+              key="lupa"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+            >
+              <div className="relative">
+                <FileText className="h-8 w-8 sm:h-9 sm:w-9 text-[#8a650c]/70" strokeWidth={1.5} />
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  initial={{ x: -12 }}
+                  animate={{ x: 12 }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 0.3, ease: 'easeInOut' }}
+                >
+                  <Search className="h-5 w-5 sm:h-6 sm:w-6 text-[#8a650c]" strokeWidth={2.5} />
+                </motion.div>
+              </div>
+              <span className="text-[11px] sm:text-xs text-[#8a650c] font-bold text-center leading-tight">IA analisando</span>
+            </motion.div>
+          )}
+          {/* Fase 2: Empresas aparecendo */}
+          {phase === 1 && (
+            <motion.div
+              key="empresas"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+            >
+              <div className="flex items-end gap-0.5 sm:gap-1">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.15, duration: 0.4 }}
+                  >
+                    <Building2 className="h-6 w-6 sm:h-7 sm:w-7 text-[#8a650c]" strokeWidth={1.8} />
+                  </motion.div>
+                ))}
+              </div>
+              <span className="text-[11px] sm:text-xs text-[#8a650c] font-bold text-center">Operadoras</span>
+            </motion.div>
+          )}
+          {/* Fase 3: Redução encontrada */}
+          {phase === 2 && (
+            <motion.div
+              key="reducao"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-0.5"
+            >
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="text-xs sm:text-sm text-[#8a650c] font-bold text-center leading-tight block"
+              >
+                Redução<br />encontrada
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+                className="text-base sm:text-lg font-black text-[#17663b]"
+              >
+                -35%
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full bg-[#8a650c]/45 opacity-50" />
+      <div className="absolute bottom-8 left-3 h-1 w-1 rounded-full bg-[#8a650c]/35 opacity-50" />
+    </motion.div>
+  );
+}
+
+// =============================================
+// CARD 3 — Economia com animação de redução
+// =============================================
+
+const ECONOMIA_PCT_FINAL = 40;
+const ECONOMIA_DURATION_MS = 2200; // subida suave até 40% em 2.2s
+const ECONOMIA_TICK_MS = 55;       // atualiza a cada ~55ms
+
+function Card3EconomiaAnimacao({ active }: { active: boolean }) {
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setPct(0);
+      return;
+    }
+    setPct(0);
+    const steps = Math.ceil(ECONOMIA_DURATION_MS / ECONOMIA_TICK_MS);
+    const stepValue = ECONOMIA_PCT_FINAL / steps;
+    let step = 0;
+    const t = setInterval(() => {
+      step += 1;
+      const value = Math.min(
+        ECONOMIA_PCT_FINAL,
+        Math.round(step * stepValue),
+      );
+      setPct(value);
+      if (value >= ECONOMIA_PCT_FINAL) clearInterval(t);
+    }, ECONOMIA_TICK_MS);
+    return () => clearInterval(t);
+  }, [active]);
+
+  return (
+    <motion.div
+      className="relative w-28 h-36 sm:w-28 sm:h-36 md:w-32 md:h-40 lg:w-36 lg:h-44 rounded-xl bg-gradient-to-br from-[#0d5c34]/20 to-[#0d5c34]/8 border border-[#17663b]/40 shadow-xl shadow-[#17663b]/10 flex flex-col items-center justify-center gap-2 overflow-hidden"
+    >
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0d5c34]/15 to-transparent" />
+      {/* Ícone seta para baixo — redução */}
+      <div className="relative z-10 flex flex-col items-center gap-0.5">
+        <TrendingDown className="h-6 w-6 sm:h-7 sm:w-7 text-[#0d5c34]" strokeWidth={2.5} />
+        <span className="text-xs sm:text-sm font-bold text-[#0d5c34] tracking-tight">Economia</span>
+      </div>
+      {/* Destaque: percentual em pill — sem key para não piscar; número sobe suave */}
+      <motion.div
+        initial={{ opacity: 0.7, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative z-10 px-3 py-1.5 rounded-lg bg-[#0d5c34]/25 border border-[#0d5c34]/40"
+      >
+        <span className="text-lg sm:text-xl font-black tabular-nums text-[#0d5c34] leading-none transition-opacity duration-75">
+          -{active ? pct : 0}%
+        </span>
+      </motion.div>
+      {/* Barra sutil de redução (opcional, mais discreta) */}
+      <div className="relative z-10 w-full px-3">
+        <div className="h-1 w-full rounded-full bg-[#0d5c34]/15 overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-[#0d5c34]/40"
+            initial={{ width: '100%' }}
+            animate={active ? { width: ['100%', '65%', '100%'] } : { width: '100%' }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================
 // COMPONENTE PRINCIPAL
 // =============================================
 
@@ -188,6 +362,24 @@ export default function CalculadoraEconomia({
   const [etapa, setEtapa] = useState<Etapa>('upload');
   const [uploading, setUploading] = useState(false);
   const [calculando, setCalculando] = useState(false);
+
+  // Fase dos cards do hero (0 → 1 → 2 → 0): efeito de carregamento em sequência
+  // Fase 2 (último card) dura mais para “demorar um pouco mais pra recomeçar o looping”
+  const [heroPhase, setHeroPhase] = useState(0);
+  useEffect(() => {
+    const delays = [2500, 2500, 6800]; // ms: card 1, card 2, card 3 (último demora mais a mudar)
+    const phaseRef = { current: 0 };
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timeoutId = setTimeout(() => {
+        phaseRef.current = (phaseRef.current + 1) % 3;
+        setHeroPhase(phaseRef.current);
+        schedule();
+      }, delays[phaseRef.current]);
+    };
+    schedule();
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Progresso OCR
   const [ocrProgresso, setOcrProgresso] = useState(0);
@@ -970,13 +1162,15 @@ export default function CalculadoraEconomia({
             href="https://wa.me/5521988179407?text=Ol%C3%A1!%20Vim%20do%20link%20de%20economia%20e%20quero%20saber%20mais%20sobre%20redu%C3%A7%C3%A3o%20do%20meu%20plano%20de%20sa%C3%BAde."
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D4AF37] text-white text-sm font-semibold hover:bg-[#c9a432] transition-all shadow-lg shadow-[#D4AF37]/20"
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D4AF37] text-sm font-semibold hover:bg-[#c9a432] transition-all shadow-lg shadow-[#D4AF37]/20',
+              styles.headerCta,
+            )}
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.52.909 3.033 1.389 4.625 1.39 5.313 0 9.636-4.322 9.638-9.634.001-2.574-1.001-4.995-2.823-6.818-1.821-1.822-4.241-2.826-6.816-2.827-5.313 0-9.636 4.323-9.638 9.636-.001 1.761.474 3.483 1.378 5.008l-.995 3.633 3.731-.978zm10.748-6.377c-.283-.141-1.669-.824-1.928-.918-.258-.094-.446-.141-.634.141-.188.281-.727.918-.891 1.104-.164.187-.328.21-.611.069-.283-.141-1.194-.441-2.274-1.405-.841-.75-1.408-1.676-1.573-1.958-.164-.282-.018-.434.123-.574.127-.127.283-.329.424-.494.141-.164.188-.282.283-.47.094-.188.047-.353-.023-.494-.071-.141-.634-1.529-.868-2.094-.229-.553-.46-.478-.634-.487-.164-.007-.353-.008-.542-.008s-.494.07-.753.353c-.259.282-.988.965-.988 2.353s1.012 2.729 1.153 2.917c.141.188 1.992 3.041 4.825 4.264.674.291 1.2.464 1.61.594.677.215 1.293.185 1.781.112.544-.081 1.669-.682 1.904-1.341.235-.659.235-1.223.164-1.341-.07-.117-.258-.188-.541-.329z"/>
             </svg>
-            <span className="hidden sm:inline">Especialista Online</span>
-            <span className="sm:hidden">Online</span>
+            <span>Analisar com Especialista</span>
           </a>
         </div>
       </header>
@@ -1015,18 +1209,37 @@ export default function CalculadoraEconomia({
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.7 }}
-              className="flex items-center justify-center gap-3 sm:gap-5"
+              className="flex items-center justify-center gap-3 sm:gap-5 md:gap-6 lg:gap-8"
             >
-              {/* Card 1 — Fatura */}
+              {/* Card 1 — em destaque quando heroPhase === 0 (vem à frente e maior) */}
               <motion.div
-                animate={{ rotateY: [0, 8, 0, -8, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative w-20 h-28 sm:w-24 sm:h-32 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.12] shadow-xl shadow-black/30 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
-                style={{ transformStyle: 'preserve-3d' }}
+                animate={{
+                  opacity: heroPhase >= 0 ? 1 : 0.45,
+                  scale: heroPhase === 0 ? 1.14 : 0.92,
+                  zIndex: heroPhase === 0 ? 20 : 0,
+                }}
+                transition={{
+                  opacity: { duration: 0.35 },
+                  scale: { duration: 0.35, ease: 'easeOut' },
+                  zIndex: { duration: 0 },
+                }}
+                className="relative w-26 h-34 sm:w-24 sm:h-32 md:w-28 md:h-36 lg:w-32 lg:h-40 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.12] border-dashed shadow-xl shadow-black/30 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
+                style={{ position: 'relative' }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 to-transparent" />
-                <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-white/50 relative z-10" />
-                <span className="text-[9px] sm:text-[10px] text-white/40 font-medium relative z-10">Fatura</span>
+                <div className="relative z-10 flex flex-col items-center gap-1">
+                  <div className="relative flex flex-col items-center gap-0.5">
+                    <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-white/50" />
+                    <motion.div
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="flex items-center justify-center"
+                    >
+                      <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-[#D4AF37]/80" strokeWidth={2.5} />
+                    </motion.div>
+                  </div>
+                  <span className="text-[11px] sm:text-xs text-white/40 font-medium">Upload fatura</span>
+                </div>
                 <div className="absolute bottom-1.5 left-2 right-2 space-y-1">
                   <div className="h-[2px] bg-white/10 rounded-full" />
                   <div className="h-[2px] bg-white/8 rounded-full w-3/4" />
@@ -1034,85 +1247,74 @@ export default function CalculadoraEconomia({
                 </div>
               </motion.div>
 
-              {/* Seta animada 1 */}
-              <div className="flex flex-col items-center gap-1">
+              {/* Seta 1 — acende quando card 2 ativa */}
+              <motion.div
+                animate={{ opacity: heroPhase >= 1 ? 1 : 0.35 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-1"
+              >
                 <motion.div
-                  animate={{ x: [0, 6, 0] }}
+                  animate={{ x: heroPhase >= 1 ? [0, 6, 0] : 0 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                 >
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#9b7316]/70" />
                 </motion.div>
-              </div>
-
-              {/* Card 2 — Processando */}
-              <motion.div
-                animate={{ rotateY: [0, -6, 0, 6, 0], scale: [1, 1.03, 1] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-[#9b7316]/15 to-[#9b7316]/5 border border-[#9b7316]/30 shadow-xl shadow-[#9b7316]/10 flex flex-col items-center justify-center gap-2 overflow-hidden"
-                style={{ transformStyle: 'preserve-3d' }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-[#9b7316]/12 to-transparent" />
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                  className="relative z-10"
-                >
-                  <Bot className="h-8 w-8 sm:h-9 sm:w-9 text-[#8a650c]" />
-                </motion.div>
-                <span className="text-[9px] sm:text-[10px] text-[#8a650c] font-bold relative z-10">Analisando</span>
-                {/* Partículas */}
-                <motion.div
-                  animate={{ opacity: [0.2, 0.6, 0.2], y: [-2, 2, -2] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full bg-[#8a650c]/45"
-                />
-                <motion.div
-                  animate={{ opacity: [0.3, 0.7, 0.3], y: [2, -2, 2] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                  className="absolute bottom-8 left-3 h-1 w-1 rounded-full bg-[#8a650c]/35"
-                />
               </motion.div>
 
-              {/* Seta animada 2 */}
-              <div className="flex flex-col items-center gap-1">
+              {/* Card 2 — em destaque quando heroPhase === 1 (vem à frente e maior) */}
+              <motion.div
+                animate={{
+                  opacity: heroPhase >= 1 ? 1 : 0.45,
+                  scale: heroPhase === 1 ? 1.14 : 0.92,
+                  zIndex: heroPhase === 1 ? 20 : 0,
+                }}
+                transition={{
+                  opacity: { duration: 0.35 },
+                  scale: { duration: 0.35, ease: 'easeOut' },
+                  zIndex: { duration: 0 },
+                }}
+                style={{ position: 'relative' }}
+              >
+                <Card2Animacao active={heroPhase >= 1} />
+              </motion.div>
+
+              {/* Seta 2 — acende quando card 3 ativa */}
+              <motion.div
+                animate={{ opacity: heroPhase >= 2 ? 1 : 0.35 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-1"
+              >
                 <motion.div
-                  animate={{ x: [0, 6, 0] }}
+                  animate={{ x: heroPhase >= 2 ? [0, 6, 0] : 0 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                 >
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-[#9b7316]/70" />
                 </motion.div>
-              </div>
+              </motion.div>
 
-              {/* Card 3 — Propostas com economia */}
+              {/* Card 3 — em destaque quando heroPhase === 2 (vem à frente e maior) */}
               <motion.div
-                animate={{ rotateY: [0, 6, 0, -6, 0] }}
-                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-xl bg-gradient-to-br from-[#1d7f4a]/12 to-[#1d7f4a]/6 border border-[#1d7f4a]/30 shadow-xl shadow-[#1d7f4a]/10 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
-                style={{ transformStyle: 'preserve-3d' }}
+                animate={{
+                  opacity: heroPhase >= 2 ? 1 : 0.45,
+                  scale: heroPhase === 2 ? 1.14 : 0.92,
+                  zIndex: heroPhase === 2 ? 20 : 0,
+                }}
+                transition={{
+                  opacity: { duration: 0.35 },
+                  scale: { duration: 0.35, ease: 'easeOut' },
+                  zIndex: { duration: 0 },
+                }}
+                style={{ position: 'relative' }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1d7f4a]/12 to-transparent" />
-                <TrendingDown className="h-7 w-7 sm:h-8 sm:w-8 text-[#17663b] relative z-10" />
-                <span className="text-[9px] sm:text-[10px] text-[#17663b] font-bold relative z-10">Economia</span>
-                <motion.div
-                  animate={{ scale: [0.95, 1.05, 0.95] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="relative z-10"
-                >
-                  <span className="text-xs sm:text-sm font-black text-[#17663b]">-35%</span>
-                </motion.div>
-                {/* Mini cards de proposta */}
-                <div className="absolute bottom-2 left-2 right-2 space-y-0.5">
-                  <div className="h-[3px] bg-[#17663b]/25 rounded-full" />
-                  <div className="h-[3px] bg-[#17663b]/18 rounded-full w-4/5" />
-                </div>
+                <Card3EconomiaAnimacao active={heroPhase >= 2} />
               </motion.div>
             </motion.div>
           </div>
         </motion.div>
         )}
 
-        {/* Steps indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
+        {/* Steps indicator — ícones maiores no mobile e legenda sempre visível */}
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mb-8 flex-wrap">
           {[
             { id: 'upload', label: 'Fatura', icon: Upload },
             { id: 'dados', label: 'Dados', icon: Calculator },
@@ -1126,18 +1328,18 @@ export default function CalculadoraEconomia({
             const stepIdx = stepOrder.indexOf(step.id);
             const isPast = stepIdx < currentIndex;
             return (
-              <div key={step.id} className="flex items-center gap-2">
+              <div key={step.id} className="flex items-center gap-1 sm:gap-2">
                 {i > 0 && (
                   <div
                     className={cn(
-                      'w-6 sm:w-8 h-[2px]',
+                      'w-4 sm:w-8 h-[2px] flex-shrink-0',
                       isPast ? 'bg-[#D4AF37]' : 'bg-white/10',
                     )}
                   />
                 )}
                 <div
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                    'flex flex-col sm:flex-row sm:items-center items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-full text-xs font-medium transition-all min-w-[56px] sm:min-w-0',
                     isActive
                       ? 'bg-[#D4AF37] text-black'
                       : isPast
@@ -1146,11 +1348,11 @@ export default function CalculadoraEconomia({
                   )}
                 >
                   {isPast ? (
-                    <CheckCircle className="h-3.5 w-3.5" />
+                    <CheckCircle className="h-5 w-5 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                   ) : (
-                    <StepIcon className="h-3.5 w-3.5" />
+                    <StepIcon className="h-5 w-5 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                   )}
-                  <span className="hidden sm:inline">{step.label}</span>
+                  <span className="text-[10px] sm:text-xs font-semibold">{step.label}</span>
                 </div>
               </div>
             );
@@ -1287,12 +1489,12 @@ export default function CalculadoraEconomia({
                     </div>
                   )}
 
-                  {/* Duas opções lado a lado: Câmera e Enviar arquivo */}
+                  {/* Duas opções: no mobile "Enviar arquivo" primeiro; no desktop lado a lado */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Tirar foto */}
+                    {/* Tirar foto — no mobile aparece em segundo (order-2) */}
                     <button
                       onClick={startCamera}
-                      className="bg-white/[0.03] border-2 border-dashed border-white/[0.12] rounded-2xl p-8 text-center hover:border-[#D4AF37]/30 transition-all cursor-pointer group flex flex-col items-center gap-4"
+                      className="bg-white/[0.03] border-2 border-dashed border-white/[0.12] rounded-2xl p-8 text-center hover:border-[#D4AF37]/30 transition-all cursor-pointer group flex flex-col items-center gap-4 order-2 sm:order-1"
                     >
                       <div className="h-16 w-16 rounded-2xl bg-white/[0.05] flex items-center justify-center group-hover:bg-[#D4AF37]/10 transition-all">
                         <Camera className="h-7 w-7 text-white/30 group-hover:text-[#D4AF37] transition-colors" />
@@ -1307,11 +1509,11 @@ export default function CalculadoraEconomia({
                       </div>
                     </button>
 
-                    {/* Enviar arquivo */}
+                    {/* Enviar arquivo — no mobile aparece primeiro (order-1) */}
                     <div
                       onDrop={handleDrop}
                       onDragOver={(e) => e.preventDefault()}
-                      className="bg-white/[0.03] border-2 border-dashed border-white/[0.12] rounded-2xl p-8 text-center hover:border-[#D4AF37]/30 transition-all cursor-pointer group flex flex-col items-center gap-4"
+                      className="bg-white/[0.03] border-2 border-dashed border-white/[0.12] rounded-2xl p-8 text-center hover:border-[#D4AF37]/30 transition-all cursor-pointer group flex flex-col items-center gap-4 order-1 sm:order-2"
                     >
                       <input
                         type="file"

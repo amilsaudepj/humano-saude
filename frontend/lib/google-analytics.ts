@@ -609,6 +609,7 @@ export async function getAgeGroups(start?: string | null, end?: string | null) {
 
 // =====================================================
 // 10. getRealtimeData — Usuários ativos agora
+// Total sem dimensões para não inflar (somar por página contava 2x o mesmo usuário)
 // =====================================================
 
 export async function getRealtimeData() {
@@ -616,25 +617,36 @@ export async function getRealtimeData() {
   if (!ga4) return null;
   const { client, property } = ga4;
 
-  const [response] = await client.runRealtimeReport({
-    property,
-    dimensions: [{ name: 'unifiedScreenName' }],
-    metrics: [{ name: 'activeUsers' }],
-    limit: 10,
-  });
+  const [totalTuple, pagesTuple] = await Promise.all([
+    client.runRealtimeReport({
+      property,
+      metrics: [{ name: 'activeUsers' }],
+    }),
+    client.runRealtimeReport({
+      property,
+      dimensions: [{ name: 'unifiedScreenName' }],
+      metrics: [{ name: 'activeUsers' }],
+      limit: 10,
+    }),
+  ]);
+  const totalRes = Array.isArray(totalTuple) ? totalTuple[0] : totalTuple;
+  const pagesRes = Array.isArray(pagesTuple) ? pagesTuple[0] : pagesTuple;
 
-  const rows = response.rows || [];
-  const totalActive = rows.reduce(
-    (sum: number, row: GA4Row) => sum + parseInt(row.metricValues?.[0]?.value ?? '0'),
-    0
-  );
+  const totalRows = totalRes.rows || [];
+  const totalActive =
+    totalRows.length > 0
+      ? parseInt(totalRows[0].metricValues?.[0]?.value ?? '0')
+      : 0;
+
+  const pagesRows = pagesRes.rows || [];
+  const pages = pagesRows.map((row: GA4Row) => ({
+    page: row.dimensionValues?.[0]?.value ?? 'Unknown',
+    users: parseInt(row.metricValues?.[0]?.value ?? '0'),
+  }));
 
   return {
     activeUsers: totalActive,
-    pages: rows.map((row: GA4Row) => ({
-      page: row.dimensionValues?.[0]?.value ?? 'Unknown',
-      users: parseInt(row.metricValues?.[0]?.value ?? '0'),
-    })),
+    pages,
   };
 }
 

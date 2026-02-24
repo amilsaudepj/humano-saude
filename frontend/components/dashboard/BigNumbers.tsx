@@ -50,10 +50,14 @@ function DeltaBadge({ value }: { value: number }) {
 interface BigNumbersProps {
   metrics: BigNumbersMetrics;
   loading?: boolean;
+  /** Ex.: "30d" — exibido no card Visitantes para não confundir com "online agora" (badge LIVE) */
+  periodLabel?: string;
 }
 
-export default function BigNumbers({ metrics, loading }: BigNumbersProps) {
+export default function BigNumbers({ metrics, loading, periodLabel }: BigNumbersProps) {
   const financials = calculateNetProfit(metrics.revenue, metrics.paid_sales);
+  const visitorsLabel = periodLabel ? `Visitantes (${periodLabel})` : 'Visitantes';
+  const visitorsSubtitle = periodLabel ? 'no período — ao vivo no badge' : undefined;
 
   const cards = [
     {
@@ -85,12 +89,13 @@ export default function BigNumbers({ metrics, loading }: BigNumbersProps) {
       bg: 'bg-purple-500/10',
     },
     {
-      label: 'Visitantes',
+      label: visitorsLabel,
       value: metrics.unique_visitors,
       delta: metrics.visitors_change,
       icon: Users,
       color: 'text-cyan-400',
       bg: 'bg-cyan-500/10',
+      subtitle: visitorsSubtitle,
     },
     {
       label: 'Conversão',

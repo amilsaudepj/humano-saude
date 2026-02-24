@@ -64,6 +64,7 @@ export const PERMISSION_KEYS = [
   // Navegação — sub-itens Comunicação
   'nav_com_whatsapp',
   'nav_com_chat',
+  'nav_com_chat_permissoes',
   'nav_com_email',
   'nav_com_notificacoes',
   // Navegação — sub-itens Financeiro
@@ -215,6 +216,7 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         children: [
           { key: 'nav_com_whatsapp', label: 'WhatsApp', sidebarId: 'com-whatsapp' },
           { key: 'nav_com_chat', label: 'Chat Equipe', sidebarId: 'com-chat' },
+          { key: 'nav_com_chat_permissoes', label: 'Permissões Chat', sidebarId: 'com-chat-permissoes' },
           { key: 'nav_com_email', label: 'E-mail', sidebarId: 'com-email' },
           { key: 'nav_com_notificacoes', label: 'Notificações', sidebarId: 'com-notificacoes' },
         ],
@@ -463,6 +465,7 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, PermissionKey> = {
   // Sub-itens Comunicação
   'com-whatsapp': 'nav_com_whatsapp',
   'com-chat': 'nav_com_chat',
+  'com-chat-permissoes': 'nav_com_chat_permissoes',
   'com-email': 'nav_com_email',
   'com-notificacoes': 'nav_com_notificacoes',
 
@@ -557,6 +560,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/portal-interno-hks-2026/financeiro/extrato': 'nav_fin_extrato',
   '/portal-interno-hks-2026/whatsapp': 'nav_com_whatsapp',
   '/portal-interno-hks-2026/chat': 'nav_com_chat',
+  '/portal-interno-hks-2026/chat/permissoes': 'nav_com_chat_permissoes',
   '/portal-interno-hks-2026/email': 'nav_com_email',
   '/portal-interno-hks-2026/notificacoes': 'nav_com_notificacoes',
   '/portal-interno-hks-2026/analytics': 'mkt_view_analytics',

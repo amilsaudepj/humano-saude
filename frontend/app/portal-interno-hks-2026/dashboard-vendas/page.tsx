@@ -234,7 +234,7 @@ export default function DashboardVendasPage() {
       ) : (
         <>
           {/* Big Numbers */}
-          {data.metrics && <BigNumbers metrics={data.metrics} />}
+          {data.metrics && <BigNumbers metrics={data.metrics} periodLabel={period} />}
 
           {/* ROI + Meta Ads Summary */}
           <div className="grid gap-4 md:grid-cols-3">

@@ -1,12 +1,13 @@
 -- =====================================================
--- MIGRATION: Portal de clientes da calculadora /economizar
--- Data: 2026-02-17
+-- ALTERNATIVA: portal_client_accounts SEM FK para insurance_leads
+-- Use este arquivo se 20260217 falhar por "insurance_leads não existe".
+-- Cria a tabela com lead_id nullable (sem FK).
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.portal_client_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  lead_id UUID UNIQUE REFERENCES public.insurance_leads(id) ON DELETE CASCADE,
-  corretor_id UUID REFERENCES public.corretores(id) ON DELETE SET NULL,
+  lead_id UUID UNIQUE,
+  corretor_id UUID,
   nome TEXT NOT NULL,
   email TEXT NOT NULL,
   telefone TEXT,
@@ -24,10 +25,8 @@ CREATE TABLE IF NOT EXISTS public.portal_client_accounts (
 
 CREATE INDEX IF NOT EXISTS idx_portal_client_accounts_email
   ON public.portal_client_accounts (LOWER(email));
-
 CREATE INDEX IF NOT EXISTS idx_portal_client_accounts_status
   ON public.portal_client_accounts (status);
-
 CREATE INDEX IF NOT EXISTS idx_portal_client_accounts_corretor
   ON public.portal_client_accounts (corretor_id);
 
@@ -40,7 +39,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_set_portal_client_accounts_updated_at ON public.portal_client_accounts;
-
 CREATE TRIGGER trg_set_portal_client_accounts_updated_at
 BEFORE UPDATE ON public.portal_client_accounts
 FOR EACH ROW

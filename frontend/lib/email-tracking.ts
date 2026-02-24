@@ -79,6 +79,66 @@ export async function logEmailToDb(
   }
 }
 
+// ─── Payload completo que vem da Resend (list + detail) ───────
+export type ResendSyncItem = {
+  id: string;
+  to: string[];
+  from: string;
+  subject: string;
+  last_event: string | null;
+  created_at: string;
+  html_content?: string | null;
+  text_content?: string | null;
+  cc?: string[] | null;
+  bcc?: string[] | null;
+  reply_to?: string[] | null;
+  scheduled_at?: string | null;
+  tags?: Array<{ name: string; value: string }> | null;
+  /** Qualquer outro campo da API Resend (guardado em metadata) */
+  [key: string]: unknown;
+};
+
+// ─── Sync Resend → email_logs (tudo que vier da Resend) ───────
+export async function syncResendEmailsToDb(items: ResendSyncItem[]): Promise<{ synced: number; errors: number }> {
+  if (items.length === 0) return { synced: 0, errors: 0 };
+  const supabase = createServiceClient();
+  let synced = 0;
+  const now = new Date().toISOString();
+  for (const e of items) {
+    const toEmail = Array.isArray(e.to) ? e.to[0] ?? '' : String(e.to);
+    const replyTo = Array.isArray(e.reply_to) && e.reply_to.length > 0 ? e.reply_to[0] : null;
+    const metadata: Record<string, unknown> = {
+      resend_sync_at: now,
+      ...(e.scheduled_at && { resend_scheduled_at: e.scheduled_at }),
+      ...(e.tags && e.tags.length > 0 && { resend_tags: e.tags }),
+    };
+    const record = {
+      resend_id: e.id,
+      from_email: e.from ?? 'Humano Saúde <noreply@humanosaude.com.br>',
+      to_email: toEmail,
+      cc_emails: (e.cc && e.cc.length > 0 ? e.cc : null) as string[] | null,
+      bcc_emails: (e.bcc && e.bcc.length > 0 ? e.bcc : null) as string[] | null,
+      reply_to: replyTo,
+      subject: e.subject ?? '',
+      status: e.last_event ?? 'sent',
+      last_event: e.last_event ?? null,
+      email_type: 'transactional' as const,
+      triggered_by: 'resend_sync',
+      created_at: e.created_at,
+      updated_at: now,
+      html_content: e.html_content ?? null,
+      text_content: e.text_content ?? null,
+      metadata,
+    };
+    const { error } = await supabase
+      .from('email_logs')
+      .upsert(record, { onConflict: 'resend_id', ignoreDuplicates: false });
+    if (!error) synced++;
+    else if (error.code !== '23505') logger.error('[email-tracking] syncResendEmailsToDb row error:', error.message);
+  }
+  return { synced, errors: items.length - synced };
+}
+
 // ─── Update email log after send ─────────────────────────────
 export async function updateEmailLog(
   logId: string,
@@ -212,12 +272,13 @@ export async function getEmailStats(): Promise<EmailStats | null> {
     const { data, error } = await supabase
       .from('email_stats')
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error('[email-tracking] Failed to get stats:', error.message);
       return null;
     }
+    if (!data) return null;
 
     return data as EmailStats;
   } catch (err) {
@@ -266,8 +327,14 @@ export async function listEmails(params: ListEmailsParams): Promise<ListEmailsRe
   const { data, error, count } = await query;
 
   if (error) {
-    logger.error('[email-tracking] Failed to list emails:', error.message);
-    return { emails: [], total: 0, page, limit, totalPages: 0 };
+    logger.error('[email-tracking] Failed to list emails:', error, { code: error.code });
+    const msg =
+      error.code === '42P01'
+        ? 'Tabela email_logs não existe. Execute a migration database/migrations/20260212_email_tracking_system.sql no Supabase.'
+        : error.code === '42501'
+          ? 'Sem permissão para ler email_logs. Verifique RLS e service role.'
+          : error.message;
+    throw new Error(msg);
   }
 
   const total = count || 0;
@@ -369,7 +436,7 @@ export function parseUserAgent(ua: string): ParsedUserAgent {
   return result;
 }
 
-// ─── Get status badge color ──────────────────────────────────
+// ─── Get status badge color (alinhado ao last_event da Resend) ─
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     queued: 'bg-gray-500/20 text-gray-400',
@@ -380,6 +447,10 @@ export function getStatusColor(status: string): string {
     bounced: 'bg-red-500/20 text-red-400',
     complained: 'bg-orange-500/20 text-orange-400',
     failed: 'bg-red-500/20 text-red-400',
+    scheduled: 'bg-amber-500/20 text-amber-400',
+    delivery_delayed: 'bg-yellow-500/20 text-yellow-400',
+    suppressed: 'bg-slate-500/20 text-slate-400',
+    canceled: 'bg-gray-500/20 text-gray-500',
   };
   return colors[status] || colors.queued;
 }

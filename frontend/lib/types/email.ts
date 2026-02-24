@@ -84,16 +84,20 @@ export interface EmailStats {
   calculated_at: string;
 }
 
-// ─── Enums ───────────────────────────────────────────────────
+// ─── Enums (alinhados ao last_event da Resend) ─────────────────
 export type EmailStatus =
   | 'queued'
   | 'sent'
+  | 'scheduled'
   | 'delivered'
+  | 'delivery_delayed'
   | 'opened'
   | 'clicked'
   | 'bounced'
   | 'complained'
-  | 'failed';
+  | 'failed'
+  | 'suppressed'
+  | 'canceled';
 
 export type EmailType = 'transactional' | 'marketing' | 'system';
 

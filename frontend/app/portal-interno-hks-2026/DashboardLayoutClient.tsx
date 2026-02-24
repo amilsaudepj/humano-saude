@@ -45,6 +45,7 @@ const ADMIN_TITLE_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/renovacoes': 'Renovações',
   '/portal-interno-hks-2026/whatsapp': 'WhatsApp',
   '/portal-interno-hks-2026/chat': 'Chat',
+  '/portal-interno-hks-2026/chat/permissoes': 'Permissões Chat',
   '/portal-interno-hks-2026/email': 'E-mail',
   '/portal-interno-hks-2026/notificacoes': 'Notificações',
   '/portal-interno-hks-2026/producao': 'Produção',

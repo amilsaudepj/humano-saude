@@ -2,7 +2,7 @@
 
 // =====================================================
 // RealtimeVisitors — Badge de visitantes online
-// Auto-refresh: 5 segundos
+// Fonte: GA4 Realtime (usuários ativos em tempo real). Auto-refresh: 5s
 // =====================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,11 +20,11 @@ export default function RealtimeVisitors({ className, showTopPage = true }: Real
 
   const fetchRealtime = useCallback(async () => {
     try {
-      const res = await fetch('/api/analytics/realtime');
+      const res = await fetch('/api/analytics/realtime', { credentials: 'include' });
       const json = await res.json();
       if (json.success && json.data) {
         setActiveUsers(json.data.activeUsers ?? 0);
-        if (json.data.pages && json.data.pages.length > 0) {
+        if (json.data.pages?.length > 0) {
           setTopPage(json.data.pages[0].page || '');
         } else {
           setTopPage('');
@@ -34,7 +34,8 @@ export default function RealtimeVisitors({ className, showTopPage = true }: Real
         setTopPage('');
       }
     } catch {
-      // silencioso
+      setActiveUsers(0);
+      setTopPage('');
     }
   }, []);
 

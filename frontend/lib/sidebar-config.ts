@@ -10,6 +10,7 @@ import {
   Gauge,
   Scale,
   ShieldAlert,
+  ShieldCheck,
   UsersRound,
   Settings,
   Sparkles,
@@ -291,6 +292,7 @@ export const sidebarItems: SidebarItem[] = [
     children: [
       { id: 'com-whatsapp', label: 'WhatsApp', icon: MessagesSquare, href: `${P}/whatsapp` },
       { id: 'com-chat', label: 'Chat Equipe', icon: MessageSquare, href: `${P}/chat` },
+      { id: 'com-chat-permissoes', label: 'Permissões Chat', icon: ShieldCheck, href: `${P}/chat/permissoes` },
       { id: 'com-email', label: 'E-mail', icon: Mail, href: `${P}/email` },
       { id: 'com-notificacoes', label: 'Notificações', icon: Bell, href: `${P}/notificacoes` },
     ],
