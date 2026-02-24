@@ -15,6 +15,8 @@ interface NotificacaoAdminEmailProps {
   comoConheceu?: string;
   motivacoes?: string;
   modalidade?: string;
+  /** Link para aprovar o cadastro em 1 clique (mesma lógica do design system). Se informado, o botão principal será "Aprovar cadastro". */
+  approveLink?: string;
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br';
@@ -29,6 +31,7 @@ export default function NotificacaoAdminEmail({
   comoConheceu = '—',
   motivacoes = '—',
   modalidade = 'digital',
+  approveLink,
 }: NotificacaoAdminEmailProps) {
   const tipoBadge = tipoPessoa === 'pj'
     ? { label: 'PESSOA JURÍDICA', bg: '#DBEAFE', color: '#1D4ED8' }
@@ -86,10 +89,26 @@ export default function NotificacaoAdminEmail({
       </Section>
 
       <Section style={buttonWrap}>
-        <Button style={primaryButton} href={`${BASE_URL}/portal-interno-hks-2026/corretores`}>
-          Analisar Solicitação →
-        </Button>
+        {approveLink ? (
+          <>
+            <Button style={primaryButton} href={approveLink}>
+              Aprovar cadastro
+            </Button>
+            <Button style={secondaryButton} href={`${BASE_URL}/portal-interno-hks-2026/corretores`}>
+              Ver no portal
+            </Button>
+          </>
+        ) : (
+          <Button style={primaryButton} href={`${BASE_URL}/portal-interno-hks-2026/corretores`}>
+            Analisar Solicitação →
+          </Button>
+        )}
       </Section>
+      {approveLink ? (
+        <Text style={small}>
+          Ao clicar em &quot;Aprovar cadastro&quot;, o corretor será criado e receberá o e-mail de boas-vindas com link de onboarding.
+        </Text>
+      ) : null}
 
       <Hr style={hr} />
     </EmailLayout>
@@ -119,5 +138,14 @@ const primaryButton: React.CSSProperties = {
   backgroundColor: '#D4AF37', borderRadius: '12px', color: '#FFFFFF',
   fontSize: '14px', fontWeight: '700', textDecoration: 'none',
   textAlign: 'center' as const, padding: '14px 36px', display: 'inline-block',
+};
+const secondaryButton: React.CSSProperties = {
+  backgroundColor: 'transparent', borderRadius: '12px', color: '#D4AF37',
+  fontSize: '14px', fontWeight: '600', textDecoration: 'none',
+  textAlign: 'center' as const, padding: '14px 24px', display: 'inline-block',
+  border: '2px solid #D4AF37', marginLeft: '12px',
+};
+const small: React.CSSProperties = {
+  fontSize: '12px', color: '#6b7280', lineHeight: 1.5, margin: '8px 0 0 0',
 };
 const hr: React.CSSProperties = { borderColor: '#E5E7EB', margin: '24px 0' };

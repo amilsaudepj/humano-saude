@@ -50,6 +50,7 @@ async function resolveTenantSlugByDomain(domain: string): Promise<string | null>
 // ─── Mapa de rotas → chaves de permissão (Edge-compatible, inlined) ────
 const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/leads': 'nav_comercial_leads',
+  '/portal-interno-hks-2026/leads-afiliados': 'nav_comercial_leads_afiliados',
   '/portal-interno-hks-2026/funil': 'nav_comercial_pipeline',
   '/portal-interno-hks-2026/crm': 'nav_comercial_crm',
   '/portal-interno-hks-2026/propostas': 'nav_comercial_propostas',
@@ -114,12 +115,12 @@ function getJwtSecret(): Uint8Array {
 }
 
 // Verificar JWT retornando payload ou null
-async function verifyJwt(token: string): Promise<{ email: string; role: string; corretor_id?: string } | null> {
+async function verifyJwt(token: string): Promise<{ email: string; role: string; corretor_id?: string; afiliado_id?: string } | null> {
   try {
     const secret = getJwtSecret();
     if (secret.length === 0) return null;
     const { payload } = await jwtVerify(token, secret);
-    return payload as { email: string; role: string; corretor_id?: string };
+    return payload as { email: string; role: string; corretor_id?: string; afiliado_id?: string };
   } catch {
     return null;
   }
@@ -407,9 +408,33 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
+  // PROTEÇÃO: /api/pdf (corretor pode usar para extrair dados de documento do afiliado)
+  // ============================================
+  if (pathname.startsWith('/api/pdf')) {
+    const token = request.cookies.get('corretor_token')?.value ||
+                  request.cookies.get('admin_token')?.value ||
+                  request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Não autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const result = await resolveToken(token);
+    if (!result.valid) {
+      return NextResponse.json(
+        { error: 'Token inválido ou expirado' },
+        { status: 401 }
+      );
+    }
+  }
+
+  // ============================================
   // PROTEÇÃO: API routes internas (exceto leads, calculadora, auth, e corretor APIs)
   // ============================================
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/email-check') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/cliente') && !pathname.startsWith('/api/design-system')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/leads') && !pathname.startsWith('/api/calculadora') && !pathname.startsWith('/api/cnpj') && !pathname.startsWith('/api/consulta-cnpj') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/health') && !pathname.startsWith('/api/email-check') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/corretor') && !pathname.startsWith('/api/afiliado') && !pathname.startsWith('/api/cliente') && !pathname.startsWith('/api/design-system') && !pathname.startsWith('/api/pdf')) {
     const token = request.cookies.get('admin_token')?.value ||
                   request.headers.get('authorization')?.replace('Bearer ', '');
 
@@ -454,6 +479,29 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
+  // PROTEÇÃO: API do Afiliado (requer afiliado_token)
+  // ============================================
+  if (pathname.startsWith('/api/afiliado')) {
+    const token = request.cookies.get('afiliado_token')?.value ||
+                  request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Não autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const result = await resolveToken(token);
+    if (!result.valid || result.role !== 'afiliado') {
+      return NextResponse.json(
+        { error: 'Token inválido ou expirado' },
+        { status: 401 }
+      );
+    }
+  }
+
+  // ============================================
   // PROTEÇÃO: Dashboard do Corretor (Multi-Tenant)
   // ============================================
   if (pathname.startsWith('/dashboard/corretor') && pathname !== '/dashboard/corretor/login' && pathname !== '/dashboard/corretor/cadastro' && !pathname.startsWith('/dashboard/corretor/onboarding')) {
@@ -481,9 +529,34 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
-  // BLOQUEIO: Rotas legadas (exceto /dashboard/corretor)
+  // PROTEÇÃO: Dashboard do Afiliado
   // ============================================
-  if ((pathname === '/dashboard' || pathname.startsWith('/dashboard/')) && !pathname.startsWith('/dashboard/corretor')) {
+  if (pathname.startsWith('/dashboard/afiliado') && pathname !== '/dashboard/afiliado/login') {
+    const token = request.cookies.get('afiliado_token')?.value;
+
+    if (!token) {
+      const loginUrl = new URL('/dashboard/afiliado/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const result = await resolveToken(token);
+    if (!result.valid || result.role !== 'afiliado') {
+      const loginUrl = new URL('/dashboard/afiliado/login', request.url);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.set('afiliado_token', '', { maxAge: 0, path: '/' });
+      return response;
+    }
+
+    const response = NextResponse.next();
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    return response;
+  }
+
+  // ============================================
+  // BLOQUEIO: Rotas legadas (exceto /dashboard/corretor e /dashboard/afiliado)
+  // ============================================
+  if ((pathname === '/dashboard' || pathname.startsWith('/dashboard/')) && !pathname.startsWith('/dashboard/corretor') && !pathname.startsWith('/dashboard/afiliado')) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

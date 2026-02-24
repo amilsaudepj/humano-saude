@@ -587,6 +587,7 @@ function CommentsPanel({ comments: serverComments, cardId, corretorId, onRefresh
 const ORIGEM_OPTIONS = [
   { value: 'corretor_crm',  label: 'CRM Manual',     icon: User,          color: CRM_THEME.gold },
   { value: 'indicacao',     label: 'Indicação',      icon: Gift,          color: CRM_THEME.gold },
+  { value: 'form_indicar_afiliado', label: 'Indicação do afiliado', icon: Gift, color: CRM_THEME.gold },
   { value: 'whatsapp',      label: 'WhatsApp',       icon: MessageCircle, color: CRM_THEME.green },
   { value: 'meta_ads',      label: 'Meta Ads',       icon: MegaphoneIcon, color: CRM_THEME.blue },
   { value: 'facebook',      label: 'Facebook',       icon: Globe,         color: CRM_THEME.blue },
@@ -946,14 +947,25 @@ function AICopilot({
 }
 
 // ========================================
-// MAIN PAGE
+// MAIN PAGE (compartilhado com portal admin)
 // ========================================
 
-export default function LeadDetailPage() {
+export type LeadCardDetailViewProps = {
+  corretorId?: string;
+  cardId?: string;
+  backHref?: string;
+};
+
+export function LeadCardDetailView(props: LeadCardDetailViewProps = {}) {
   const params = useParams();
   const router = useRouter();
-  const cardId = params.id as string;
-  const corretorId = useCorretorId();
+  const corretorIdFromHook = useCorretorId();
+  const cardId = (props.cardId ?? params?.id ?? (params as Record<string, string>)?.cardId) as string;
+  const corretorId = props.corretorId ?? corretorIdFromHook;
+  const handleBack = () => {
+    if (props.backHref) router.push(props.backHref);
+    else router.push('/dashboard/corretor/crm');
+  };
 
   const [detail, setDetail] = useState<CrmCardFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1350,7 +1362,7 @@ export default function LeadDetailPage() {
           <AlertCircle className="w-8 h-8 text-red-400" />
         </div>
         <p className="text-white/60">Lead não encontrado</p>
-        <button onClick={() => router.push('/dashboard/corretor/crm')}
+        <button onClick={handleBack}
           className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] rounded-xl text-white/60 text-sm transition-colors">
           ← Voltar ao CRM
         </button>
@@ -1377,7 +1389,7 @@ export default function LeadDetailPage() {
         {/* ══ TOP BAR ══ */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard/corretor/crm')}
+            <button onClick={handleBack}
               className="p-2.5 hover:bg-white/[0.06] rounded-xl transition-colors border border-transparent hover:border-white/[0.06]">
               <ArrowLeft className="w-5 h-5 text-white/50" />
             </button>
@@ -1883,4 +1895,8 @@ function TimelineView({ interacoes }: { interacoes: CrmInteracao[] }) {
       ))}
     </div>
   );
+}
+
+export default function LeadDetailPage() {
+  return <LeadCardDetailView />;
 }

@@ -57,6 +57,7 @@ import {
   Cog,
   Shield,
   CheckSquare,
+  Gift,
 } from 'lucide-react';
 import Link from 'next/link';
 import NextImage from 'next/image';
@@ -124,6 +125,7 @@ const menuItems: SidebarItem[] = [
     children: [
       { id: 'com-pipeline', label: 'Pipeline Visual', icon: Filter, href: `${B}/funil`, badge: { text: '🔥', variant: 'gold' } },
       { id: 'com-leads', label: 'Leads', icon: Users, href: `${B}/crm/leads` },
+      { id: 'com-leads-afiliados', label: 'Leads dos Afiliados', icon: Gift, href: `${B}/crm/leads-afiliados` },
       { id: 'com-crm', label: 'CRM', icon: Columns3, href: `${B}/crm` },
       { id: 'com-crm-contatos', label: 'Contatos', icon: UserPlus, href: `${B}/crm/contacts` },
       { id: 'com-crm-empresas', label: 'Empresas', icon: Building2, href: `${B}/crm/companies` },
@@ -212,6 +214,7 @@ const menuItems: SidebarItem[] = [
       { id: 'ops-documentos', label: 'Documentos', icon: FileArchive, href: `${B}/documentos` },
       { id: 'ops-tarefas', label: 'Tarefas', icon: CheckSquare, href: `${B}/tarefas` },
       { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${B}/indicacoes` },
+      { id: 'ops-afiliados', label: 'Meus afiliados', icon: UsersRound, href: `${B}/afiliados` },
       { id: 'ops-renovacoes', label: 'Renovações', icon: CalendarClock, href: `${B}/renovacoes` },
     ],
   },
@@ -286,22 +289,25 @@ const badgeStyles: Record<BadgeVariant, string> = {
   green: 'bg-green-500/20 text-green-400',
 };
 
+const SIDEBAR_HOVER = 'hover:bg-white/5';
+const SIDEBAR_BORDER_BASE = 'border border-transparent';
+
 function resolveColors(item: SidebarItem, isHighlighted: boolean) {
   const colorMap = {
     gold: {
-      parentBg: isHighlighted ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/30' : 'border border-transparent hover:bg-white/5',
+      parentBg: isHighlighted ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/30' : `${SIDEBAR_BORDER_BASE} ${SIDEBAR_HOVER}`,
       icon: isHighlighted ? 'text-[#D4AF37]' : 'text-white/50',
       text: isHighlighted ? 'text-[#D4AF37]' : 'text-white/70',
       childActive: 'bg-[#D4AF37]/15 text-[#F4D03F]',
     },
     green: {
-      parentBg: isHighlighted ? 'bg-green-600/15 border border-green-500/30' : 'border border-transparent hover:bg-white/5',
+      parentBg: isHighlighted ? 'bg-green-600/15 border border-green-500/30' : `${SIDEBAR_BORDER_BASE} ${SIDEBAR_HOVER}`,
       icon: isHighlighted ? 'text-green-400' : 'text-white/50',
       text: isHighlighted ? 'text-green-400' : 'text-white/70',
       childActive: 'bg-green-600/15 text-green-300',
     },
     blue: {
-      parentBg: isHighlighted ? 'bg-blue-600/15 border border-blue-500/30' : 'border border-transparent hover:bg-white/5',
+      parentBg: isHighlighted ? 'bg-blue-600/15 border border-blue-500/30' : `${SIDEBAR_BORDER_BASE} ${SIDEBAR_HOVER}`,
       icon: isHighlighted ? 'text-blue-400' : 'text-white/50',
       text: isHighlighted ? 'text-blue-400' : 'text-white/70',
       childActive: 'bg-blue-600/15 text-blue-300',
@@ -309,7 +315,7 @@ function resolveColors(item: SidebarItem, isHighlighted: boolean) {
   };
 
   return colorMap[item.color ?? 'gold'] ?? {
-    parentBg: isHighlighted ? 'bg-white/5 border border-transparent' : 'border border-transparent hover:bg-white/5',
+    parentBg: isHighlighted ? 'bg-white/5 border border-transparent' : `${SIDEBAR_BORDER_BASE} ${SIDEBAR_HOVER}`,
     icon: isHighlighted ? 'text-white' : 'text-white/50',
     text: isHighlighted ? 'text-white' : 'text-white/70',
     childActive: 'bg-white/5 text-white',
@@ -360,22 +366,22 @@ export default function CorretorSidebar() {
   const isChildActive = (item: SidebarItem) =>
     item.children?.some((c) => pathname === c.href || pathname.startsWith(c.href + '/')) ?? false;
 
-  const toggleMenu = (id: string) => {
-    setOpenMenus((prev) => {
-      const next = new Set<string>();
-      if (!prev.has(id)) next.add(id);
-      return next;
-    });
-    // Track explicitly closed menus (to override auto-open from active child)
-    setClosedMenus((prev) => {
-      const next = new Set(prev);
-      if (prev.has(id)) {
-        next.delete(id); // re-opening, remove from closed
-      } else {
-        next.add(id); // closing, track it
-      }
-      return next;
-    });
+  const toggleMenu = (id: string, isCurrentlyOpen: boolean) => {
+    if (isCurrentlyOpen) {
+      setClosedMenus((prev) => new Set(prev).add(id));
+      setOpenMenus((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      setClosedMenus((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setOpenMenus((prev) => new Set(prev).add(id));
+    }
   };
 
   // Reset manually opened/closed menus when route changes
@@ -479,7 +485,7 @@ export default function CorretorSidebar() {
         return (
           <div key={item.id}>
             <button
-              onClick={() => expanded ? toggleMenu(item.id) : setIsExpanded(true)}
+              onClick={() => expanded ? toggleMenu(item.id, isOpen) : setIsExpanded(true)}
               className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative', colors.parentBg)}
             >
               <Icon className={cn('h-5 w-5 flex-shrink-0', colors.icon)} />
@@ -524,8 +530,8 @@ export default function CorretorSidebar() {
                       return (
                         <Link key={child.id} href={child.href} onClick={onNav}>
                           <div className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
-                            childIsActive ? colors.childActive : 'text-white/60 hover:text-white/80 hover:bg-white/5',
+                            'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200',
+                            childIsActive ? colors.childActive : 'text-white/60 hover:text-white/80 ' + SIDEBAR_HOVER,
                           )}>
                             <ChildIcon className="h-4 w-4 flex-shrink-0" />
                             <span className="text-sm flex-1 min-w-0 whitespace-normal leading-snug">{child.label}</span>
@@ -561,14 +567,14 @@ export default function CorretorSidebar() {
         )}
       </button>
       <Link href="/ajuda" onClick={onNav}>
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group relative">
+        <div className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative', SIDEBAR_HOVER)}>
           <HelpCircle className="h-5 w-5 text-white/50 flex-shrink-0" />
           {expanded && <span className="text-sm text-white/70">Ajuda</span>}
         </div>
       </Link>
       <div
         onClick={() => { onNav?.(); handleLogout(); }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group relative"
+        className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer group relative', SIDEBAR_HOVER)}
       >
         <LogOut className="h-5 w-5 text-white/50 flex-shrink-0" />
         {expanded && <span className="text-sm text-white/70">Sair</span>}

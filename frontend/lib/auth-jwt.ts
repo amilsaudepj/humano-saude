@@ -3,9 +3,10 @@ import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 // Payload tipado para tokens da plataforma
 export interface HumanoTokenPayload extends JWTPayload {
   email: string;
-  role: 'admin' | 'corretor' | 'cliente';
+  role: 'admin' | 'corretor' | 'cliente' | 'afiliado';
   corretor_id?: string;
   cliente_id?: string;
+  afiliado_id?: string;
 }
 
 // Secret derivada da env var — mínimo 32 chars recomendado
@@ -26,9 +27,10 @@ function getSecret(): Uint8Array {
  */
 export async function signToken(payload: {
   email: string;
-  role: 'admin' | 'corretor' | 'cliente';
+  role: 'admin' | 'corretor' | 'cliente' | 'afiliado';
   corretor_id?: string;
   cliente_id?: string;
+  afiliado_id?: string;
 }): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
@@ -62,6 +64,7 @@ export function decodeTokenUnsafe(token: string): {
   role: string;
   corretor_id?: string;
   cliente_id?: string;
+  afiliado_id?: string;
   exp?: number;
 } | null {
   try {
@@ -101,4 +104,51 @@ export async function getCorretorIdFromRequest(
   const token = request.cookies.get('corretor_token')?.value;
   if (!token) return null;
   return getCorretorIdFromToken(token);
+}
+
+/**
+ * Extrai afiliado_id do token JWT (cookie afiliado_token).
+ */
+export async function getAfiliadoIdFromToken(token: string): Promise<string | null> {
+  const jwt = await verifyToken(token);
+  if (jwt?.afiliado_id) return jwt.afiliado_id;
+  return null;
+}
+
+/**
+ * Extrai afiliado_id do cookie de um NextRequest (afiliado_token).
+ */
+export async function getAfiliadoIdFromRequest(
+  request: { cookies: { get(name: string): { value: string } | undefined } },
+): Promise<string | null> {
+  const token = request.cookies.get('afiliado_token')?.value;
+  if (!token) return null;
+  return getAfiliadoIdFromToken(token);
+}
+
+// ─── Token para confirmação de e-mail (corretor) ─────────────────
+
+export interface ConfirmEmailPayload extends JWTPayload {
+  corretor_id: string;
+  purpose: 'confirm_email';
+}
+
+/** Gera JWT de confirmação de e-mail (válido 24h). */
+export async function signConfirmEmailToken(corretorId: string): Promise<string> {
+  return new SignJWT({ corretor_id: corretorId, purpose: 'confirm_email' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('24h')
+    .sign(getSecret());
+}
+
+/** Verifica JWT de confirmação de e-mail; retorna payload ou null. */
+export async function verifyConfirmEmailToken(token: string): Promise<ConfirmEmailPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    if ((payload as ConfirmEmailPayload).purpose !== 'confirm_email') return null;
+    return payload as ConfirmEmailPayload;
+  } catch {
+    return null;
+  }
 }

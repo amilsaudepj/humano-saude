@@ -121,6 +121,7 @@ export const sidebarItems: SidebarItem[] = [
     children: [
       { id: 'com-pipeline', label: 'Pipeline Visual', icon: Filter, href: `${P}/funil`, badge: { text: '🔥', variant: 'gold' } },
       { id: 'com-leads', label: 'Leads', icon: Users, href: `${P}/leads` },
+      { id: 'com-leads-afiliados', label: 'Leads dos Afiliados', icon: Link2, href: `${P}/leads-afiliados` },
       { id: 'com-crm', label: 'CRM', icon: Columns3, href: `${P}/crm` },
       { id: 'com-crm-contatos', label: 'Contatos', icon: UserPlus, href: `${P}/crm/contacts` },
       { id: 'com-crm-empresas', label: 'Empresas', icon: Building2, href: `${P}/crm/companies` },
@@ -266,6 +267,7 @@ export const sidebarItems: SidebarItem[] = [
           { id: 'corr-convites', label: 'Convites', icon: UserPlus, href: `${P}/corretores/convites` },
         ],
       },
+      { id: 'ops-afiliados', label: 'Afiliados', icon: UserPlus, href: `${P}/afiliados` },
       { id: 'ops-indicacoes', label: 'Indicações', icon: Award, href: `${P}/indicacoes` },
       { id: 'ops-renovacoes', label: 'Renovações', icon: CalendarClock, href: `${P}/renovacoes` },
       { id: 'ops-design-system-emails', label: 'E-mails Design System', icon: Palette, href: `${P}/design-system-emails` },

@@ -120,6 +120,8 @@ export async function enviarEmailNotificacaoAdmin(dados: {
   comoConheceu?: string | null;
   motivacoes?: string[] | null;
   modalidade?: string | null;
+  /** Link para aprovar em 1 clique (mesma lógica do design system). Se informado, o e-mail terá botão "Aprovar cadastro". */
+  approveLink?: string | null;
 }) {
   try {
     const guard = guardApiKey();
@@ -142,6 +144,7 @@ export async function enviarEmailNotificacaoAdmin(dados: {
         comoConheceu: dados.comoConheceu?.replace(/_/g, ' ') || '—',
         motivacoes: motivacoesText,
         modalidade: dados.modalidade || 'digital',
+        approveLink: dados.approveLink || undefined,
       })
     );
 
@@ -576,6 +579,47 @@ export async function enviarEmailConviteCorretor(dados: {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error('enviarEmailConviteCorretor', err);
+    return { success: false, error: msg || 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 10.1 CONFIRMAÇÃO DE E-MAIL (corretor — link único)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailConfirmacaoCorretor(dados: {
+  nome: string;
+  email: string;
+  confirmLink: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <p>Olá, <strong>${dados.nome.split(' ')[0]}</strong>!</p>
+        <p>Confirme seu e-mail para ativar sua conta no painel do corretor Humano Saúde.</p>
+        <p><a href="${dados.confirmLink}" style="display: inline-block; background: #D4AF37; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Confirmar e-mail</a></p>
+        <p style="color: #666; font-size: 14px;">Se você não solicitou este e-mail, ignore-o. O link expira em 24 horas.</p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendTransactionalEmail({
+      to: dados.email,
+      subject: 'Confirme seu e-mail — Humano Saúde',
+      html,
+      templateName: 'corretor_confirmar_email',
+      emailType: 'transactional',
+      category: 'onboarding',
+      tags: ['corretor', 'confirmar_email'],
+      triggeredBy: 'system',
+    });
+
+    return result.success ? { success: true } : { success: false, error: result.error };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('enviarEmailConfirmacaoCorretor', err);
     return { success: false, error: msg || 'Erro inesperado' };
   }
 }
@@ -1020,4 +1064,401 @@ export async function enviarEmailAcessoPortalCliente(dados: {
     log.error('enviarEmailAcessoPortalCliente', err);
     return { success: false, error: 'Erro ao enviar email de acesso' };
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14. AFILIADO — Acesso ao painel (cadastro concluído)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAfiliadoAcessoPainel(dados: {
+  to: string;
+  nomeAfiliado: string;
+  /** Senha temporária (ex.: cadastro sem vínculo). Se não informada, orienta a usar "Esqueci minha senha". */
+  senhaTemporaria?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '');
+    const linkLogin = `${baseUrl}/dashboard/afiliado/login`;
+
+    const blocoSenha = dados.senhaTemporaria
+      ? `
+        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:20px;margin:24px 0;">
+          <p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 12px 0;">Seus dados de acesso</p>
+          <p style="font-size:15px;color:#374151;margin:0 0 8px 0;line-height:1.5;"><strong>E-mail:</strong> <a href="mailto:${escapeHtml(dados.to)}" style="color:#2563eb;text-decoration:underline;">${escapeHtml(dados.to)}</a></p>
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.5;"><strong>Senha temporária:</strong> <span style="background:#E5E7EB;padding:6px 12px;border-radius:6px;font-family:monospace;font-size:15px;">${escapeHtml(dados.senhaTemporaria)}</span></p>
+        </div>
+        <p style="font-size:14px;color:#6B7280;margin:0 0 24px 0;line-height:1.5;">Recomendamos alterar a senha após o primeiro acesso (no painel).</p>
+      `
+      : `
+        <p style="font-size:15px;color:#374151;margin:0 0 16px 0;line-height:1.6;">Na primeira vez, use <strong>Esqueci minha senha</strong> na tela de login (com este e-mail) para definir sua senha e entrar.</p>
+        <p style="font-size:15px;color:#374151;margin:0 0 24px 0;line-height:1.6;">Depois você pode alterar sua senha quando quiser, dentro do painel.</p>
+      `;
+
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 20px;font-size:16px;color:#111827;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <h1 style="color:#D4AF37;font-size:24px;font-weight:700;margin:0;">Humano Saúde</h1>
+        </div>
+        <p style="font-size:16px;color:#374151;margin:0 0 20px 0;line-height:1.6;">Olá, <strong>${escapeHtml(dados.nomeAfiliado)}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin:0 0 24px 0;line-height:1.6;">Sua conta de afiliado foi criada. Use o link abaixo para acessar o painel e acompanhar suas indicações.</p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${linkLogin}" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;font-size:16px;padding:16px 32px;text-decoration:none;border-radius:10px;">Acessar painel do afiliado</a>
+        </div>
+        ${blocoSenha}
+        <p style="font-size:15px;color:#6B7280;margin:28px 0 0 0;line-height:1.5;">— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: 'Acesso ao painel do afiliado — Humano Saúde',
+      html,
+      templateName: 'afiliado_acesso_painel',
+      category: 'afiliado',
+      tags: ['afiliado', 'acesso', 'cadastro'],
+      triggeredBy: 'system',
+      metadata: {},
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAfiliadoAcessoPainel', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14b. ADMIN — Novo afiliado cadastrado
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAdminNovoAfiliado(dados: {
+  nome: string;
+  email: string;
+  telefone: string;
+  nomeCorretor?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const corretorLabel = dados.nomeCorretor ? ` (corretor: ${escapeHtml(dados.nomeCorretor)})` : '';
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Novo afiliado cadastrado${corretorLabel}:</p>
+        <ul>
+          <li><strong>Nome:</strong> ${escapeHtml(dados.nome)}</li>
+          <li><strong>E-mail:</strong> ${escapeHtml(dados.email)}</li>
+          <li><strong>Telefone:</strong> ${escapeHtml(dados.telefone)}</li>
+        </ul>
+        <p>— Sistema Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: ADMIN_EMAILS,
+      subject: `Novo afiliado cadastrado — ${dados.nome}`,
+      html,
+      templateName: 'admin_novo_afiliado',
+      category: 'admin',
+      tags: ['admin', 'afiliado', 'cadastro'],
+      triggeredBy: 'system',
+      metadata: { afiliado_nome: dados.nome },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAdminNovoAfiliado', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14b2. ADMIN — Novo lead "quero ser afiliado" (sem vínculo)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAdminLeadSejaAfiliado(dados: {
+  nome: string;
+  email: string;
+  telefone: string;
+  cpf?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const cpfLine = dados.cpf ? `<li><strong>CPF:</strong> ${escapeHtml(dados.cpf)}</li>` : '';
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p><strong>Novo interesse em ser afiliado</strong> (cadastro sem vínculo com corretor):</p>
+        <ul>
+          <li><strong>Nome:</strong> ${escapeHtml(dados.nome)}</li>
+          <li><strong>E-mail:</strong> ${escapeHtml(dados.email)}</li>
+          <li><strong>Telefone:</strong> ${escapeHtml(dados.telefone)}</li>
+          ${cpfLine}
+        </ul>
+        <p>Lead disponível no portal interno. Após contato, você pode liberar acesso ao painel do afiliado.</p>
+        <p>— Sistema Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: ADMIN_EMAILS,
+      subject: `Novo interesse em ser afiliado — ${dados.nome}`,
+      html,
+      templateName: 'admin_lead_seja_afiliado',
+      category: 'admin',
+      tags: ['admin', 'afiliado', 'lead'],
+      triggeredBy: 'system',
+      metadata: { afiliado_nome: dados.nome },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAdminLeadSejaAfiliado', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14c. AFILIADO — Confirmação de interesse (cadastro sem vínculo com corretor)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAfiliadoInteresseRecebido(dados: {
+  to: string;
+  nome: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Olá, <strong>${escapeHtml(dados.nome)}</strong>,</p>
+        <p>Recebemos seu interesse em participar do programa de afiliados da <strong>Humano Saúde</strong>.</p>
+        <p>Nossa equipe vai analisar seus dados e entrar em contato em breve para dar os próximos passos.</p>
+        <p>Se você também enviou uma indicação, ela foi recebida e a pessoa indicada será contactada pela nossa equipe.</p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: 'Recebemos seu interesse em ser afiliado — Humano Saúde',
+      html,
+      templateName: 'afiliado_interesse_recebido',
+      category: 'afiliado',
+      tags: ['afiliado', 'interesse', 'cadastro'],
+      triggeredBy: 'system',
+      metadata: {},
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAfiliadoInteresseRecebido', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 15. AFILIADO — Mudança de status do lead indicado
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAfiliadoStatusLead(dados: {
+  to: string;
+  nomeAfiliado: string;
+  nomeLead: string;
+  novoStatus: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const statusLabel: Record<string, string> = {
+      simulou: 'Simulou',
+      entrou_em_contato: 'Entrou em contato',
+      em_analise: 'Em análise',
+      proposta_enviada: 'Proposta enviada',
+      fechado: 'Venda fechada',
+      perdido: 'Não fechou',
+    };
+    const label = statusLabel[dados.novoStatus] || dados.novoStatus;
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Olá, <strong>${escapeHtml(dados.nomeAfiliado)}</strong>,</p>
+        <p>O status da sua indicação <strong>${escapeHtml(dados.nomeLead)}</strong> foi atualizado para: <strong>${escapeHtml(label)}</strong>.</p>
+        <p>Acesse seu painel para acompanhar: <a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '')}/dashboard/afiliado">Painel do Afiliado</a>.</p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: `Indicação: ${label} — ${dados.nomeLead}`,
+      html,
+      templateName: 'afiliado_status_lead',
+      category: 'afiliado',
+      tags: ['afiliado', 'indicacao', 'status'],
+      triggeredBy: 'system',
+      metadata: { lead_status: dados.novoStatus },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAfiliadoStatusLead', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 16. AFILIADO — E-mail na venda (valor, prazo, forma de pagamento)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAfiliadoVenda(dados: {
+  to: string;
+  nomeAfiliado: string;
+  nomeLead: string;
+  valor?: string;
+  prazo?: string;
+  formaPagamento?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const valor = dados.valor || 'A combinar';
+    const prazo = dados.prazo || 'Conforme política';
+    const forma = dados.formaPagamento || 'Conforme cadastro';
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Olá, <strong>${escapeHtml(dados.nomeAfiliado)}</strong>,</p>
+        <p>Ótima notícia: a indicação <strong>${escapeHtml(dados.nomeLead)}</strong> foi fechada!</p>
+        <p><strong>Valor a receber:</strong> ${escapeHtml(valor)}</p>
+        <p><strong>Prazo:</strong> ${escapeHtml(prazo)}</p>
+        <p><strong>Forma de pagamento:</strong> ${escapeHtml(forma)}</p>
+        <p>Acesse seu painel: <a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '')}/dashboard/afiliado">Painel do Afiliado</a>.</p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: `Venda fechada — ${dados.nomeLead} | Comissão`,
+      html,
+      templateName: 'afiliado_venda',
+      category: 'afiliado',
+      tags: ['afiliado', 'venda', 'comissao'],
+      triggeredBy: 'system',
+      metadata: { lead_nome: dados.nomeLead },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAfiliadoVenda', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 17. AFILIADO — Confirmação de que a indicação foi recebida
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailAfiliadoIndicacaoRecebida(dados: {
+  to: string;
+  nomeAfiliado: string;
+  nomeIndicado: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Olá, <strong>${escapeHtml(dados.nomeAfiliado)}</strong>,</p>
+        <p>Sua indicação de <strong>${escapeHtml(dados.nomeIndicado)}</strong> foi recebida com sucesso.</p>
+        <p>O corretor foi notificado e entrará em contato com a pessoa indicada. Você pode acompanhar o status no seu painel.</p>
+        <p><a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '')}/dashboard/afiliado" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;padding:12px 24px;text-decoration:none;border-radius:8px;">Acessar painel do afiliado</a></p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: `Indicação recebida — ${dados.nomeIndicado}`,
+      html,
+      templateName: 'afiliado_indicacao_recebida',
+      category: 'afiliado',
+      tags: ['afiliado', 'indicacao'],
+      triggeredBy: 'system',
+      metadata: { nome_indicado: dados.nomeIndicado },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailAfiliadoIndicacaoRecebida', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 18. CORRETOR — Novo lead indicado pelo afiliado
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailCorretorNovoLeadAfiliado(dados: {
+  to: string;
+  nomeCorretor: string;
+  nomeAfiliado: string;
+  nomeLead: string;
+  telefoneLead: string;
+  emailLead?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return { success: false, error: guard.result.error };
+
+    const contato = [dados.telefoneLead, dados.emailLead].filter(Boolean).join(' · ') || 'Não informado';
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <p>Olá, <strong>${escapeHtml(dados.nomeCorretor)}</strong>,</p>
+        <p>Seu afiliado <strong>${escapeHtml(dados.nomeAfiliado)}</strong> indicou um novo lead:</p>
+        <p><strong>Nome:</strong> ${escapeHtml(dados.nomeLead)}<br/>
+        <strong>Contato:</strong> ${escapeHtml(contato)}</p>
+        <p>O lead já está no seu painel de Leads e no CRM para você dar sequência.</p>
+        <p><a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://humanosaude.com.br').replace(/\/$/, '')}/dashboard/corretor/crm/leads" style="display:inline-block;background:#D4AF37;color:#000;font-weight:700;padding:12px 24px;text-decoration:none;border-radius:8px;">Ver meus leads</a></p>
+        <p>— Equipe Humano Saúde</p>
+      </div>
+    `;
+
+    const result = await sendViaResend({
+      to: dados.to,
+      subject: `Novo lead indicado por ${dados.nomeAfiliado} — ${dados.nomeLead}`,
+      html,
+      templateName: 'corretor_novo_lead_afiliado',
+      category: 'corretor',
+      tags: ['corretor', 'lead', 'afiliado'],
+      triggeredBy: 'system',
+      metadata: { nome_lead: dados.nomeLead, nome_afiliado: dados.nomeAfiliado },
+    });
+
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true };
+  } catch (err) {
+    log.error('enviarEmailCorretorNovoLeadAfiliado', err);
+    return { success: false, error: 'Erro ao enviar e-mail' };
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

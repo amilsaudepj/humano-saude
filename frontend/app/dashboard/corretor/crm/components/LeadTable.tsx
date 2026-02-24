@@ -6,6 +6,7 @@ import {
   Mail,
   Star,
   Sparkles,
+  Gift,
   AlertTriangle,
   Clock,
   ChevronLeft,
@@ -135,8 +136,14 @@ export default function LeadTable({
                   {lead.titulo.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-medium text-white truncate">{lead.titulo}</p>
+                    {lead.lead?.origem === 'form_indicar_afiliado' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
+                        <Gift className="h-2.5 w-2.5" />
+                        Indicação afiliado
+                      </span>
+                    )}
                     {lead.is_hot && <Sparkles className="h-3 w-3 text-[#D4AF37] flex-shrink-0" />}
                     {lead.is_stale && lead.coluna_slug !== 'fechado' && lead.coluna_slug !== 'perdido' && (
                       <AlertTriangle className="h-3 w-3 text-red-400 flex-shrink-0" />

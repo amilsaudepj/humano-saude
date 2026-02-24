@@ -7,6 +7,9 @@ import { logger } from '@/lib/logger';
 // TYPES
 // ============================================
 
+/** Tipo da indicação para visão admin/corretor */
+export type TipoIndicacao = 'economizar' | 'form_indicar' | 'form_indicar_afiliado' | 'seja_corretor' | 'seja_afiliado';
+
 export interface LeadIndicado {
   id: string;
   nome: string | null;
@@ -17,6 +20,9 @@ export interface LeadIndicado {
   economia_estimada: number | null;
   created_at: string;
   clicou_no_contato: boolean;
+  /** Origem: economizar (calculadora), form_indicar (form /indicar direto), form_indicar_afiliado (form /indicar via afiliado) */
+  tipo?: TipoIndicacao;
+  afiliado_nome?: string | null;
 }
 
 export interface CorretorIndicacoes {
@@ -50,6 +56,14 @@ export interface IndicacoesOverview {
   taxa_conversao_geral: number;
   valor_total_economia: number;
   corretores: CorretorIndicacoes[];
+  /** Contagens por tipo (visão geral admin) */
+  por_tipo: {
+    economizar: number;
+    form_indicar: number;
+    form_indicar_afiliado: number;
+    seja_corretor: number;
+    seja_afiliado: number;
+  };
 }
 
 // ============================================
@@ -84,14 +98,27 @@ export async function getIndicacoesOverview(): Promise<{
       return { success: false, data: null, error: errLeads.message };
     }
 
-    // 3. Buscar leads da tabela leads_indicacao para complementar
+    // 3. Buscar leads da tabela leads_indicacao (com afiliado para tipo e nome)
     const { data: leadsIndicacao, error: errLI } = await sb
       .from('leads_indicacao')
-      .select('id, corretor_id, nome, telefone, operadora_atual, status, valor_atual, economia_estimada, created_at, clicou_no_contato');
+      .select('id, corretor_id, afiliado_id, nome, telefone, operadora_atual, status, valor_atual, economia_estimada, created_at, clicou_no_contato');
 
     if (errLI) {
       return { success: false, data: null, error: errLI.message };
     }
+
+    // 3b. Buscar solicitações "seja corretor" (para contagem por tipo e por corretor indicador)
+    const { data: solicitacoesCorretor } = await sb
+      .from('solicitacoes_corretor')
+      .select('id, indicado_por_corretor_id')
+      .in('status', ['pendente', 'aprovado']);
+
+    // 3c. Nomes dos afiliados (para exibir "indicado por afiliado X")
+    const afiliadoIds = [...new Set((leadsIndicacao || []).map((l: { afiliado_id?: string }) => l.afiliado_id).filter(Boolean))] as string[];
+    const { data: afiliados } = afiliadoIds.length
+      ? await sb.from('corretor_afiliados').select('id, nome').in('id', afiliadoIds)
+      : { data: [] };
+    const afiliadoNomeById = new Map<string, string>(((afiliados as { id: string; nome: string }[]) || []).map((a) => [a.id, a.nome || '']));
 
     // 4. Montar mapa de corretor_id -> leads da leads_indicacao
     const indicacaoMap = new Map<string, typeof leadsIndicacao>();
@@ -188,7 +215,7 @@ export async function getIndicacoesOverview(): Promise<{
 
       const leadsIndicados: LeadIndicado[] = [];
 
-      // Primeiro: leads da insurance_leads (fonte principal — tem nome)
+      // Primeiro: leads da insurance_leads (calculadora /economizar)
       for (const la of leadsAdmin) {
         leadsIndicados.push({
           id: la.id,
@@ -199,15 +226,16 @@ export async function getIndicacoesOverview(): Promise<{
           valor_atual: Number(la.valor_atual) || null,
           economia_estimada: Number(la.economia_estimada) || null,
           created_at: la.created_at,
-          clicou_no_contato: false, // insurance_leads não tem esse campo
+          clicou_no_contato: false,
+          tipo: 'economizar',
         });
       }
 
-      // Segundo: leads da leads_indicacao que NÃO estão no insurance_leads
+      // Segundo: leads da leads_indicacao (form /indicar) que NÃO estão no insurance_leads
       const adminLeadIds = new Set(leadsAdmin.map((la: any) => la.id));
       for (const li of leadsDoCorretor) {
-        // Evitar duplicatas (já incluídas via insurance_leads)
         if (adminLeadIds.has(li.id)) continue;
+        const tipoIndicacao = li.afiliado_id ? 'form_indicar_afiliado' : 'form_indicar';
         leadsIndicados.push({
           id: li.id,
           nome: li.nome || null,
@@ -218,6 +246,8 @@ export async function getIndicacoesOverview(): Promise<{
           economia_estimada: Number(li.economia_estimada) || null,
           created_at: li.created_at,
           clicou_no_contato: li.clicou_no_contato || false,
+          tipo: tipoIndicacao,
+          afiliado_nome: li.afiliado_id ? afiliadoNomeById.get(li.afiliado_id) ?? null : null,
         });
       }
 
@@ -252,6 +282,19 @@ export async function getIndicacoesOverview(): Promise<{
 
     const corretoresAtivos = corretoresComMetricas.filter(c => c.ativo).length;
 
+    // Contagens por tipo (visão admin): economizar = insurance_leads com corretor; form = leads_indicacao
+    let totalEconomizar = 0;
+    adminLeadsByCorretor.forEach((arr) => { totalEconomizar += arr.length; });
+    const totalFormIndicar = (leadsIndicacao || []).filter((l: { afiliado_id?: string }) => !l.afiliado_id).length;
+    const totalFormIndicarAfiliado = (leadsIndicacao || []).filter((l: { afiliado_id?: string }) => !!l.afiliado_id).length;
+    const totalSejaCorretor = (solicitacoesCorretor || []).length;
+    const { count: countSejaAfiliado } = await sb
+      .from('insurance_leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('origem', 'landing_seja_afiliado')
+      .eq('arquivado', false);
+    const totalSejaAfiliado = countSejaAfiliado ?? 0;
+
     return {
       success: true,
       data: {
@@ -262,6 +305,13 @@ export async function getIndicacoesOverview(): Promise<{
         taxa_conversao_geral: totalIndicacoesGeral > 0 ? Math.round((totalGanhosGeral / totalIndicacoesGeral) * 100) : 0,
         valor_total_economia: economiaGeral,
         corretores: corretoresComMetricas,
+        por_tipo: {
+          economizar: totalEconomizar,
+          form_indicar: totalFormIndicar,
+          form_indicar_afiliado: totalFormIndicarAfiliado,
+          seja_corretor: totalSejaCorretor,
+          seja_afiliado: totalSejaAfiliado,
+        },
       },
     };
   } catch (error: any) {

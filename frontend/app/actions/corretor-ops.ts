@@ -322,3 +322,131 @@ export async function getCorretorById(corretorId: string): Promise<{
     return { success: false, error: 'Corretor não encontrado' };
   }
 }
+
+const PRAZO_DIAS_CONFIRMACAO_EMAIL = 7;
+
+/**
+ * Status de confirmação de e-mail do corretor.
+ * Usado no painel para exibir banner e dias restantes até suspensão.
+ */
+export async function getStatusConfirmacaoEmail(corretorId: string): Promise<{
+  success: boolean;
+  data?: {
+    precisaConfirmar: boolean;
+    diasRestantes: number;
+    emailConfirmadoEm: string | null;
+    created_at: string;
+  };
+  error?: string;
+}> {
+  try {
+    const supabase = createServiceClient();
+
+    const { data, error } = await supabase
+      .from('corretores')
+      .select('email_confirmado_em, created_at')
+      .eq('id', corretorId)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: 'Corretor não encontrado' };
+    }
+
+    const emailConfirmadoEm = (data.email_confirmado_em as string | null) ?? null;
+    const created_at = (data.created_at as string) || new Date().toISOString();
+    const precisaConfirmar = !emailConfirmadoEm;
+
+    const criadoEm = new Date(created_at).getTime();
+    const agora = Date.now();
+    const diasDesdeCriacao = Math.floor((agora - criadoEm) / (24 * 60 * 60 * 1000));
+    const diasRestantes = Math.max(0, PRAZO_DIAS_CONFIRMACAO_EMAIL - diasDesdeCriacao);
+
+    return {
+      success: true,
+      data: {
+        precisaConfirmar,
+        diasRestantes,
+        emailConfirmadoEm,
+        created_at,
+      },
+    };
+  } catch (err) {
+    logger.error('[getStatusConfirmacaoEmail]', err);
+    return { success: false, error: 'Erro ao verificar status' };
+  }
+}
+
+/**
+ * Reenvia e-mail de confirmação para o corretor (link único, 24h).
+ */
+export async function reenviarEmailConfirmacaoCorretor(corretorId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = createServiceClient();
+
+    const { data: corretor, error: fetchError } = await supabase
+      .from('corretores')
+      .select('nome, email, email_confirmado_em')
+      .eq('id', corretorId)
+      .single();
+
+    if (fetchError || !corretor?.email) {
+      return { success: false, error: 'Corretor não encontrado' };
+    }
+
+    if ((corretor.email_confirmado_em as string | null) != null) {
+      return { success: true }; // já confirmado, não precisa reenviar
+    }
+
+    const { signConfirmEmailToken } = await import('@/lib/auth-jwt');
+    const { enviarEmailConfirmacaoCorretor } = await import('@/lib/email');
+
+    const token = await signConfirmEmailToken(corretorId);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosaude.com.br';
+    const confirmLink = `${baseUrl}/api/auth/corretor/confirmar-email?token=${encodeURIComponent(token)}`;
+
+    const result = await enviarEmailConfirmacaoCorretor({
+      nome: (corretor.nome as string) || 'Corretor',
+      email: corretor.email as string,
+      confirmLink,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Falha ao enviar e-mail' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('[reenviarEmailConfirmacaoCorretor]', err);
+    return { success: false, error: 'Erro ao reenviar e-mail' };
+  }
+}
+
+/**
+ * Marca o e-mail do corretor como confirmado (chamado ao clicar no link do e-mail).
+ */
+export async function marcarEmailCorretorConfirmado(corretorId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = createServiceClient();
+
+    const { error } = await supabase
+      .from('corretores')
+      .update({ email_confirmado_em: new Date().toISOString() })
+      .eq('id', corretorId);
+
+    if (error) {
+      logger.error('[marcarEmailCorretorConfirmado]', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error('[marcarEmailCorretorConfirmado]', err);
+    return { success: false, error: 'Erro ao confirmar e-mail' };
+  }
+}

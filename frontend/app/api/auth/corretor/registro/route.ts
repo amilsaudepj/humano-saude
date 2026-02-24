@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { enviarEmailConfirmacaoCadastro, enviarEmailNotificacaoAdmin } from '@/lib/email';
+import { signCorretorApproveToken } from '@/lib/corretor-approve-token';
 import { logger } from '@/lib/logger';
 
 // ─── Validadores Server-Side ───────────────────────────────
@@ -437,6 +438,11 @@ export async function POST(request: NextRequest) {
       logger.error('[termos aceite] non-critical error:', termosErr);
     }
 
+    // ─── Link de aprovação por e-mail (mesma lógica do design system) ───
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosaude.com.br';
+    const token = signCorretorApproveToken(data.id);
+    const approveLink = `${baseUrl}/api/corretor/approve-from-email?request=${encodeURIComponent(data.id)}&token=${encodeURIComponent(token)}`;
+
     // ─── Enviar e-mails (non-blocking) ───────────────────────
     try {
       // Email de confirmação para o corretor
@@ -446,7 +452,7 @@ export async function POST(request: NextRequest) {
         tipoPessoa: tipoPessoa as 'pf' | 'pj',
       });
 
-      // Email de notificação para admin
+      // Email de notificação para admin (com link para aprovar em 1 clique)
       await enviarEmailNotificacaoAdmin({
         nome: nome_completo.trim(),
         email: email.toLowerCase().trim(),
@@ -458,6 +464,7 @@ export async function POST(request: NextRequest) {
         comoConheceu: como_conheceu || null,
         motivacoes: motivacoes || [],
         modalidade: modalidade_trabalho || 'digital',
+        approveLink,
       });
     } catch (emailErr) {
       logger.error('[email] non-critical error:', emailErr);

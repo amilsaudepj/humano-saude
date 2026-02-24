@@ -41,16 +41,17 @@ export async function POST(request: NextRequest) {
     }
 
     // =============================================
-    // 1. Tentar autenticação via Supabase Auth
+    // 1. Tentar autenticação via Supabase (corretores)
     // =============================================
+    const PRAZO_DIAS_CONFIRMACAO_EMAIL = 7;
+
     try {
       const supabase = createServiceClient();
 
       const { data: corretor, error } = await supabase
         .from('corretores')
-        .select('id, nome, role, ativo, metadata')
+        .select('id, nome, role, ativo, metadata, email_confirmado_em, created_at')
         .eq('email', email.toLowerCase().trim())
-        .eq('ativo', true)
         .single();
 
       if (corretor && !error) {
@@ -63,6 +64,32 @@ export async function POST(request: NextRequest) {
             { error: 'E-mail ou senha inválidos' },
             { status: 401 },
           );
+        }
+
+        // Conta suspensa
+        if (corretor.ativo === false) {
+          return NextResponse.json(
+            { error: 'Sua conta está suspensa. Entre em contato com o suporte.' },
+            { status: 401 },
+          );
+        }
+
+        // Regra 7 dias: e-mail não confirmado há mais de 7 dias → suspender
+        const emailConfirmadoEm = (corretor as { email_confirmado_em?: string | null }).email_confirmado_em;
+        const createdAt = (corretor as { created_at?: string }).created_at;
+        if (emailConfirmadoEm == null && createdAt) {
+          const criadoEm = new Date(createdAt).getTime();
+          const diasDesdeCriacao = (Date.now() - criadoEm) / (24 * 60 * 60 * 1000);
+          if (diasDesdeCriacao >= PRAZO_DIAS_CONFIRMACAO_EMAIL) {
+            await supabase
+              .from('corretores')
+              .update({ ativo: false })
+              .eq('id', corretor.id);
+            return NextResponse.json(
+              { error: 'Sua conta foi suspensa por não confirmação do e-mail em até 7 dias. Entre em contato com o suporte.' },
+              { status: 401 },
+            );
+          }
         }
 
         // JWT assinado com HS256 (24h)

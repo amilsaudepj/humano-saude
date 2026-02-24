@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Phone, Mail, ArrowUpRight, CheckCircle, XCircle, Pause, MessageSquare, Calculator, ScanLine, PenLine, Globe, UserCheck, MailPlus, LayoutGrid } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Users, Phone, Mail, ArrowUpRight, CheckCircle, XCircle, Pause, MessageSquare, Calculator, ScanLine, PenLine, Globe, UserCheck, MailPlus, LayoutGrid, UserPlus } from 'lucide-react';
 import { getLeads, updateLeadStatus } from '@/app/actions/leads';
 import { getCorretoresMap } from '@/app/actions/indicacoes-admin';
+import { getCardByLeadId } from '@/app/actions/crm-card-detail';
 import type { LeadStatus } from '@/lib/types/database';
 import { LEAD_STATUS } from '@/lib/types/database';
 import {
@@ -48,6 +50,8 @@ const ORIGEM_CONFIG: Record<string, { label: string; color: string; icon: React.
   site: { label: 'Site', color: 'bg-indigo-500/20 text-indigo-400', icon: Globe },
   landing: { label: 'Landing', color: 'bg-slate-500/20 text-slate-400', icon: Globe },
   hero_form: { label: 'Formulário hero', color: 'bg-blue-500/20 text-blue-400', icon: Globe },
+  landing_indicar_admin: { label: 'Indicação (sem vínculo)', color: 'bg-orange-500/20 text-orange-400', icon: UserCheck },
+  landing_seja_afiliado: { label: 'Quero ser afiliado', color: 'bg-cyan-500/20 text-cyan-400', icon: UserPlus },
 };
 
 const ORIGEM_FALLBACK = { label: 'Direto', color: 'bg-gray-500/20 text-gray-400', icon: Globe };
@@ -62,13 +66,15 @@ function getCorretorId(lead: any): string | null {
   return lead?.dados_pdf?.corretor?.id || null;
 }
 
-/** Retorna o nome do corretor usando o mapa slug/id → nome */
+/** Retorna o nome do usuário (corretor) dono do lead: prioridade corretor_id (insurance_leads), depois dados_pdf */
 function getCorretorNome(lead: any, corretorMap: Record<string, string>): string | null {
+  if (lead?.corretor_id && corretorMap[lead.corretor_id]) return corretorMap[lead.corretor_id];
   const slug = getCorretorSlug(lead);
   const id = getCorretorId(lead);
   if (slug && corretorMap[slug]) return corretorMap[slug];
   if (id && corretorMap[id]) return corretorMap[id];
-  return slug; // fallback para o slug se não encontrar o nome
+  if (lead?.corretor_id) return corretorMap[lead.corretor_id] ?? null;
+  return slug ?? null;
 }
 
 // ============================================
@@ -90,6 +96,19 @@ function makeColumns(
           {lead.email && <p className="text-xs text-gray-500">{lead.email}</p>}
         </div>
       ),
+    },
+    {
+      key: 'usuario',
+      header: 'Usuário',
+      sortable: false,
+      render: (lead) => {
+        const nome = getCorretorNome(lead, corretorMap);
+        return (
+          <span className="text-[#D4AF37] font-medium">
+            {nome || '—'}
+          </span>
+        );
+      },
     },
     {
       key: 'empresa',
@@ -205,6 +224,7 @@ function makeColumns(
 // ============================================
 
 export default function LeadsPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -225,7 +245,8 @@ export default function LeadsPage() {
     setLoading(true);
     const result = await getLeads({
       status: filterStatus || undefined,
-      limit: 100,
+      limit: 500,
+      excludeOrigem: ['landing_seja_afiliado'],
     });
     if (result.success) setLeads(result.data);
     setLoading(false);
@@ -248,6 +269,9 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     let result = leads;
+
+    // "Quero ser afiliado" nunca aparece em Leads — só em Afiliados
+    result = result.filter((l) => (l.origem || '') !== 'landing_seja_afiliado');
 
     // Filtro de busca por texto (nome, e-mail, WhatsApp, empresa, CNPJ)
     if (search) {
@@ -272,22 +296,28 @@ export default function LeadsPage() {
       }
     }
 
-    // Filtro por corretor
+    // Filtro por corretor (slug, id em dados_pdf ou corretor_id)
     if (filterCorretor) {
-      result = result.filter((l) => getCorretorSlug(l) === filterCorretor);
+      result = result.filter(
+        (l) =>
+          getCorretorSlug(l) === filterCorretor ||
+          getCorretorId(l) === filterCorretor ||
+          l.corretor_id === filterCorretor,
+      );
     }
 
     return result;
   }, [leads, search, filterOrigem, filterCorretor]);
 
-  // Lista única de corretores para o filtro
+  // Lista única de corretores para o filtro (por slug ou corretor_id)
   const corretorOptions = useMemo(() => {
-    const slugs = new Set<string>();
+    const ids = new Set<string>();
     leads.forEach((l) => {
       const slug = getCorretorSlug(l);
-      if (slug) slugs.add(slug);
+      if (slug) ids.add(slug);
+      if (l.corretor_id) ids.add(l.corretor_id);
     });
-    return Array.from(slugs).sort().map((s) => ({ value: s, label: corretorMap[s] || s }));
+    return Array.from(ids).sort().map((id) => ({ value: id, label: corretorMap[id] || id }));
   }, [leads, corretorMap]);
 
   // Contagem de indicações
@@ -383,7 +413,12 @@ export default function LeadsPage() {
         emptyIcon={Users}
         emptyTitle="Nenhum lead encontrado"
         emptyDescription="Cadastre um lead manualmente ou use o Scanner Inteligente"
-        onRowClick={(lead) => {
+        onRowClick={async (lead) => {
+          const res = await getCardByLeadId(lead.id);
+          if (res.success && res.data) {
+            router.push(`/portal-interno-hks-2026/leads/card/${res.data.cardId}`);
+            return;
+          }
           setSelectedLead(lead);
           setDrawerOpen(true);
         }}

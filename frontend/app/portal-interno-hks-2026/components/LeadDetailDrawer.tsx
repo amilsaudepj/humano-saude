@@ -265,8 +265,21 @@ export function LeadDetailDrawer({ open, onOpenChange, lead }: LeadDetailDrawerP
   const propostas = dadosPdf.propostas || [];
   const corretor = dadosPdf.corretor || null;
   const faturaUrl = dadosOcr.fatura_url || null;
-  const historico: any[] = Array.isArray(lead.historico) ? lead.historico : [];
-  const cotacoesSimuladorEntry = historico.find((h: any) => h.evento === 'cotacoes_simulador');
+  const historicoBruto: any[] = Array.isArray(lead.historico) ? lead.historico : [];
+  // Para leads de indicação (sem vínculo), não exibir mudança "novo → proposta_enviada" no histórico
+  // quando não houve proposta de fato (evita exibir transição indevida por clique acidental no status).
+  const historico =
+    lead.origem === 'landing_indicar_admin'
+      ? historicoBruto.filter(
+          (h: any) =>
+            !(
+              h.evento === 'mudanca_status' &&
+              h.status_anterior === 'novo' &&
+              h.status_novo === 'proposta_enviada'
+            )
+        )
+      : historicoBruto;
+  const cotacoesSimuladorEntry = historicoBruto.find((h: any) => h.evento === 'cotacoes_simulador');
   let cotacoesSimulador: Array<{ nome: string; operadora: string; valorTotal: number; coparticipacao?: string; abrangencia?: string; reembolso?: string }> = [];
   if (cotacoesSimuladorEntry?.detalhes) {
     try {

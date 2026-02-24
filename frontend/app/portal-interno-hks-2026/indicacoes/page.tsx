@@ -16,6 +16,10 @@ import {
   ChevronUp,
   UserCheck,
   BarChart3,
+  Calculator,
+  UserPlus,
+  Share2,
+  LayoutGrid,
 } from 'lucide-react';
 import { getIndicacoesOverview } from '@/app/actions/indicacoes-admin';
 import type { CorretorIndicacoes, IndicacoesOverview, LeadIndicado } from '@/app/actions/indicacoes-admin';
@@ -53,6 +57,14 @@ const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   fechado: { label: 'Fechado', color: 'bg-green-500/20 text-green-400' },
 };
 const LEAD_STATUS_FALLBACK = { label: 'Desconhecido', color: 'bg-gray-500/20 text-gray-400' };
+
+const TIPO_INDICACAO_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<any> }> = {
+  economizar: { label: 'Economizar', color: 'bg-emerald-500/20 text-emerald-400', icon: Calculator },
+  form_indicar: { label: 'Form. indicar', color: 'bg-blue-500/20 text-blue-400', icon: Share2 },
+  form_indicar_afiliado: { label: 'Via afiliado', color: 'bg-violet-500/20 text-violet-400', icon: UserPlus },
+  seja_corretor: { label: 'Seja corretor', color: 'bg-amber-500/20 text-amber-400', icon: Award },
+  seja_afiliado: { label: 'Seja afiliado', color: 'bg-cyan-500/20 text-cyan-400', icon: LayoutGrid },
+};
 
 // ============================================
 // COMPONENTE: Barra de Funil
@@ -233,6 +245,7 @@ function CorretorCard({ corretor }: { corretor: CorretorIndicacoes }) {
                   <thead>
                     <tr className="border-b border-white/5 text-left text-[10px] uppercase tracking-wider text-gray-600">
                       <th className="px-3 py-2">Nome</th>
+                      <th className="hidden px-3 py-2 sm:table-cell">Tipo</th>
                       <th className="hidden px-3 py-2 sm:table-cell">Operadora</th>
                       <th className="px-3 py-2 text-center">Status</th>
                       <th className="hidden px-3 py-2 text-right md:table-cell">Valor</th>
@@ -243,6 +256,9 @@ function CorretorCard({ corretor }: { corretor: CorretorIndicacoes }) {
                   <tbody className="divide-y divide-white/[0.03]">
                     {corretor.leads.map((lead) => {
                       const st = LEAD_STATUS_CONFIG[lead.status] || LEAD_STATUS_FALLBACK;
+                      const tipoConf = (lead as LeadIndicado & { tipo?: string }).tipo
+                        ? TIPO_INDICACAO_CONFIG[(lead as LeadIndicado & { tipo?: string }).tipo!]
+                        : null;
                       return (
                         <tr key={lead.id} className="transition-colors hover:bg-white/[0.02]">
                           <td className="px-3 py-2">
@@ -262,7 +278,19 @@ function CorretorCard({ corretor }: { corretor: CorretorIndicacoes }) {
                                   {lead.whatsapp}
                                 </a>
                               )}
+                              {(lead as LeadIndicado & { afiliado_nome?: string }).afiliado_nome && (
+                                <p className="text-[10px] text-violet-400">via {(lead as LeadIndicado & { afiliado_nome?: string }).afiliado_nome}</p>
+                              )}
                             </div>
+                          </td>
+                          <td className="hidden px-3 py-2 sm:table-cell">
+                            {tipoConf ? (
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${tipoConf.color}`}>
+                                {tipoConf.label}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-500">—</span>
+                            )}
                           </td>
                           <td className="hidden px-3 py-2 text-gray-400 sm:table-cell">
                             {lead.operadora_atual || '—'}
@@ -448,6 +476,39 @@ export default function IndicacoesPage() {
           }
         />
       </StatsGrid>
+
+      {/* Por tipo de indicação */}
+      {data.por_tipo && (
+        <div className="rounded-xl border border-white/5 bg-[#0a0a0a] p-4">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Por tipo de indicação
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            {(['economizar', 'form_indicar', 'form_indicar_afiliado', 'seja_corretor', 'seja_afiliado'] as const).map((key) => {
+              const conf = TIPO_INDICACAO_CONFIG[key];
+              const count = data.por_tipo[key] ?? 0;
+              const Icon = conf?.icon ?? LayoutGrid;
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-3"
+                >
+                  <div className={`rounded-lg p-2 ${conf?.color || 'bg-gray-500/20 text-gray-400'}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-white">{count}</p>
+                    <p className="text-[10px] text-gray-500">{conf?.label ?? key}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-gray-600">
+            Economizar = cliente pelo /economizar · Form. indicar = formulário /indicar · Via afiliado = indicação do afiliado · Seja corretor = solicitações · Seja afiliado = cadastros afiliado
+          </p>
+        </div>
+      )}
 
       {/* Toggle de visualização */}
       <div className="flex items-center justify-between">

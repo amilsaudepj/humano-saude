@@ -26,6 +26,7 @@ export interface SolicitacaoCorretor {
   motivo_rejeicao: string | null;
   termo_aceito: boolean;
   created_at: string;
+  indicado_por_corretor_id?: string | null;
 }
 
 export interface TermoAceite {
@@ -66,6 +67,28 @@ export async function getSolicitacoes(status?: string): Promise<{
   } catch (err) {
     logger.error('[getSolicitacoes]', err);
     return { success: false, error: 'Erro ao buscar solicitações' };
+  }
+}
+
+/** Lista solicitações de corretores indicadas pelo corretor logado (link seja corretor). */
+export async function getSolicitacoesIndicadasPorCorretor(corretorId: string): Promise<{
+  success: boolean;
+  data?: SolicitacaoCorretor[];
+  error?: string;
+}> {
+  try {
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
+      .from('solicitacoes_corretor')
+      .select('*')
+      .eq('indicado_por_corretor_id', corretorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data: (data ?? []) as SolicitacaoCorretor[] };
+  } catch (err) {
+    logger.error('[getSolicitacoesIndicadasPorCorretor]', err);
+    return { success: false, error: 'Erro ao buscar indicados' };
   }
 }
 

@@ -228,6 +228,70 @@ export async function createLeadWithCard(input: {
   }
 }
 
+/**
+ * Adiciona um lead já existente (insurance_leads) ao CRM do corretor.
+ * Usado quando um lead/indicação entra por outro canal e deve aparecer no Kanban.
+ */
+export async function createCardForExistingLead(
+  leadId: string,
+  corretorId: string,
+  colunaSlug: KanbanColumnSlug = 'novo_lead',
+): Promise<{ success: boolean; data?: CrmCard; error?: string }> {
+  try {
+    const supabase = createServiceClient();
+
+    const { data: lead, error: leadError } = await supabase
+      .from('insurance_leads')
+      .select('id, nome, whatsapp, email, operadora_atual, valor_atual')
+      .eq('id', leadId)
+      .single();
+
+    if (leadError || !lead) {
+      logger.warn('[createCardForExistingLead] Lead não encontrado', { leadId, error: leadError?.message });
+      return { success: false, error: 'Lead não encontrado' };
+    }
+
+    const { data: card, error: cardError } = await supabase
+      .from('crm_cards')
+      .insert({
+        corretor_id: corretorId,
+        lead_id: lead.id,
+        coluna_slug: colunaSlug,
+        titulo: lead.nome || 'Indicado',
+        subtitulo: lead.operadora_atual
+          ? `${lead.operadora_atual}${lead.valor_atual ? ` · R$ ${Number(lead.valor_atual).toLocaleString('pt-BR')}` : ''}`
+          : null,
+        valor_estimado: lead.valor_atual ?? null,
+        posicao: 0,
+        score: 0,
+        score_motivo: null,
+        ultima_interacao_proposta: null,
+        total_interacoes: 0,
+        tags: [],
+        prioridade: 'media',
+        metadata: {},
+      })
+      .select()
+      .single();
+
+    if (cardError) throw cardError;
+
+    await supabase.from('crm_interacoes').insert({
+      card_id: card.id,
+      corretor_id: corretorId,
+      lead_id: lead.id,
+      tipo: 'sistema',
+      titulo: 'Lead adicionado ao CRM',
+      descricao: `Lead "${lead.nome || 'Indicado'}" (${lead.whatsapp || '—'}) entrou por indicação/formulário`,
+    });
+
+    return { success: true, data: card };
+  } catch (err) {
+    logger.error('[createCardForExistingLead]', err);
+    return { success: false, error: 'Erro ao adicionar lead ao CRM' };
+  }
+}
+
 export async function updateCrmCard(
   cardId: string,
   updates: CrmCardUpdate,
@@ -641,6 +705,103 @@ export async function getLeadsList(
   } catch (err) {
     logger.error('[getLeadsList]', err);
     return { success: false, error: 'Erro ao carregar leads' };
+  }
+}
+
+// ========================================
+// LEADS DOS AFILIADOS (Comercial Admin + Corretor)
+// corretorId = null → admin (todos os usuários); corretorId = string → só do corretor
+// ========================================
+
+export async function getLeadsFromAffiliatesList(
+  corretorId: string | null,
+  filters: LeadListFilters = {},
+): Promise<{ success: boolean; data?: LeadListResult; error?: string }> {
+  try {
+    const supabase = createServiceClient();
+    const {
+      search,
+      colunaSlug = 'todos',
+      prioridade,
+      scoreMin,
+      scoreMax,
+      orderBy = 'updated_at',
+      orderDir = 'desc',
+      page = 1,
+      perPage = 20,
+    } = filters;
+
+    const leadIdsQ = supabase
+      .from('insurance_leads')
+      .select('id')
+      .eq('origem', 'form_indicar_afiliado');
+    if (corretorId) {
+      leadIdsQ.eq('corretor_id', corretorId);
+    }
+    const { data: leadRows, error: leadErr } = await leadIdsQ;
+    if (leadErr) throw leadErr;
+    const leadIds = (leadRows ?? []).map((r) => r.id).filter(Boolean);
+    if (leadIds.length === 0) {
+      return {
+        success: true,
+        data: {
+          leads: [],
+          total: 0,
+          page,
+          perPage,
+          totalPages: 0,
+        },
+      };
+    }
+
+    let query = supabase
+      .from('crm_cards')
+      .select(`
+        *,
+        lead:insurance_leads(nome, whatsapp, email, operadora_atual, valor_atual, origem, tipo_contratacao, observacoes, created_at),
+        corretor:corretores(nome)
+      `, { count: 'exact' })
+      .in('lead_id', leadIds);
+
+    if (corretorId) {
+      query = query.eq('corretor_id', corretorId);
+    }
+    if (colunaSlug && colunaSlug !== 'todos') {
+      query = query.eq('coluna_slug', colunaSlug);
+    }
+    if (prioridade) {
+      query = query.eq('prioridade', prioridade);
+    }
+    if (scoreMin !== undefined) query = query.gte('score', scoreMin);
+    if (scoreMax !== undefined) query = query.lte('score', scoreMax);
+    if (search) {
+      query = query.ilike('titulo', `%${search}%`);
+    }
+
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+    query = query.order(orderBy, { ascending: orderDir === 'asc' }).range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    const enriched = (data ?? []).map((card) =>
+      enrichCard(card as CrmCard & { lead?: Record<string, unknown> | null }),
+    );
+
+    return {
+      success: true,
+      data: {
+        leads: enriched,
+        total: count ?? 0,
+        page,
+        perPage,
+        totalPages: Math.ceil((count ?? 0) / perPage),
+      },
+    };
+  } catch (err) {
+    logger.error('[getLeadsFromAffiliatesList]', err);
+    return { success: false, error: 'Erro ao carregar leads dos afiliados' };
   }
 }
 

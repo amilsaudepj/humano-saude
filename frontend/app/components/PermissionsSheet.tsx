@@ -53,6 +53,7 @@ const CORRETOR_SIDEBAR_PREVIEW = [
     children: [
       { label: 'Pipeline Visual', permKey: 'nav_comercial_pipeline' as PermissionKey },
       { label: 'Leads', permKey: 'nav_comercial_leads' as PermissionKey },
+      { label: 'Leads dos Afiliados', permKey: 'nav_comercial_leads_afiliados' as PermissionKey },
       { label: 'CRM', permKey: 'nav_comercial_crm' as PermissionKey },
       { label: 'Contatos', permKey: 'nav_comercial_crm_contatos' as PermissionKey },
       { label: 'Empresas', permKey: 'nav_comercial_crm_empresas' as PermissionKey },

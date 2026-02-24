@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Briefcase, Sparkles, AlertTriangle, Clock, Flag,
   Search, ChevronLeft, ChevronRight,
@@ -40,6 +41,7 @@ const columnLabels: Record<string, { label: string; color: string }> = {
 // ========================================
 
 export default function CorretorDealsPage() {
+  const router = useRouter();
   const corretorId = useCorretorId();
   const [deals, setDeals] = useState<CrmCardEnriched[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,6 +164,10 @@ export default function CorretorDealsPage() {
             return (
               <div
                 key={deal.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/dashboard/corretor/crm/lead/${deal.id}`)}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/dashboard/corretor/crm/lead/${deal.id}`)}
                 className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors cursor-pointer"
               >
                 {/* Name + badges */}

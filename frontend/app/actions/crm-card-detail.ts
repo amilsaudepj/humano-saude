@@ -571,6 +571,48 @@ export async function getAdminKanbanBoard(
 }
 
 // ========================================
+// CARD BY LEAD ID (admin: abrir card a partir do lead)
+// ========================================
+
+export async function getCardByLeadId(leadId: string): Promise<R<{ cardId: string; corretorId: string }>> {
+  try {
+    const sb = createServiceClient();
+    const { data, error } = await sb
+      .from('crm_cards')
+      .select('id, corretor_id')
+      .eq('lead_id', leadId)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data?.id) return err('Nenhum card no CRM para este lead');
+    return ok({
+      cardId: String(data.id),
+      corretorId: String(data.corretor_id),
+    });
+  } catch (e) {
+    logger.error('[getCardByLeadId]', e);
+    return err('Erro ao buscar card do lead');
+  }
+}
+
+/** Dados mínimos do card (id + corretor_id) para abrir a view no admin */
+export async function getCardMinimal(cardId: string): Promise<R<{ id: string; corretor_id: string }>> {
+  try {
+    const sb = createServiceClient();
+    const { data, error } = await sb
+      .from('crm_cards')
+      .select('id, corretor_id')
+      .eq('id', cardId)
+      .single();
+    if (error || !data) return err('Card não encontrado');
+    return ok({ id: String(data.id), corretor_id: String(data.corretor_id) });
+  } catch (e) {
+    logger.error('[getCardMinimal]', e);
+    return err('Card não encontrado');
+  }
+}
+
+// ========================================
 // MOVE CARD STAGE (from lead detail page)
 // ========================================
 

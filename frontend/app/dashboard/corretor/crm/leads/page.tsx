@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCorretorId } from '../../hooks/useCorretorToken';
@@ -9,11 +9,11 @@ import { useCrmStats } from '../hooks/useCrmStats';
 import CrmStatsCards from '../components/CrmStatsCards';
 import CrmFilters from '../components/CrmFilters';
 import LeadTable from '../components/LeadTable';
-import LeadDrawer from '../../components/LeadDrawer';
 import { deleteCrmCard } from '@/app/actions/corretor-crm';
 import type { CrmCardEnriched } from '@/lib/types/corretor';
 
 export default function LeadsPage() {
+  const router = useRouter();
   const corretorId = useCorretorId();
   const { stats, loading: statsLoading } = useCrmStats(corretorId);
   const {
@@ -31,14 +31,10 @@ export default function LeadsPage() {
     refetch,
   } = useCrmLeads(corretorId);
 
-  const [selectedCard, setSelectedCard] = useState<CrmCardEnriched | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
   if (!corretorId) return null;
 
   const handleCardClick = (card: CrmCardEnriched) => {
-    setSelectedCard(card);
-    setDrawerOpen(true);
+    router.push(`/dashboard/corretor/crm/lead/${card.id}`);
   };
 
   const handleDelete = async (cardId: string) => {
@@ -101,15 +97,6 @@ export default function LeadsPage() {
         onPageChange={setPage}
         onCardClick={handleCardClick}
         onDelete={handleDelete}
-      />
-
-      {/* Drawer */}
-      <LeadDrawer
-        card={selectedCard}
-        isOpen={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedCard(null); }}
-        corretorId={corretorId}
-        onUpdate={() => refetch()}
       />
     </div>
   );

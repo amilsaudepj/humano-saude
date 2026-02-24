@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus,
@@ -395,6 +396,7 @@ function DetalheModal({
 
 // ─── Página Principal ──────────────────────────────────────
 export default function SolicitacoesCorretorPage() {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<'solicitacoes' | 'termos' | 'documentos' | 'alteracoes'>('solicitacoes');
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoCorretor[]>([]);
   const [termosAceites, setTermosAceites] = useState<TermoAceite[]>([]);
@@ -442,6 +444,20 @@ export default function SolicitacoesCorretorPage() {
   const [processandoAlteracao, setProcessandoAlteracao] = useState<string | null>(null);
   const [motivoRejeicaoBank, setMotivoRejeicaoBank] = useState('');
   const [showRejeicaoBank, setShowRejeicaoBank] = useState<string | null>(null);
+
+  // Feedback ao voltar do link de aprovação por e-mail (mesma lógica do design system)
+  useEffect(() => {
+    const aprovado = searchParams.get('aprovado');
+    const erro = searchParams.get('erro');
+    if (aprovado === '1') {
+      toast.success('Cadastro aprovado com sucesso pelo link do e-mail. O corretor recebeu o acesso.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (erro) {
+      const msg = erro === 'link-expirado' ? 'Link expirado ou inválido.' : erro === 'ja-processado' ? 'Solicitação já foi processada.' : 'Link inválido.';
+      toast.error(msg);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   const fetchSolicitacoes = useCallback(async () => {
     setLoading(true);

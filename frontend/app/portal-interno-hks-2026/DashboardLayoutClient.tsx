@@ -13,6 +13,7 @@ import { TenantThemeProvider } from '@/app/components/TenantThemeProvider';
 const ADMIN_TITLE_MAP: Record<string, string> = {
   '/portal-interno-hks-2026': 'Dashboard',
   '/portal-interno-hks-2026/leads': 'Leads',
+  '/portal-interno-hks-2026/leads-afiliados': 'Leads dos Afiliados',
   '/portal-interno-hks-2026/pipeline': 'Pipeline',
   '/portal-interno-hks-2026/crm': 'CRM',
   '/portal-interno-hks-2026/crm/contacts': 'CRM · Contatos',
@@ -41,6 +42,7 @@ const ADMIN_TITLE_MAP: Record<string, string> = {
   '/portal-interno-hks-2026/clientes': 'Clientes',
   '/portal-interno-hks-2026/documentos': 'Documentos',
   '/portal-interno-hks-2026/tarefas': 'Tarefas',
+  '/portal-interno-hks-2026/afiliados': 'Afiliados',
   '/portal-interno-hks-2026/corretores/painel': 'Corretores',
   '/portal-interno-hks-2026/renovacoes': 'Renovações',
   '/portal-interno-hks-2026/whatsapp': 'WhatsApp',

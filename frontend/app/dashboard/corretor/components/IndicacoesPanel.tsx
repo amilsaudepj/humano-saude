@@ -25,13 +25,18 @@ import {
   XCircle,
   DollarSign,
   CreditCard,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   getIndicacoesCorretor,
+  getLeadsEconomizarCorretor,
+  type LeadEconomizar,
 } from '@/app/actions/leads-indicacao';
 import type { LeadIndicacao } from '@/app/actions/leads-indicacao';
+import { getSolicitacoesIndicadasPorCorretor, type SolicitacaoCorretor } from '@/app/actions/solicitacoes-corretor';
+import { createLeadWithCard } from '@/app/actions/corretor-crm';
 
 // =============================================
 // STATUS CONFIG
@@ -45,6 +50,51 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   fechado: { label: '✅ Venda fechada', color: 'text-green-400', bg: 'bg-green-400/10', desc: 'Venda concluída com sucesso!' },
   perdido: { label: 'Não fechou', color: 'text-red-400', bg: 'bg-red-400/10', desc: 'Cliente não fechou' },
 };
+
+// =============================================
+// BOTÃO ADICIONAR AO CRM
+// =============================================
+
+function AddToCrmButton({ corretorId, lead, onSuccess }: { corretorId: string; lead: LeadIndicacao; onSuccess: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const tel = (lead.whatsapp || lead.telefone || '').toString().replace(/\D/g, '');
+  const handleAdd = async () => {
+    if (!tel || tel.length < 10) {
+      toast.error('Lead sem telefone válido para adicionar ao CRM');
+      return;
+    }
+    setLoading(true);
+    const r = await createLeadWithCard({
+      corretor_id: corretorId,
+      coluna_slug: 'novo_lead',
+      nome: lead.nome || 'Indicado',
+      whatsapp: tel,
+      email: lead.email || null,
+      operadora_atual: lead.operadora_atual || null,
+      valor_atual: lead.valor_atual ?? null,
+      origem: 'form_indicar_afiliado',
+      observacoes: `Indicação${lead.afiliado_nome ? ` via afiliado ${lead.afiliado_nome}` : ''}. Lead id: ${lead.id}`,
+    });
+    setLoading(false);
+    if (r.success) {
+      toast.success('Lead adicionado ao seu CRM');
+      onSuccess();
+    } else {
+      toast.error(r.error || 'Erro ao adicionar ao CRM');
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleAdd}
+      disabled={loading}
+      className="inline-flex items-center gap-1 rounded-lg bg-[#D4AF37]/20 px-2 py-1.5 text-[10px] font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/30 disabled:opacity-50"
+    >
+      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlusCircle className="h-3.5 w-3.5" />}
+      Ao CRM
+    </button>
+  );
+}
 
 // =============================================
 // COMPONENTE PRINCIPAL
@@ -72,7 +122,15 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
   // Filtros
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('todos');
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'form_indicar' | 'form_indicar_afiliado'>('todos');
   const [pagina, setPagina] = useState(1);
+
+  // Aba: indicações formulário | leads economizar | indicados para ser corretor
+  const [abaIndicacoes, setAbaIndicacoes] = useState<'formulario' | 'economizar' | 'indicados_corretor'>('formulario');
+  const [leadsEconomizar, setLeadsEconomizar] = useState<LeadEconomizar[]>([]);
+  const [loadingEconomizar, setLoadingEconomizar] = useState(false);
+  const [solicitacoesIndicadas, setSolicitacoesIndicadas] = useState<SolicitacaoCorretor[]>([]);
+  const [loadingSolicitacoes, setLoadingSolicitacoes] = useState(false);
 
   // Link de indicação
   const linkIndicacao = `https://humanosaude.com.br/economizar/${slug}`;
@@ -105,9 +163,33 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
     setLoading(false);
   }, [corretorId, slugConfirmado, statusFiltro, busca, pagina]);
 
+  const leadsFiltrados = tipoFiltro === 'todos'
+    ? leads
+    : leads.filter((l) => l.tipo === tipoFiltro);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (abaIndicacoes === 'economizar' && corretorId) {
+      setLoadingEconomizar(true);
+      getLeadsEconomizarCorretor(corretorId).then((r) => {
+        if (r.success && r.data) setLeadsEconomizar(r.data);
+        setLoadingEconomizar(false);
+      });
+    }
+  }, [abaIndicacoes, corretorId]);
+
+  useEffect(() => {
+    if (abaIndicacoes === 'indicados_corretor' && corretorId) {
+      setLoadingSolicitacoes(true);
+      getSolicitacoesIndicadasPorCorretor(corretorId).then((r) => {
+        if (r.success && r.data) setSolicitacoesIndicadas(r.data);
+        setLoadingSolicitacoes(false);
+      });
+    }
+  }, [abaIndicacoes, corretorId]);
 
   // Polling real-time (a cada 30s)
   useEffect(() => {
@@ -319,10 +401,48 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
       )}
 
       {/* ================================================== */}
-      {/* SEÇÃO 2: BIG NUMBERS (só se tem link) */}
+      {/* SEÇÃO 2: ABAS + CONTEÚDO (só se tem link) */}
       {/* ================================================== */}
       {slugConfirmado && (
         <>
+          <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
+            <button
+              onClick={() => setAbaIndicacoes('formulario')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                abaIndicacoes === 'formulario'
+                  ? 'bg-[#D4AF37] text-black'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              )}
+            >
+              Indicações (formulário)
+            </button>
+            <button
+              onClick={() => setAbaIndicacoes('economizar')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                abaIndicacoes === 'economizar'
+                  ? 'bg-[#D4AF37] text-black'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              )}
+            >
+              Leads pelo Economizar
+            </button>
+            <button
+              onClick={() => setAbaIndicacoes('indicados_corretor')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                abaIndicacoes === 'indicados_corretor'
+                  ? 'bg-[#D4AF37] text-black'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              )}
+            >
+              Indicados para ser corretor
+            </button>
+          </div>
+
+          {abaIndicacoes === 'formulario' && (
+          <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: 'Total leads', value: resumo.total, icon: Users, color: 'text-white' },
@@ -353,7 +473,7 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
             })}
           </div>
 
-          {/* Filtros */}
+          {/* Filtros (só na aba formulário) */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
@@ -368,6 +488,18 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[#D4AF37]/40"
               />
             </div>
+            <select
+              value={tipoFiltro}
+              onChange={(e) => {
+                setTipoFiltro(e.target.value as 'todos' | 'form_indicar' | 'form_indicar_afiliado');
+                setPagina(1);
+              }}
+              className="pl-4 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none appearance-none"
+            >
+              <option value="todos">Todos os tipos</option>
+              <option value="form_indicar">Form. indicar (direto)</option>
+              <option value="form_indicar_afiliado">Via afiliado</option>
+            </select>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
               <select
@@ -378,7 +510,7 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                 }}
                 className="pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none appearance-none"
               >
-                <option value="todos">Todos</option>
+                <option value="todos">Todos status</option>
                 {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                   <option key={key} value={key}>
                     {cfg.label}
@@ -402,22 +534,30 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                   Compartilhe seu link para começar a receber leads
                 </p>
               </div>
+            ) : leadsFiltrados.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-white/40 text-sm">Nenhum lead neste filtro de tipo</p>
+                <p className="text-white/20 text-xs mt-1">Altere o filtro &quot;Todos os tipos&quot;</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/[0.06]">
                       <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Lead</th>
+                      <th className="text-center px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden sm:table-cell">Tipo</th>
                       <th className="text-center px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Status Cliente</th>
                       <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden md:table-cell">Valor Fatura</th>
                       <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden md:table-cell">Plano Novo Est.</th>
                       <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden lg:table-cell">Economia</th>
                       <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden lg:table-cell">Data</th>
+                      <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leads.map((lead) => {
+                    {leadsFiltrados.map((lead) => {
                       const statusCfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.simulou;
+                      const viaAfiliado = lead.tipo === 'form_indicar_afiliado';
                       return (
                         <motion.tr
                           key={lead.id}
@@ -430,6 +570,9 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                             <p className="text-sm text-white font-medium">{lead.nome || 'Lead'}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-white/20">{lead.qtd_vidas} vida{lead.qtd_vidas !== 1 ? 's' : ''}</span>
+                              {viaAfiliado && lead.afiliado_nome && (
+                                <span className="text-[10px] text-violet-400/80 bg-violet-400/10 px-1.5 py-0.5 rounded">via {lead.afiliado_nome}</span>
+                              )}
                               {lead.clicou_no_contato && (
                                 <span className="inline-flex items-center gap-0.5 text-[10px] text-green-400/70 bg-green-400/5 px-1.5 py-0.5 rounded">
                                   <MessageCircle className="h-2.5 w-2.5" />
@@ -437,6 +580,15 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                                 </span>
                               )}
                             </div>
+                          </td>
+
+                          {/* TIPO: direto ou via afiliado */}
+                          <td className="px-4 py-3 text-center hidden sm:table-cell">
+                            {viaAfiliado ? (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-500/20 text-violet-400">Via afiliado</span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-400">Form. indicar</span>
+                            )}
                           </td>
 
                           {/* STATUS CLIENTE (read-only, atualizado pelo admin) */}
@@ -499,6 +651,11 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
                           <td className="px-4 py-3 text-right text-[11px] text-white/30 hidden lg:table-cell">
                             {formatDate(lead.created_at)}
                           </td>
+
+                          {/* ADICIONAR AO CRM */}
+                          <td className="px-4 py-3 text-right">
+                            <AddToCrmButton corretorId={corretorId} lead={lead} onSuccess={fetchData} />
+                          </td>
                         </motion.tr>
                       );
                     })}
@@ -531,6 +688,118 @@ export default function IndicacoesPanel({ corretorId, slug: initialSlug }: { cor
               </div>
             )}
           </div>
+          </>
+          )}
+
+          {abaIndicacoes === 'economizar' && (
+            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden backdrop-blur-xl">
+              {loadingEconomizar ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+                </div>
+              ) : leadsEconomizar.length === 0 ? (
+                <div className="py-16 text-center">
+                  <TrendingUp className="h-10 w-10 mx-auto mb-3 text-white/10" />
+                  <p className="text-white/30 text-sm">Nenhum lead pelo link Economizar ainda</p>
+                  <p className="text-white/20 text-xs mt-1">Quem acessar seu link /economizar/{slug} e simular aparecerá aqui</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Lead</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden sm:table-cell">Operadora / Status</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Valor / Economia</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leadsEconomizar.map((lead) => (
+                        <tr key={lead.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                          <td className="px-4 py-3">
+                            <p className="text-sm text-white font-medium">{lead.nome || '—'}</p>
+                            {(lead.whatsapp || lead.email) && (
+                              <p className="text-[10px] text-white/40 mt-0.5">{lead.whatsapp || lead.email}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-white/70 hidden sm:table-cell">
+                            {lead.operadora_atual || '—'} {lead.status && `· ${lead.status}`}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {lead.valor_atual != null && <span className="text-white/70">{formatCurrency(lead.valor_atual)}</span>}
+                            {lead.economia_estimada != null && (
+                              <span className="text-green-400 ml-2">{formatCurrency(lead.economia_estimada)}</span>
+                            )}
+                            {lead.valor_atual == null && lead.economia_estimada == null && '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-[11px] text-white/30">{formatDate(lead.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {abaIndicacoes === 'indicados_corretor' && (
+            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden backdrop-blur-xl">
+              {loadingSolicitacoes ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+                </div>
+              ) : solicitacoesIndicadas.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Users className="h-10 w-10 mx-auto mb-3 text-white/10" />
+                  <p className="text-white/30 text-sm">Nenhum indicado para ser corretor</p>
+                  <p className="text-white/20 text-xs mt-1">Quem se cadastrar pelo seu link &quot;Seja corretor&quot; aparecerá aqui</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Nome / Contato</th>
+                        <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase hidden sm:table-cell">Experiência</th>
+                        <th className="text-center px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Status</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#D4AF37] uppercase">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {solicitacoesIndicadas.map((sol) => (
+                        <tr key={sol.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                          <td className="px-4 py-3">
+                            <p className="text-sm text-white font-medium">{sol.nome_completo || '—'}</p>
+                            <p className="text-[10px] text-white/40 mt-0.5">{sol.email}</p>
+                            {sol.telefone && <p className="text-[10px] text-white/40">{sol.telefone}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-white/60 hidden sm:table-cell">
+                            {sol.experiencia_anos} ano(s) · {sol.operadoras_experiencia?.length ? sol.operadoras_experiencia.join(', ') : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span
+                              className={cn(
+                                'inline-flex rounded-full px-2.5 py-1 text-xs font-medium',
+                                sol.status === 'aprovado' && 'bg-green-500/20 text-green-400',
+                                sol.status === 'rejeitado' && 'bg-red-500/20 text-red-400',
+                                sol.status === 'pendente' && 'bg-yellow-500/20 text-yellow-400'
+                              )}
+                            >
+                              {sol.status === 'pendente' && 'Pendente'}
+                              {sol.status === 'aprovado' && 'Aprovado'}
+                              {sol.status === 'rejeitado' && 'Rejeitado'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-[11px] text-white/30">{formatDate(sol.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

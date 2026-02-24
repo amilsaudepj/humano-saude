@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import DashboardOverview from './components/DashboardOverview';
+import BannerEmailNaoConfirmado from './components/BannerEmailNaoConfirmado';
 import { getCorretorById } from '@/app/actions/corretor-ops';
 import { verifyToken } from '@/lib/auth-jwt';
 
@@ -34,6 +35,7 @@ export default async function CorretorDashboardPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <BannerEmailNaoConfirmado corretorId={dbCorretorId} />
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">
           Bem-vindo, <span className="text-[#D4AF37]">{nomeCompleto.split(' ')[0]}</span>

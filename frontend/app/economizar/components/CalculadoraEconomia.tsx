@@ -356,8 +356,10 @@ function Card3EconomiaAnimacao({ active }: { active: boolean }) {
 
 export default function CalculadoraEconomia({
   corretor,
+  afiliadoId,
 }: {
   corretor?: CorretorPublico;
+  afiliadoId?: string;
 }) {
   const [etapa, setEtapa] = useState<Etapa>('upload');
   const [uploading, setUploading] = useState(false);
@@ -934,6 +936,7 @@ export default function CalculadoraEconomia({
       const bestEconomia = simData.propostas?.[0]?.economia_valor || Math.round(valor * 0.3 * 100) / 100;
       const leadResult = await salvarLeadIndicacao({
         corretor_id: corretor?.id,
+        afiliado_id: afiliadoId,
         nome: nomeResponsavel || nome || null as unknown as undefined,
         email: email || null as unknown as undefined,
         telefone: telefone || null as unknown as undefined,

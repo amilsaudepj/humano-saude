@@ -28,6 +28,8 @@ export type ScannedLeadData = {
 export type SaveLeadResponse = {
   success: boolean;
   lead_id?: string;
+  /** ID do afiliado criado (ex.: cadastro sem vínculo) para vincular indicações no painel */
+  afiliado_id?: string;
   error?: string;
   message?: string;
 };
@@ -765,6 +767,10 @@ export async function getLeads(filters?: {
   status?: string;
   limit?: number;
   offset?: number;
+  /** Incluir apenas leads com esta origem (ex.: 'landing_seja_afiliado') */
+  origem?: string;
+  /** Excluir leads com estas origens (ex.: ['landing_seja_afiliado'] para não misturar na lista geral) */
+  excludeOrigem?: string[];
 }) {
   try {
     const sb = createServiceClient();
@@ -778,14 +784,18 @@ export async function getLeads(filters?: {
       query = query.eq('status', filters.status);
     }
 
+    if (filters?.origem) {
+      query = query.eq('origem', filters.origem);
+    }
+
     if (filters?.limit) {
       query = query.limit(filters.limit);
     }
 
-    if (filters?.offset) {
+    if (filters?.offset !== undefined && filters?.limit) {
       query = query.range(
         filters.offset,
-        filters.offset + (filters.limit || 10) - 1
+        filters.offset + filters.limit - 1
       );
     }
 
@@ -796,7 +806,12 @@ export async function getLeads(filters?: {
       return { success: false, data: [], error: error.message };
     }
 
-    return { success: true, data: data || [] };
+    let result = data || [];
+    if (filters?.excludeOrigem?.length && !filters?.origem) {
+      result = result.filter((row: { origem?: string }) => !filters.excludeOrigem!.includes(row.origem || ''));
+    }
+
+    return { success: true, data: result };
 
   } catch (error: unknown) {
     logger.error('Erro inesperado ao buscar leads', error);
@@ -1035,7 +1050,10 @@ export async function getDashboardEssentials(periodo: DashboardPeriod = 'hoje') 
       return { success: false, data: null, error: error.message };
     }
 
-    const leads = data || [];
+    // Excluir "quero ser afiliado" das métricas de leads (não são leads de venda)
+    const leads = (data || []).filter(
+      (row: { origem?: string }) => row.origem !== 'landing_seja_afiliado',
+    );
     const leadsPeriodo = leads.length;
     const propostasEnviadas = leads.filter((lead) => lead.status === 'proposta_enviada').length;
     const vendasFechadas = leads.filter((lead) => lead.status === 'ganho').length;
@@ -1050,15 +1068,20 @@ export async function getDashboardEssentials(periodo: DashboardPeriod = 'hoje') 
     const taxaFechamento =
       leadsPeriodo > 0 ? Number(((vendasFechadas / leadsPeriodo) * 100).toFixed(1)) : 0;
 
-    const { data: backlogLeads, error: backlogLeadsError } = await sb
+    const { data: backlogRaw, error: backlogLeadsError } = await sb
       .from('insurance_leads')
-      .select('status, created_at, updated_at, valor_proposto, valor_atual')
+      .select('status, created_at, updated_at, valor_proposto, valor_atual, origem')
       .eq('arquivado', false);
 
     if (backlogLeadsError) {
       logger.error('Erro ao buscar backlog estratégico de leads', backlogLeadsError);
       return { success: false, data: null, error: backlogLeadsError.message };
     }
+
+    // Excluir "quero ser afiliado" dos clientes em aberto
+    const backlogLeads = (backlogRaw || []).filter(
+      (row: { origem?: string }) => row.origem !== 'landing_seja_afiliado',
+    );
 
     const openStatuses = new Set(['novo', 'contatado', 'negociacao', 'proposta_enviada']);
     const fortyEightHoursAgo = now.getTime() - 48 * 60 * 60 * 1000;
@@ -1310,5 +1333,294 @@ export async function saveCalculadoraLead(
       error: 'unexpected_error',
       message,
     };
+  }
+}
+
+// =============================================
+// Server Action: Indicação SEM vínculo (vai direto pro admin)
+// Usado na landing /indicar sem ref — lead aparece em portal Leads
+// =============================================
+
+export type SaveIndicacaoAdminData = {
+  nome: string;
+  telefone: string;
+  email?: string;
+  mensagem?: string;
+  /** Quando o usuário acabou de se cadastrar como afiliado (sem vínculo), para vincular a indicação ao painel dele */
+  afiliado_id?: string;
+};
+
+export async function saveLeadIndicacaoAdmin(
+  data: SaveIndicacaoAdminData
+): Promise<SaveLeadResponse> {
+  try {
+    const nome = data.nome?.trim();
+    const telefone = data.telefone?.trim().replace(/\D/g, '');
+    if (!nome || !telefone || telefone.length < 10) {
+      return {
+        success: false,
+        error: 'validation_error',
+        message: 'Nome e telefone (com DDD) são obrigatórios.',
+      };
+    }
+
+    const sb = createServiceClient();
+    const email = data.email?.trim().toLowerCase() || null;
+    const mensagem = data.mensagem?.trim() || null;
+
+    const dadosPdf = {
+      origem_pagina: 'landing_indicar_admin',
+      indicacao_sem_vinculo: true,
+      dados_digitados: {
+        nome,
+        email,
+        telefone: data.telefone?.trim() ?? '',
+        mensagem_indicador: mensagem,
+      },
+      corretor: null,
+      timestamp: new Date().toISOString(),
+    };
+
+    const observacoes = [
+      '📋 INDICAÇÃO (sem vínculo com corretor)',
+      '🌐 Landing "Quero apenas indicar" — direto para o admin',
+      mensagem ? `Mensagem: ${mensagem}` : null,
+    ].filter(Boolean).join('\n');
+
+    let corretorIdSemVinculo: string | null = null;
+    try {
+      const { getOrCreateCorretorAfiliadosSemVinculo } = await import('@/app/actions/corretor-afiliados');
+      const res = await getOrCreateCorretorAfiliadosSemVinculo();
+      if (res.success && res.corretor_id) corretorIdSemVinculo = res.corretor_id;
+    } catch (_) {}
+
+    const { data: newLead, error } = await sb
+      .from('insurance_leads')
+      .insert({
+        nome,
+        whatsapp: telefone,
+        email,
+        operadora_atual: null,
+        valor_atual: null,
+        idades: [],
+        economia_estimada: null,
+        valor_proposto: null,
+        tipo_contratacao: 'individual',
+        status: 'novo',
+        origem: 'landing_indicar_admin',
+        prioridade: 'media',
+        observacoes,
+        dados_pdf: dadosPdf,
+        historico: [
+          {
+            timestamp: new Date().toISOString(),
+            evento: 'lead_criado',
+            origem: 'landing_indicar_admin',
+            detalhes: 'Indicação sem vínculo com corretor. Lead vai direto para o admin.',
+          },
+        ],
+        arquivado: false,
+        ...(corretorIdSemVinculo && { corretor_id: corretorIdSemVinculo }),
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      logger.error('Erro ao salvar lead indicação admin', error);
+      return {
+        success: false,
+        error: 'database_error',
+        message: error.message,
+      };
+    }
+
+    // Se o indicador é afiliado recém-cadastrado (sem vínculo), gravar também em leads_indicacao para aparecer no painel do afiliado
+    if (data.afiliado_id && corretorIdSemVinculo) {
+      const { error: errLI } = await sb.from('leads_indicacao').insert({
+        corretor_id: corretorIdSemVinculo,
+        afiliado_id: data.afiliado_id,
+        nome,
+        telefone: data.telefone?.trim() ?? null,
+        email,
+        status: 'simulou',
+        origem: 'form_indicar_afiliado',
+        metadata: mensagem ? { mensagem_indicador: mensagem } : {},
+      });
+      if (errLI) {
+        logger.warn('Indicação admin: falha ao gravar em leads_indicacao para painel do afiliado', { error: errLI });
+      }
+    }
+
+    // Cadastrar o lead no CRM do corretor (sem vínculo) para aparecer no Kanban
+    if (newLead?.id && corretorIdSemVinculo) {
+      try {
+        const { createCardForExistingLead } = await import('@/app/actions/corretor-crm');
+        await createCardForExistingLead(newLead.id, corretorIdSemVinculo, 'novo_lead');
+      } catch (crmErr) {
+        logger.warn('Indicação admin: falha ao adicionar lead ao CRM', { error: crmErr });
+      }
+    }
+
+    revalidatePath('/portal-interno-hks-2026/leads');
+    revalidatePath('/portal-interno-hks-2026');
+
+    return {
+      success: true,
+      lead_id: newLead?.id,
+      message: 'Indicação enviada! Nossa equipe entrará em contato.',
+    };
+  } catch (error: unknown) {
+    logger.error('Erro ao salvar indicação admin', error);
+    const message = error instanceof Error ? error.message : 'Erro inesperado';
+    return {
+      success: false,
+      error: 'unexpected_error',
+      message,
+    };
+  }
+}
+
+export type SaveSejaAfiliadoAdminData = {
+  nome: string;
+  email: string;
+  telefone: string;
+  cpf?: string;
+};
+
+/** Lead "quero ser afiliado" sem vínculo (Step 1 sem ref). Origem landing_seja_afiliado. */
+export async function saveLeadSejaAfiliadoAdmin(
+  data: SaveSejaAfiliadoAdminData
+): Promise<SaveLeadResponse> {
+  try {
+    const nome = data.nome?.trim();
+    const email = data.email?.trim()?.toLowerCase();
+    const telefone = data.telefone?.trim()?.replace(/\D/g, '');
+    if (!nome || !email || !telefone || telefone.length < 10) {
+      return {
+        success: false,
+        error: 'validation_error',
+        message: 'Nome, e-mail e telefone (com DDD) são obrigatórios.',
+      };
+    }
+
+    const sb = createServiceClient();
+    const cpf = data.cpf?.trim()?.replace(/\D/g, '') || null;
+
+    const dadosPdf = {
+      origem_pagina: 'landing_seja_afiliado',
+      quero_ser_afiliado: true,
+      dados_digitados: { nome, email, telefone: data.telefone?.trim() ?? '', cpf },
+      corretor: null,
+      timestamp: new Date().toISOString(),
+    };
+
+    const observacoes = [
+      'QUERO SER AFILIADO (sem vínculo)',
+      'Landing Seja afiliado. Cadastro inicial, direto para o admin.',
+      cpf ? `CPF: ${cpf}` : null,
+    ].filter(Boolean).join('\n');
+
+    let corretorIdSemVinculo: string | null = null;
+    try {
+      const { getOrCreateCorretorAfiliadosSemVinculo } = await import('@/app/actions/corretor-afiliados');
+      const res = await getOrCreateCorretorAfiliadosSemVinculo();
+      if (res.success && res.corretor_id) corretorIdSemVinculo = res.corretor_id;
+    } catch (_) {}
+
+    const { data: newLead, error } = await sb
+      .from('insurance_leads')
+      .insert({
+        nome,
+        whatsapp: telefone,
+        email,
+        operadora_atual: null,
+        valor_atual: null,
+        idades: [],
+        economia_estimada: null,
+        valor_proposto: null,
+        tipo_contratacao: 'individual',
+        status: 'novo',
+        origem: 'landing_seja_afiliado',
+        prioridade: 'media',
+        observacoes,
+        dados_pdf: dadosPdf,
+        historico: [
+          {
+            timestamp: new Date().toISOString(),
+            evento: 'lead_criado',
+            origem: 'landing_seja_afiliado',
+            detalhes: 'Cadastro quero ser afiliado sem vínculo. Lead vai direto para o admin.',
+          },
+        ],
+        arquivado: false,
+        ...(corretorIdSemVinculo && { corretor_id: corretorIdSemVinculo }),
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      logger.error('Erro ao salvar lead seja afiliado admin', error);
+      return { success: false, error: 'database_error', message: error.message };
+    }
+
+    revalidatePath('/portal-interno-hks-2026/leads');
+    revalidatePath('/portal-interno-hks-2026');
+    revalidatePath('/portal-interno-hks-2026/afiliados');
+
+    // Criar conta de afiliado (sem vínculo) e enviar e-mail com dados de acesso
+    const { criarAfiliadoSemVinculo } = await import('@/app/actions/corretor-afiliados');
+    const contaAfiliado = await criarAfiliadoSemVinculo({
+      nome,
+      email,
+      telefone: data.telefone?.trim() ?? '',
+      cpf: data.cpf?.trim()?.replace(/\D/g, '') || undefined,
+    });
+
+    void (async () => {
+      try {
+        const { enviarEmailAfiliadoAcessoPainel, enviarEmailAdminLeadSejaAfiliado } = await import('@/lib/email');
+        if (contaAfiliado.success) {
+          await Promise.all([
+            enviarEmailAfiliadoAcessoPainel({
+              to: email,
+              nomeAfiliado: nome,
+              senhaTemporaria: contaAfiliado.senhaTemporaria,
+            }),
+            enviarEmailAdminLeadSejaAfiliado({
+              nome,
+              email,
+              telefone: data.telefone?.trim() ?? '',
+              cpf: cpf || undefined,
+            }),
+          ]);
+        } else {
+          const { enviarEmailAfiliadoInteresseRecebido, enviarEmailAdminLeadSejaAfiliado } = await import('@/lib/email');
+          await Promise.all([
+            enviarEmailAfiliadoInteresseRecebido({ to: email, nome }),
+            enviarEmailAdminLeadSejaAfiliado({
+              nome,
+              email,
+              telefone: data.telefone?.trim() ?? '',
+              cpf: cpf || undefined,
+            }),
+          ]);
+        }
+      } catch (emailErr) {
+        logger.warn('[saveLeadSejaAfiliadoAdmin] Falha ao enviar e-mails (afiliado/admin)', { error: emailErr });
+      }
+    })();
+
+    return {
+      success: true,
+      lead_id: newLead?.id,
+      afiliado_id: contaAfiliado.success && contaAfiliado.afiliado_id ? contaAfiliado.afiliado_id : undefined,
+      message: contaAfiliado.success
+        ? 'Cadastro concluído! Você receberá um e-mail com o link e os dados para acessar o painel do afiliado.'
+        : 'Cadastro enviado! Nossa equipe entrará em contato.',
+    };
+  } catch (error: unknown) {
+    logger.error('Erro ao salvar seja afiliado admin', error);
+    const message = error instanceof Error ? error.message : 'Erro inesperado';
+    return { success: false, error: 'unexpected_error', message };
   }
 }

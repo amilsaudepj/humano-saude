@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Filter, ArrowDown, Users, FileCheck, Handshake, Trophy } from 'lucide-react';
+import { ArrowDown, Users, FileCheck, Handshake, Trophy } from 'lucide-react';
 import { getPipeline } from '@/app/actions/clientes';
+import { getCorretoresMap } from '@/app/actions/indicacoes-admin';
 
 interface PipelineItem {
   lead_id: string;
   nome: string;
   whatsapp: string;
   lead_status: string;
+  corretor_id?: string | null;
   cotacao_id?: string;
   numero_cotacao?: string;
   cotacao_status?: string;
@@ -28,12 +30,14 @@ const FUNNEL_STAGES = [
 
 export default function FunilPage() {
   const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
+  const [corretorMap, setCorretorMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const res = await getPipeline();
+      const [res, map] = await Promise.all([getPipeline(), getCorretoresMap()]);
       if (res.success) setPipeline(res.data || []);
+      setCorretorMap(map);
       setLoading(false);
     }
     load();
@@ -116,6 +120,7 @@ export default function FunilPage() {
                     <thead>
                       <tr className="border-b border-white/10 text-left text-gray-400">
                         <th className="pb-2 pr-4">Nome</th>
+                        <th className="pb-2 pr-4">Usuário</th>
                         <th className="pb-2 pr-4">WhatsApp</th>
                         <th className="pb-2 pr-4">Operadora</th>
                         <th className="pb-2 pr-4">Cotação</th>
@@ -126,6 +131,13 @@ export default function FunilPage() {
                       {items.map((item) => (
                         <tr key={item.lead_id} className="border-b border-white/5 hover:bg-white/5">
                           <td className="py-2 pr-4 text-white">{item.nome}</td>
+                          <td className="py-2 pr-4">
+                            <span className="text-[#D4AF37] font-medium">
+                              {item.corretor_id && corretorMap[item.corretor_id]
+                                ? corretorMap[item.corretor_id]
+                                : '—'}
+                            </span>
+                          </td>
                           <td className="py-2 pr-4 text-gray-300">{item.whatsapp || '—'}</td>
                           <td className="py-2 pr-4 text-gray-300">{item.operadora || '—'}</td>
                           <td className="py-2 pr-4 text-gray-300">{item.numero_cotacao || '—'}</td>

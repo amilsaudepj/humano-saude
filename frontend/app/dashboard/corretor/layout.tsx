@@ -23,6 +23,7 @@ const CORRETOR_TITLE_MAP: Record<string, string> = {
   '/dashboard/corretor/planos': 'Tabela de Preços',
   '/dashboard/corretor/crm': 'CRM',
   '/dashboard/corretor/crm/leads': 'Leads',
+  '/dashboard/corretor/crm/leads-afiliados': 'Leads dos Afiliados',
   '/dashboard/corretor/crm/contacts': 'Contatos',
   '/dashboard/corretor/crm/companies': 'Empresas',
   '/dashboard/corretor/crm/deals': 'Oportunidades',

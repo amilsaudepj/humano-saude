@@ -18,6 +18,7 @@ export const PERMISSION_KEYS = [
   // Navegação — sub-itens Comercial
   'nav_comercial_pipeline',
   'nav_comercial_leads',
+  'nav_comercial_leads_afiliados',
   'nav_comercial_crm',
   'nav_comercial_crm_contatos',
   'nav_comercial_crm_empresas',
@@ -152,6 +153,7 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         children: [
           { key: 'nav_comercial_pipeline', label: 'Pipeline Visual', sidebarId: 'com-pipeline' },
           { key: 'nav_comercial_leads', label: 'Leads', sidebarId: 'com-leads' },
+          { key: 'nav_comercial_leads_afiliados', label: 'Leads dos Afiliados', sidebarId: 'com-leads-afiliados' },
           { key: 'nav_comercial_crm', label: 'CRM', sidebarId: 'com-crm' },
           { key: 'nav_comercial_crm_contatos', label: 'Contatos', sidebarId: 'com-crm-contatos' },
           { key: 'nav_comercial_crm_empresas', label: 'Empresas', sidebarId: 'com-crm-empresas' },
@@ -315,7 +317,7 @@ export const ROLE_TEMPLATES: Record<string, UserPermissions> = {
     // Navegação principal
     nav_home: true, nav_comercial: true, nav_operacoes: true, nav_comunicacao: true,
     // Sub-itens comercial
-    nav_comercial_leads: true, nav_comercial_crm: true, nav_comercial_crm_contatos: true,
+    nav_comercial_leads: true, nav_comercial_leads_afiliados: true, nav_comercial_crm: true, nav_comercial_crm_contatos: true,
     nav_comercial_crm_empresas: true, nav_comercial_cotacoes: true,
     // Sub-itens operações
     nav_ops_clientes: true, nav_ops_clientes_portal: true, nav_ops_documentos: true,
@@ -358,7 +360,9 @@ export const ROLE_TEMPLATES: Record<string, UserPermissions> = {
     nav_materiais: true,       // seção "Materiais"
     nav_operacoes: true,       // seção "Renovações" (item direto)
 
-    // Sub-itens Propostas (dentro de Comercial)
+    // Sub-itens Comercial (Leads, CRM, Propostas, etc.)
+    nav_comercial_leads: true,
+    nav_comercial_leads_afiliados: true,
     nav_comercial_propostas_fila: true,
     nav_comercial_propostas_ia: true,
     nav_comercial_cotacoes: true,
@@ -413,6 +417,7 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, PermissionKey> = {
   // Sub-itens Comercial
   'com-pipeline': 'nav_comercial_pipeline',
   'com-leads': 'nav_comercial_leads',
+  'com-leads-afiliados': 'nav_comercial_leads_afiliados',
   'com-crm': 'nav_comercial_crm',
   'com-crm-contatos': 'nav_comercial_crm_contatos',
   'com-crm-empresas': 'nav_comercial_crm_empresas',
@@ -530,6 +535,7 @@ export const SIDEBAR_PERMISSION_MAP: Record<string, PermissionKey> = {
 // ─── Mapeamento rota → permissão (para middleware) ────────
 export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/portal-interno-hks-2026/leads': 'nav_comercial_leads',
+  '/portal-interno-hks-2026/leads-afiliados': 'nav_comercial_leads_afiliados',
   '/portal-interno-hks-2026/funil': 'nav_comercial_pipeline',
   '/portal-interno-hks-2026/crm': 'nav_comercial_crm',
   '/portal-interno-hks-2026/propostas': 'nav_comercial_propostas',
@@ -580,6 +586,8 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/dashboard/corretor/vendas': 'nav_comercial_vendas',
   '/dashboard/corretor/planos': 'nav_comercial_planos',
   '/dashboard/corretor/materiais': 'nav_materiais',
+  '/dashboard/corretor/crm/leads': 'nav_comercial_leads',
+  '/dashboard/corretor/crm/leads-afiliados': 'nav_comercial_leads_afiliados',
   '/dashboard/corretor/renovacoes': 'nav_ops_renovacoes',
   '/dashboard/corretor/indicacoes': 'nav_ops_indicacoes',
   '/dashboard/corretor/treinamento': 'nav_ops_treinamento',
