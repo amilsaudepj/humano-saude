@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAdminAuthorized } from '@/lib/api-auth';
 import { isEmailAllowedForLinks } from '@/app/actions/links-access';
 import { signLinksAccessToken } from '@/lib/auth-jwt';
+import { LINKS_RESTRICTED_PATH } from '@/lib/links-restricted-path';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosaude.com.br';
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const token = await signLinksAccessToken(email);
-    const url = `${BASE_URL}/links?token=${encodeURIComponent(token)}`;
+    const url = `${BASE_URL}${LINKS_RESTRICTED_PATH}?token=${encodeURIComponent(token)}`;
     return NextResponse.json({ url, token }, { status: 200 });
   } catch (e) {
     return NextResponse.json({ error: 'Erro ao gerar link' }, { status: 500 });

@@ -1,15 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import Logo from './components/Logo';
+import Image from 'next/image';
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black flex items-center justify-center p-4">
       <div className="text-center max-w-2xl mx-auto">
-        {/* Logo */}
+        {/* Logo sem fundo (ícone oficial) */}
         <div className="flex justify-center mb-8">
-          <Logo className="h-16" />
+          <Link href="/" className="inline-flex items-center gap-3">
+            <Image
+              src="/images/logos/icon-humano.png"
+              alt="Humano Saúde"
+              width={64}
+              height={64}
+              className="h-16 w-auto object-contain"
+            />
+            <span className="text-xl font-bold text-white tracking-tight">Humano Saúde</span>
+          </Link>
         </div>
 
         {/* 404 */}

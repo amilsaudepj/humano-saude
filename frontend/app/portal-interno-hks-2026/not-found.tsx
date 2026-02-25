@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Home, ArrowLeft, Shield } from 'lucide-react';
-import Logo from '../components/Logo';
 
 export default function PortalNotFound() {
   return (
@@ -15,9 +15,18 @@ export default function PortalNotFound() {
       </div>
 
       <div className="relative z-10 text-center max-w-2xl mx-auto">
-        {/* Logo */}
+        {/* Logo sem fundo (ícone oficial) */}
         <div className="flex justify-center mb-8">
-          <Logo className="h-12" />
+          <Link href="/" className="inline-flex items-center gap-3">
+            <Image
+              src="/images/logos/icon-humano.png"
+              alt="Humano Saúde"
+              width={48}
+              height={48}
+              className="h-12 w-auto object-contain"
+            />
+            <span className="text-lg font-bold text-white tracking-tight">Humano Saúde</span>
+          </Link>
         </div>
 
         {/* 404 */}

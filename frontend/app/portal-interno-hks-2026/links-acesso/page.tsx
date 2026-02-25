@@ -139,11 +139,11 @@ export default function LinksAcessoPage() {
       <div>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Link2 className="h-5 w-5 text-[#D4AF37]" />
-          Acesso à página /links
+          Acesso à página restrita de links
         </h1>
         <p className="text-xs text-white/40 mt-1">Menu: Configurações → Acesso à página /links</p>
         <p className="text-sm text-white/50 mt-2">
-          Apenas os e-mails listados abaixo podem acessar a página de links (ou quem receber o link gerado). Quando alguém solicitar acesso, você recebe um e-mail com o botão &quot;Aprovar acesso&quot; (ou pode autorizar aqui na seção abaixo).
+          <strong className="text-white/70">/links</strong> é o linktree público (Instagram, etc.). A página <strong className="text-white/70">/acesso-links</strong> é restrita: apenas os e-mails abaixo ou quem receber o link gerado pode acessar. Quando alguém solicitar acesso na página restrita, você recebe um e-mail com &quot;Aprovar acesso&quot; (ou pode autorizar aqui).
         </p>
       </div>
 
@@ -226,7 +226,7 @@ export default function LinksAcessoPage() {
           Autorizar solicitações (aqui você aprova ou recusa)
         </h2>
         <p className="text-xs text-white/50 mb-4">
-          Quando alguém clica em &quot;Não tem acesso? Solicitar agora&quot; na página /links, você recebe um e-mail com link para aprovar em 1 clique e a solicitação também aparece aqui para autorizar ou recusar.
+          Quando alguém clica em &quot;Não tem acesso? Solicitar agora&quot; na página restrita (/acesso-links), você recebe um e-mail com link para aprovar em 1 clique e a solicitação também aparece aqui.
         </p>
         {loading ? (
           <div className="flex items-center gap-2 text-white/50 py-4">
@@ -280,12 +280,17 @@ export default function LinksAcessoPage() {
 
       <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-4">
         <p className="text-sm text-white/80">
-          <strong className="text-[#D4AF37]">Como usar:</strong> Quem acessa{' '}
+          <strong className="text-[#D4AF37]">Como usar:</strong>{' '}
           <a href="/links" target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] underline inline-flex items-center gap-1">
             /links
             <ExternalLink className="h-3 w-3" />
           </a>
-          {' '}pode entrar com o e-mail (se estiver na lista), usar o link que você enviou por e-mail, ou clicar em &quot;Não tem acesso? Solicitar agora&quot;. As solicitações aparecem acima: aprove para adicionar o e-mail à lista ou recuse. Use &quot;Gerar link&quot; para copiar uma URL com token e enviar por e-mail (acesso por 90 dias).
+          {' '}é o linktree público (4 links oficiais).{' '}
+          <a href="/acesso-links" target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] underline inline-flex items-center gap-1">
+            /acesso-links
+            <ExternalLink className="h-3 w-3" />
+          </a>
+          {' '}é a página restrita: quem acessa entra com e-mail (se estiver na lista), usa o link que você gerou, ou solicita acesso. Use &quot;Gerar link&quot; para copiar a URL com token (válida 90 dias) e enviar por e-mail.
         </p>
       </div>
     </div>

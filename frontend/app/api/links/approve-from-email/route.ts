@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLinksAccessRequests, approveLinksAccessRequest } from '@/app/actions/links-access';
 import { enviarEmailLinksAcessoAprovado } from '@/lib/email';
 import { verifyLinksApproveToken } from '@/lib/links-approve-token';
+import { LINKS_RESTRICTED_PATH } from '@/lib/links-restricted-path';
 
 export async function GET(request: NextRequest) {
   const email = request.nextUrl.searchParams.get('email');
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${adminLinksUrl}?erro=erro`);
   }
 
-  const linksUrl = `${baseUrl}/links`;
+  const linksUrl = `${baseUrl}${LINKS_RESTRICTED_PATH}`;
   await enviarEmailLinksAcessoAprovado({ email: decoded.email, linksUrl });
 
   return NextResponse.redirect(`${adminLinksUrl}?aprovado=1`);
