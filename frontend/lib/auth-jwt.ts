@@ -152,3 +152,30 @@ export async function verifyConfirmEmailToken(token: string): Promise<ConfirmEma
     return null;
   }
 }
+
+// ─── Token de acesso à página /links (link no e-mail do admin) ─────────────────
+
+export interface LinksAccessPayload extends JWTPayload {
+  email: string;
+  purpose: 'links_access';
+}
+
+/** Gera JWT de acesso à página /links (válido 90 dias). */
+export async function signLinksAccessToken(email: string): Promise<string> {
+  return new SignJWT({ email: email.toLowerCase().trim(), purpose: 'links_access' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('90d')
+    .sign(getSecret());
+}
+
+/** Verifica JWT de acesso à página /links; retorna payload ou null. */
+export async function verifyLinksAccessToken(token: string): Promise<LinksAccessPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    if ((payload as LinksAccessPayload).purpose !== 'links_access') return null;
+    return payload as LinksAccessPayload;
+  } catch {
+    return null;
+  }
+}

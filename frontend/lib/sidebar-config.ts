@@ -326,6 +326,7 @@ export const sidebarItems: SidebarItem[] = [
       { id: 'config-tenants', label: 'Corretoras (Tenants)', icon: Building2, href: `${P}/tenants`, badge: { text: 'SUPER', variant: 'gold' } },
       { id: 'config-perfil', label: 'Perfil', icon: User, href: `${P}/perfil` },
       { id: 'config-seguranca', label: 'Segurança', icon: Shield, href: `${P}/seguranca` },
+      { id: 'config-links-acesso', label: 'Acesso à página /links', icon: Link2, href: `${P}/links-acesso` },
       { id: 'config-integracoes-legacy', label: 'Integrações (Legado)', icon: Plug, href: `${P}/integracoes` },
     ],
   },

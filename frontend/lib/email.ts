@@ -29,6 +29,9 @@ import PixPendenteEmail from '@/emails/PixPendenteEmail';
 import DesignSystemSolicitacaoAdminEmail from '@/emails/DesignSystemSolicitacaoAdminEmail';
 import DesignSystemSolicitacaoRecebidaEmail from '@/emails/DesignSystemSolicitacaoRecebidaEmail';
 import DesignSystemAcessoAprovadoEmail from '@/emails/DesignSystemAcessoAprovadoEmail';
+import LinksSolicitacaoAdminEmail from '@/emails/LinksSolicitacaoAdminEmail';
+import LinksSolicitacaoRecebidaEmail from '@/emails/LinksSolicitacaoRecebidaEmail';
+import LinksAcessoAprovadoEmail from '@/emails/LinksAcessoAprovadoEmail';
 
 // ─── Resend client (lazy) ────────────────────────────────────
 let _resend: Resend | null = null;
@@ -484,6 +487,91 @@ export async function enviarEmailDesignSystemAcessoAprovado(dados: {
     });
   } catch (err) {
     log.error('enviarEmailDesignSystemAcessoAprovado', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PÁGINA /LINKS — Notificação admin (solicitação de acesso)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailLinksSolicitacaoAdmin(dados: {
+  emailSolicitante: string;
+  mensagem?: string;
+  approveLink: string;
+}) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(
+      LinksSolicitacaoAdminEmail({
+        emailSolicitante: dados.emailSolicitante,
+        mensagem: dados.mensagem,
+        approveLink: dados.approveLink,
+      })
+    );
+
+    const to = process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL] : ADMIN_EMAILS;
+    return sendViaResend({
+      to,
+      subject: `Página de links: ${dados.emailSolicitante} solicitou acesso`,
+      html,
+      templateName: 'links_solicitacao_admin',
+      category: 'links',
+      tags: ['links', 'admin', 'solicitacao'],
+    });
+  } catch (err) {
+    log.error('enviarEmailLinksSolicitacaoAdmin', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PÁGINA /LINKS — Confirmação para quem solicitou (solicitação recebida)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailLinksSolicitacaoRecebida(dados: { email: string }) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(LinksSolicitacaoRecebidaEmail({ email: dados.email }));
+
+    return sendViaResend({
+      to: dados.email,
+      subject: 'Solicitação de acesso à página de links recebida — Humano Saúde',
+      html,
+      templateName: 'links_solicitacao_recebida',
+      category: 'links',
+      tags: ['links', 'solicitante'],
+    });
+  } catch (err) {
+    log.error('enviarEmailLinksSolicitacaoRecebida', err);
+    return { success: false, error: 'Erro inesperado' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PÁGINA /LINKS — Aviso de acesso aprovado (para quem solicitou)
+// ─────────────────────────────────────────────────────────────
+export async function enviarEmailLinksAcessoAprovado(dados: { email: string; linksUrl: string }) {
+  try {
+    const guard = guardApiKey();
+    if (!guard.ok) return guard.result;
+
+    const html = await render(
+      LinksAcessoAprovadoEmail({ email: dados.email, linksUrl: dados.linksUrl })
+    );
+
+    return sendViaResend({
+      to: dados.email,
+      subject: 'Acesso à página de links aprovado — Humano Saúde',
+      html,
+      templateName: 'links_acesso_aprovado',
+      category: 'links',
+      tags: ['links', 'aprovado'],
+    });
+  } catch (err) {
+    log.error('enviarEmailLinksAcessoAprovado', err);
     return { success: false, error: 'Erro inesperado' };
   }
 }
