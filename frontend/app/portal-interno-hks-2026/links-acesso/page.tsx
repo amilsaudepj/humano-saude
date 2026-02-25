@@ -59,27 +59,29 @@ export default function LinksAcessoPage() {
     }
     setSaving(true);
     const res = await setLinksAllowedEmails([...emails, email]);
-    setSaving(false);
     if (res.success) {
-      setEmails((prev) => [...prev, email]);
+      const refetch = await getLinksAllowedEmails();
+      if (refetch.success && refetch.data) setEmails(refetch.data);
       setNewEmail('');
       toast.success('E-mail adicionado');
     } else {
       toast.error(res.error || 'Erro ao adicionar');
     }
+    setSaving(false);
   };
 
   const handleRemove = async (email: string) => {
     setSaving(true);
     const next = emails.filter((e) => e !== email);
     const res = await setLinksAllowedEmails(next);
-    setSaving(false);
     if (res.success) {
-      setEmails(next);
+      const refetch = await getLinksAllowedEmails();
+      if (refetch.success && refetch.data) setEmails(refetch.data);
       toast.success('E-mail removido');
     } else {
       toast.error(res.error || 'Erro ao remover');
     }
+    setSaving(false);
   };
 
   const handleApproveRequest = async (email: string) => {

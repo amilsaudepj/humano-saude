@@ -38,8 +38,24 @@ export async function getLinksAllowedEmails(): Promise<{ success: boolean; data?
       return { success: false, error: error.message };
     }
 
-    const config = (data?.config as { emails?: string[] }) || {};
-    const emails = Array.isArray(config.emails) ? config.emails.map(normalizeEmail) : [];
+    const raw = data?.config;
+    const config =
+      typeof raw === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(raw) as Record<string, unknown>;
+            } catch {
+              return {};
+            }
+          })()
+        : (raw as Record<string, unknown> | null) || {};
+    const list = config.emails;
+    const emails = Array.isArray(list)
+      ? list
+          .filter((e): e is string => typeof e === 'string')
+          .map((e) => normalizeEmail(e))
+          .filter(Boolean)
+      : [];
     return { success: true, data: emails };
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro inesperado';
@@ -54,7 +70,8 @@ export async function isEmailAllowedForLinks(email: string): Promise<boolean> {
   const res = await getLinksAllowedEmails();
   if (!res.success || !res.data) return false;
   const normalized = normalizeEmail(email);
-  return res.data.some((e) => e === normalized);
+  if (!normalized) return false;
+  return res.data.some((e) => normalizeEmail(e) === normalized);
 }
 
 /**
