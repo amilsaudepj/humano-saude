@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import CorretorSidebar from './components/CorretorSidebar';
 import { Toaster } from '@/components/ui/sonner';
+import NotificationBannerFloating from '@/components/notifications/NotificationBannerFloating';
 import { Shield, ArrowRight, LogOut, Clock, FileText, Landmark } from 'lucide-react';
 import { getCorretorIdFromCookie } from './hooks/useCorretorToken';
 import GuidedTour from '@/app/components/tour/GuidedTour';
@@ -14,6 +15,7 @@ const CORRETOR_TITLE_MAP: Record<string, string> = {
   '/dashboard/corretor': 'Visão Geral',
   '/dashboard/corretor/login': 'Login',
   '/dashboard/corretor/cadastro': 'Cadastro',
+  '/dashboard/corretor/email-confirmado': 'E-mail confirmado',
   '/dashboard/corretor/onboarding': 'Onboarding',
   // Comercial
   '/dashboard/corretor/funil': 'Pipeline Visual',
@@ -91,7 +93,7 @@ export default function CorretorLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isPublicPage = pathname === '/dashboard/corretor/login' || pathname === '/dashboard/corretor/cadastro' || pathname.startsWith('/dashboard/corretor/onboarding');
+  const isPublicPage = pathname === '/dashboard/corretor/login' || pathname === '/dashboard/corretor/cadastro' || pathname === '/dashboard/corretor/email-confirmado' || pathname.startsWith('/dashboard/corretor/onboarding');
   const isPerfilPage = pathname === '/dashboard/corretor/perfil';
 
   const [onboardingCompleto, setOnboardingCompleto] = useState<boolean | null>(null);
@@ -261,6 +263,8 @@ export default function CorretorLayout({
       </div>
       
       <Toaster position="top-right" richColors closeButton />
+      {/* Banner inferior direito: notificações novas (Descartar / Visualizar) */}
+      <NotificationBannerFloating notificacoesPath="/dashboard/corretor/notificacoes" />
       <GuidedTour role="corretor" />
     </div>
     </TenantThemeProvider>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import DockSidebar from '../components/DockSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import NotificationBannerFloating from '@/components/notifications/NotificationBannerFloating';
 import GuidedTour from '@/app/components/tour/GuidedTour';
 import TenantInitClient from './TenantInitClient';
 import { TenantThemeProvider } from '@/app/components/TenantThemeProvider';
@@ -135,6 +136,9 @@ export default function DashboardLayoutClient({ children, tenantSlug, tenantDoma
       
       {/* Toast Notifications */}
       <Toaster position="top-right" richColors closeButton />
+
+      {/* Banner inferior direito: notificações novas (Descartar / Visualizar) */}
+      <NotificationBannerFloating notificacoesPath="/portal-interno-hks-2026/notificacoes" />
 
       <style jsx global>{`
         .admin-panel [data-slot="button"][class*="bg-[#D4AF37]"],

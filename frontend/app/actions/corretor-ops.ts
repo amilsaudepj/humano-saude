@@ -344,7 +344,7 @@ export async function getStatusConfirmacaoEmail(corretorId: string): Promise<{
 
     const { data, error } = await supabase
       .from('corretores')
-      .select('email_confirmado_em, created_at')
+      .select('email_confirmado_em, created_at, prazo_confirmacao_email_desde')
       .eq('id', corretorId)
       .single();
 
@@ -353,13 +353,15 @@ export async function getStatusConfirmacaoEmail(corretorId: string): Promise<{
     }
 
     const emailConfirmadoEm = (data.email_confirmado_em as string | null) ?? null;
+    const prazoDesde = (data.prazo_confirmacao_email_desde as string | null) ?? null;
     const created_at = (data.created_at as string) || new Date().toISOString();
+    const inicioPrazo = prazoDesde || created_at;
     const precisaConfirmar = !emailConfirmadoEm;
 
-    const criadoEm = new Date(created_at).getTime();
+    const inicioEm = new Date(inicioPrazo).getTime();
     const agora = Date.now();
-    const diasDesdeCriacao = Math.floor((agora - criadoEm) / (24 * 60 * 60 * 1000));
-    const diasRestantes = Math.max(0, PRAZO_DIAS_CONFIRMACAO_EMAIL - diasDesdeCriacao);
+    const diasDesdeInicio = Math.floor((agora - inicioEm) / (24 * 60 * 60 * 1000));
+    const diasRestantes = Math.max(0, PRAZO_DIAS_CONFIRMACAO_EMAIL - diasDesdeInicio);
 
     return {
       success: true,

@@ -19,6 +19,7 @@ export interface Corretor {
     ativo: boolean;
     data_admissao: string | null;
     comissao_padrao_pct: number | null;
+    email_confirmado_em: string | null;
     metadata: Record<string, unknown>;
     created_at: string;
     updated_at: string;
@@ -136,14 +137,20 @@ export async function updateCorretor(corretorId: string, dados: UpdateCorretorDa
 }
 
 /**
- * Suspende ou ativa um corretor (toggle do campo ativo)
+ * Suspende ou ativa um corretor (toggle do campo ativo).
+ * Ao reativar (ativo = true), zera a contagem dos 7 dias para confirmação de e-mail
+ * (prazo_confirmacao_email_desde = now), para o corretor ter 7 dias novamente.
  */
 export async function toggleStatusCorretor(corretorId: string, ativo: boolean) {
     try {
         const supabase = createServiceClient();
+        const payload: { ativo: boolean; prazo_confirmacao_email_desde?: string } = { ativo };
+        if (ativo) {
+            payload.prazo_confirmacao_email_desde = new Date().toISOString();
+        }
         const { data, error } = await supabase
             .from('corretores')
-            .update({ ativo })
+            .update(payload)
             .eq('id', corretorId)
             .select()
             .single();

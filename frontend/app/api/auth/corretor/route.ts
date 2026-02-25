@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
       const { data: corretor, error } = await supabase
         .from('corretores')
-        .select('id, nome, role, ativo, metadata, email_confirmado_em, created_at')
+        .select('id, nome, role, ativo, metadata, email_confirmado_em, created_at, prazo_confirmacao_email_desde')
         .eq('email', email.toLowerCase().trim())
         .single();
 
@@ -75,20 +75,32 @@ export async function POST(request: NextRequest) {
         }
 
         // Regra 7 dias: e-mail não confirmado há mais de 7 dias → suspender
-        const emailConfirmadoEm = (corretor as { email_confirmado_em?: string | null }).email_confirmado_em;
-        const createdAt = (corretor as { created_at?: string }).created_at;
-        if (emailConfirmadoEm == null && createdAt) {
-          const criadoEm = new Date(createdAt).getTime();
-          const diasDesdeCriacao = (Date.now() - criadoEm) / (24 * 60 * 60 * 1000);
-          if (diasDesdeCriacao >= PRAZO_DIAS_CONFIRMACAO_EMAIL) {
-            await supabase
-              .from('corretores')
-              .update({ ativo: false })
-              .eq('id', corretor.id);
-            return NextResponse.json(
-              { error: 'Sua conta foi suspensa por não confirmação do e-mail em até 7 dias. Entre em contato com o suporte.' },
-              { status: 401 },
-            );
+        // Isentar corretores de sistema (ex.: sem vínculo - helciodmtt) via env ou lista fixa
+        const emailsIsentos = (process.env.CORRETOR_EMAILS_ISENTOS_CONFIRMACAO_EMAIL ?? 'helciodmtt@gmail.com')
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean);
+        const emailCorretor = (email as string).trim().toLowerCase();
+        const isento = emailsIsentos.includes(emailCorretor);
+
+        if (!isento) {
+          const emailConfirmadoEm = (corretor as { email_confirmado_em?: string | null }).email_confirmado_em;
+          const prazoDesde = (corretor as { prazo_confirmacao_email_desde?: string | null }).prazo_confirmacao_email_desde;
+          const createdAt = (corretor as { created_at?: string }).created_at;
+          const inicioPrazo = prazoDesde || createdAt;
+          if (emailConfirmadoEm == null && inicioPrazo) {
+            const inicioEm = new Date(inicioPrazo).getTime();
+            const diasDesdeInicio = (Date.now() - inicioEm) / (24 * 60 * 60 * 1000);
+            if (diasDesdeInicio >= PRAZO_DIAS_CONFIRMACAO_EMAIL) {
+              await supabase
+                .from('corretores')
+                .update({ ativo: false })
+                .eq('id', corretor.id);
+              return NextResponse.json(
+                { error: 'Sua conta foi suspensa por não confirmação do e-mail em até 7 dias. Entre em contato com o suporte.' },
+                { status: 401 },
+              );
+            }
           }
         }
 

@@ -31,6 +31,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(
-    `${BASE_URL}${DASHBOARD_PATH}?email_confirmado=1`
+    `${BASE_URL}${DASHBOARD_PATH}/email-confirmado`
   );
 }

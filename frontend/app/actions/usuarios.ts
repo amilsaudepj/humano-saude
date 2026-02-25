@@ -184,6 +184,9 @@ export async function getUsuarios() {
                 });
             }
 
+            // Ordenar por data de criação (mais recentes primeiro)
+            usuarios.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
             logger.info('[getUsuarios] Fallback: usuários carregados', { total: usuarios.length, corretores: corretores?.length || 0, admins: adminProfile?.config ? 1 : 0 });
 
             // Busca últimos logins
@@ -232,6 +235,9 @@ export async function getUsuarios() {
                 } : undefined,
             };
         });
+
+        // Ordenar por data de criação (mais recentes primeiro)
+        usuarios.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         // Busca últimos logins de todos os usuários
         const { data: loginLogs } = await supabase

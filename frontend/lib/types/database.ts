@@ -570,6 +570,8 @@ export type TarefaUpdate = Partial<Omit<Tarefa, 'id' | 'created_at'>>;
 export type Notificacao = {
   id: string;
   user_id: string | null;
+  destino: 'admin' | 'corretor';
+  corretor_id: string | null;
   titulo: string;
   mensagem: string;
   tipo: 'info' | 'warning' | 'error' | 'success';

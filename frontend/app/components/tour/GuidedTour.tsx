@@ -529,7 +529,7 @@ export default function GuidedTour({
       ? `flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/90 px-3 py-2 text-xs font-semibold text-[#D4AF37] shadow-md shadow-black/40 backdrop-blur ${
           triggerClassName || ''
         }`
-      : `fixed bottom-5 right-5 z-[109] flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/95 px-4 py-2 text-xs font-semibold text-[#D4AF37] shadow-lg shadow-black/40 backdrop-blur ${
+      : `fixed top-5 right-5 z-[109] hidden md:flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#0a0a0a]/95 px-4 py-2 text-xs font-semibold text-[#D4AF37] shadow-lg shadow-black/40 backdrop-blur ${
           triggerClassName || ''
         }`;
 
@@ -538,6 +538,7 @@ export default function GuidedTour({
       type="button"
       onClick={handleManualOpen}
       className={triggerButtonClassName}
+      aria-label="Abrir tour"
     >
       <HelpCircle className="h-4 w-4" />
       <span className={triggerMode === 'inline' ? 'hidden sm:inline' : ''}>Abrir tour</span>

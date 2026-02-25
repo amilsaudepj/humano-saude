@@ -266,6 +266,25 @@ function DetalhesModal({ corretor, onClose }: { corretor: Corretor; onClose: () 
                                 </p>
                             </div>
                         )}
+                        <div className="bg-white/[0.03] rounded-xl p-3 sm:col-span-2">
+                            <span className="text-xs text-white/40 uppercase block mb-1">Status do e-mail</span>
+                            <p className={cn(
+                                'text-sm flex items-center gap-2',
+                                corretor.email_confirmado_em ? 'text-green-400' : 'text-amber-400',
+                            )}>
+                                {corretor.email_confirmado_em ? (
+                                    <>
+                                        <CheckCircle className="h-4 w-4 shrink-0" />
+                                        Confirmado em {new Date(corretor.email_confirmado_em).toLocaleString('pt-BR')}
+                                    </>
+                                ) : (
+                                    <>
+                                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                                        E-mail não confirmado
+                                    </>
+                                )}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -574,6 +593,13 @@ export default function PainelCorretoresPage() {
                                                 SUSEP
                                             </span>
                                         )}
+                                        <span className={cn(
+                                            'text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1',
+                                            corretor.email_confirmado_em ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400',
+                                        )}>
+                                            <Mail className="h-2.5 w-2.5" />
+                                            {corretor.email_confirmado_em ? 'E-mail confirmado' : 'E-mail não confirmado'}
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-3 mt-1">
                                         <span className="text-sm text-white/40 flex items-center gap-1">
