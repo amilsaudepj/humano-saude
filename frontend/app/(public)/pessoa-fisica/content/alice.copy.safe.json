@@ -1,0 +1,70 @@
+{
+  "source": "Reescrita SAFE baseada em alice.com.br – adaptada para Humano Saúde PF",
+  "header": {
+    "navItems": ["Início", "Planos", "Benefícios", "Contato"],
+    "ctaLabel": "Cotação grátis"
+  },
+  "hero": {
+    "badge": "Atendimento em até 10 minutos",
+    "title": "O plano de saúde que protege sua família e seu bolso",
+    "subtitle": "Cobertura nacional de qualidade, reajustes sob controle e profissionais de saúde acessíveis sempre que você precisar",
+    "primaryCta": "Quero minha cotação grátis",
+    "secondaryCta": "Sou empresa, quero reduzir custos",
+    "trustLine": "Seus dados estão seguros. Sem spam."
+  },
+  "network": {
+    "title": "Acesse a rede hospitalar mais ampla do mercado",
+    "subtitle": "Presente em mais de 1.400 cidades, com milhares de hospitais e laboratórios conveniados em todo o Brasil",
+    "ctaLabel": "Explorar rede credenciada"
+  },
+  "specialists": {
+    "title": "Profissionais de excelência selecionados criteriosamente para você",
+    "ctaLabel": "Conheça os +4.500 especialistas",
+    "items": [
+      { "role": "Oftalmologista", "credential": "Mais de 30 anos de prática clínica em centros de referência" },
+      { "role": "Cirurgião Geral", "credential": "Formação em hospital de ponta reconhecido nacionalmente" },
+      { "role": "Otorrinolaringologista", "credential": "Pós-graduação em escola médica renomada" },
+      { "role": "Psiquiatra", "credential": "Corpo clínico de hospital referência em saúde mental" },
+      { "role": "Urologista", "credential": "Décadas de experiência em instituição de excelência" },
+      { "role": "Ginecologista e Obstetra", "credential": "Coordenação médica em hospital referência" },
+      { "role": "Dermatologista", "credential": "Atuação em centro hospitalar de alto padrão" }
+    ]
+  },
+  "appSection": {
+    "title": "Atendimento rápido sempre que precisar",
+    "bullets": [
+      "Resolução de grande parte das queixas de saúde sem sair de casa",
+      "Cuidado eficiente que evita idas desnecessárias ao pronto-socorro",
+      "Controle de custos com reajustes previsíveis e transparentes"
+    ]
+  },
+  "plans": {
+    "title": "Tudo que você precisa em um plano",
+    "subtitle": "Recursos e diferenciais pensados para quem busca segurança, economia e qualidade de atendimento.",
+    "cards": [
+      { "title": "Cobertura nacional", "description": "Mais de 1.000 hospitais e 5.000 laboratórios em 1.400 cidades brasileiras." },
+      { "title": "Atendimento ágil", "description": "Profissionais de saúde disponíveis em minutos via app ou WhatsApp." },
+      { "title": "Rede de excelência", "description": "Hospitais e clínicas de referência selecionados com rigor." },
+      { "title": "Redução de carência", "description": "Migre de operadora aproveitando carências já cumpridas." },
+      { "title": "Reajuste controlado", "description": "Histórico consistente de reajustes abaixo da média de mercado." },
+      { "title": "Plano individual ou familiar", "description": "Opções flexíveis de 1 vida até toda a sua família." },
+      { "title": "Análise inteligente", "description": "Comparação automatizada de operadoras, preços e coberturas." },
+      { "title": "Acompanhamento contínuo", "description": "Suporte dedicado antes, durante e após a contratação." }
+    ]
+  },
+  "benefits": {
+    "title": "Por que escolher a Humano Saúde",
+    "subtitle": "Parceria com as operadoras mais sólidas do mercado para oferecer o melhor custo-benefício.",
+    "items": [
+      { "title": "Consultoria especializada", "description": "Nosso time analisa seu perfil e indica o plano mais adequado às suas necessidades e orçamento." },
+      { "title": "Economia real comprovada", "description": "Comparamos dezenas de operadoras para encontrar a opção que entrega mais cobertura por menos." },
+      { "title": "Processo 100% digital", "description": "Da cotação à contratação, tudo online. Sem papelada, sem burocracia, com suporte humano sempre disponível." }
+    ]
+  },
+  "footer": {
+    "title": "Pronto para garantir sua saúde?",
+    "subtitle": "Fale com um especialista e receba sua cotação personalizada em minutos.",
+    "ctaLabel": "Cotação grátis via WhatsApp",
+    "disclaimer": "© Humano Saúde. Todos os direitos reservados."
+  }
+}

@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useCallback } from 'react';
+import { motion, useInView } from 'framer-motion';
 
 const insurers = [
   { name: 'Bradesco Saúde', logo: '/images/operadoras/bradesco-logo.png' },
@@ -64,8 +65,17 @@ function InfiniteCarousel() {
 }
 
 export default function TrustBar() {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+
   return (
-    <section className="py-10 sm:py-14 bg-slate-50 border-y border-gray-200/60 overflow-hidden">
+    <motion.section
+      ref={ref}
+      initial={{ opacity: 0, y: 48 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="py-10 sm:py-14 bg-slate-50 border-y border-gray-200/60 overflow-hidden"
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <p className="text-center text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-[3px] mb-8 sm:mb-10">
           Trabalhamos com as melhores seguradoras
@@ -92,6 +102,6 @@ export default function TrustBar() {
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

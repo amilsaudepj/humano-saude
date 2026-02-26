@@ -1,0 +1,80 @@
+{
+  "source": "alice.com.br – homepage (extraído 2026-02-25)",
+  "header": {
+    "navItems": ["Rede Credenciada", "Perguntas Frequentes", "Cases de Sucesso", "Blog"],
+    "ctaLabel": "Fazer cotação"
+  },
+  "hero": {
+    "badge": "Cobertura nacional completa",
+    "title": "O plano de saúde que cuida do seu time e do seu orçamento",
+    "subtitle": "Conte com uma cobertura nacional completa, com o menor reajuste do mercado e profissionais de saúde disponíveis 24h para o seu time",
+    "primaryCta": "Fazer cotação",
+    "trustLine": "Profissional disponível em até 60s"
+  },
+  "network": {
+    "title": "Ofereça acesso à rede credenciada mais completa para sua equipe",
+    "subtitle": "Em 1400 cidades, com acesso a mais de 1.000 hospitais e 5.000 laboratórios no Brasil",
+    "ctaLabel": "Conheça nossa Rede Credenciada"
+  },
+  "specialists": {
+    "title": "Conecte seu time aos especialistas mais qualificados, escolhidos com rigor pela Alice",
+    "ctaLabel": "Conte com os +4.500 especialistas",
+    "items": [
+      { "role": "Oftalmologista", "credential": "Formado na USP com mais de 30 anos de experiência" },
+      { "role": "Cirurgião Geral", "credential": "Especialista do Albert Einstein" },
+      { "role": "Otorrinolaringologista", "credential": "Pós graduação na EPM, Unifesp" },
+      { "role": "Psiquiatra", "credential": "Especialista do Sírio Libanês" },
+      { "role": "Urologista", "credential": "47 anos de experiência e membro do corpo clínico do Albert Einstein" },
+      { "role": "Ginecologista e Obstetra", "credential": "Coordenador médico do Santa Catarina" },
+      { "role": "Dermatologista", "credential": "Especialista do Sírio Libanês" }
+    ]
+  },
+  "appSection": {
+    "title": "Tenha um profissional Alice disponível em até 60s",
+    "bullets": [
+      "Resolvemos 70% das queixas de saúde sem seu time precisar sair de casa",
+      "Melhore a saúde do seu time da forma mais efetiva e menos custosa",
+      "Reduza custos e evite surpresas com reajustes do seu plano de saúde empresarial"
+    ]
+  },
+  "chart": {
+    "title": "Alice com o menor reajuste do mercado!",
+    "subtitle": "Reajuste controlado e previsível, para empresas de qualquer tamanho",
+    "items": [
+      { "name": "Alice", "value": "11,20%" },
+      { "name": "Bradesco", "value": "15,11%" },
+      { "name": "Sul América", "value": "15,23%" },
+      { "name": "Porto Seguro", "value": "15,87%" },
+      { "name": "Amil", "value": "15,98%" }
+    ],
+    "reference": "Ano de referência: 2025"
+  },
+  "rh": {
+    "sectionLabel": "Pensado para você, RH",
+    "title": "Assuma o controle com as ferramentas que empoderam sua gestão",
+    "cards": [
+      {
+        "title": "Plano de saúde para empresas: simples e sem complicações",
+        "bullets": [
+          "Inclua CLTs, PJs, estagiários e temporários",
+          "Tenha titulares e dependentes com planos diferentes"
+        ],
+        "ctaLabel": "Fazer cotação"
+      },
+      {
+        "title": "Enfermeiro(a) Gestor(a) de Saúde",
+        "description": "Um especialista da Alice que acompanha a saúde do seu time e oferece suporte direto"
+      },
+      {
+        "title": "Acesso ao Portal RH",
+        "description": "Centralize a gestão de saúde na sua empresa com uma plataforma simples"
+      }
+    ],
+    "trustLine": "Facilitando a gestão de mais de 25.000 empresas e 75.000 membros"
+  },
+  "footer": {
+    "title": "O plano de saúde que cuida do seu time e do seu orçamento",
+    "ctaLabel": "Fazer cotação",
+    "disclaimer": "© Alice Saúde"
+  }
+}

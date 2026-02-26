@@ -449,6 +449,31 @@ html {
   animation: marquee 6s linear infinite;
 }
 
+/* Carrossel de planos (trilha triplicada: -33.33% para loop perfeito, deslizar mais suave) */
+@keyframes marquee-pf {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-marquee-pf {
+  animation: marquee-pf 65s ease-in-out infinite;
+  will-change: transform;
+}
+
 .animate-scroll-infinite:hover {
   animation-play-state: paused;
+}
+
+/* Shimmer para placeholder de mídia (seção Sticky Scroll – estilo GIF) */
+@keyframes shimmer-pf {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer-pf {
+  animation: shimmer-pf 2.5s ease-in-out infinite;
 }
